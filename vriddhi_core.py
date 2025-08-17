@@ -283,14 +283,11 @@ def plot_enhanced_projection(monthly_investment, horizon_months, achieved_cagr, 
 
     🎯 Target Period: {horizon_months} months ({horizon_months/12:.1f} years)
     💰 Monthly Investment: ₹{monthly_investment:,}
-    📈 Expected CAGR: {achieved_cagr * 100:.2f}%
+    📈 Achievable CAGR: {achieved_cagr * 100:.2f}%
 
     💵 Total Investment: ₹{final_invested:,.0f}
     🚀 Final Portfolio Value: ₹{final_value:,.0f}
     💎 Total Gains: ₹{total_gain:,.0f}
-    📊 Total Return: {gain_percentage:.1f}%
-
-    🎉 Your money grows by {final_value/final_invested:.1f}x!
     """
 
     ax5.text(0.1, 0.9, summary_text, transform=ax5.transAxes, fontsize=11,
