@@ -121,7 +121,8 @@ def optimize_portfolio(selected_df, horizon_months):
 # ===============================
 
 def compute_projection(df, monthly_investment, horizon_months, horizon_cagr):
-    monthly_cagr = horizon_cagr / 100 / 12
+    # horizon_cagr is already in decimal format (0.30 for 30%)
+    monthly_cagr = horizon_cagr / 12
     total_investment = monthly_investment * horizon_months
     if monthly_cagr > 0:
         future_value = monthly_investment * (((1 + monthly_cagr) ** horizon_months - 1) / monthly_cagr)
@@ -142,7 +143,7 @@ def plot_enhanced_projection(monthly_investment, horizon_months, achieved_cagr, 
 
     # Calculate projections for the specified horizon
     months = np.arange(1, horizon_months + 1)
-    monthly_cagr = achieved_cagr / 100 / 12  # Convert annual to monthly
+    monthly_cagr = achieved_cagr / 12  # achieved_cagr is already in decimal format
 
     # Calculate cumulative investment (linear)
     cumulative_invested = monthly_investment * months
@@ -166,7 +167,7 @@ def plot_enhanced_projection(monthly_investment, horizon_months, achieved_cagr, 
     ax1.plot(months, cumulative_invested, '--', linewidth=3, color='#2E86AB',
              label='Total Investment', marker='o', markersize=3, markevery=12)
     ax1.plot(months, projected_values, '-', linewidth=3, color='#A23B72',
-             label=f'Portfolio Value ({achieved_cagr:.1f}% CAGR)', marker='s', markersize=4, markevery=12)
+             label=f'Portfolio Value ({achieved_cagr*100:.1f}% CAGR)', marker='s', markersize=4, markevery=12)
 
     key_months = [m for m in [12, 24, 36, 48, 60] if m <= horizon_months]
     for month in key_months:
@@ -345,7 +346,7 @@ def final_summary_output(feasible: bool, horizon_months: int, expected_cagr: flo
         print(f"📋 PLAN SUMMARY:")
         print(f"   • Investment Period: {horizon_years:.1f} years ({horizon_months} months)")
         print(f"   • Total Investment: ₹{int(total_invested):,}")
-        print(f"   • Expected CAGR: {expected_cagr:.2f}% → Achieved CAGR: {achieved_cagr:.2f}%")
+        print(f"   • Expected CAGR: {expected_cagr*100:.1f}% → Achieved CAGR: {achieved_cagr*100:.1f}%")
         print(f"   • Final Portfolio Value: ₹{int(projected_value):,}")
         print(f"   • Total Gains: ₹{int(gain):,}")
         print(f"   • Money Multiplier: {projected_value/total_invested:.2f}x\n")
@@ -363,25 +364,25 @@ def final_summary_output(feasible: bool, horizon_months: int, expected_cagr: flo
     else:
         print("⚠️  REALITY CHECK: Your expectations need adjustment ⚠️\n")
         print(f"📋 CURRENT SCENARIO:")
-        print(f"   • Desired CAGR: {expected_cagr:.2f}%")
-        print(f"   • Best Achievable CAGR ({horizon_months} months): {max_possible_cagr_current_horizon:.2f}%")
-        print(f"   • Gap: {expected_cagr - max_possible_cagr_current_horizon:.2f}% short\n")
+        print(f"   • Desired CAGR: {expected_cagr*100:.1f}%")
+        print(f"   • Best Achievable CAGR ({horizon_months} months): {max_possible_cagr_current_horizon*100:.1f}%")
+        print(f"   • Gap: {(expected_cagr - max_possible_cagr_current_horizon)*100:.1f}% short\n")
 
         print("💰 BUT HERE'S THE GOOD NEWS:")
-        print(f"   • Even at {achieved_cagr:.2f}% CAGR, you'll still gain ₹{int(gain):,}!")
+        print(f"   • Even at {achieved_cagr*100:.1f}% CAGR, you'll still gain ₹{int(gain):,}!")
         print(f"   • Your ₹{int(total_invested):,} will become ₹{int(projected_value):,}")
         print(f"   • That's still a {((projected_value/total_invested - 1) * 100):.1f}% total return!")
         print(f"   • Monthly average gain: ₹{int(gain/horizon_months):,}\n")
 
         print("💡 SMART RECOMMENDATIONS:")
-        print(f"   • Option 1: Accept {max_possible_cagr_current_horizon:.2f}% CAGR → Gain ₹{int(gain):,}")
-        print(f"   • Option 2: Extend to 60 months for up to {best_horizon_60_cagr:.2f}% CAGR")
+        print(f"   • Option 1: Accept {max_possible_cagr_current_horizon*100:.1f}% CAGR → Gain ₹{int(gain):,}")
+        print(f"   • Option 2: Extend to 60 months for up to {best_horizon_60_cagr*100:.1f}% CAGR")
         print(f"   • Option 3: Increase monthly investment to reach your target faster")
-        print(f"   • Option 4: Adjust expectations - {achieved_cagr:.2f}% is still excellent!\n")
+        print(f"   • Option 4: Adjust expectations - {achieved_cagr*100:.1f}% is still excellent!\n")
 
         print("🧠 PERSPECTIVE CHECK:")
-        print(f"   • Bank FD gives ~7% → You're getting {achieved_cagr:.1f}%!")
-        print(f"   • Inflation is ~6% → You're beating it by {achieved_cagr - 6:.1f}%!")
+        print(f"   • Bank FD gives ~7% → You're getting {achieved_cagr*100:.1f}%!")
+        print(f"   • Inflation is ~6% → You're beating it by {(achieved_cagr*100) - 6:.1f}%!")
         print("   • This is solid wealth creation, even if not your original target!")
 
     print("="*80)
