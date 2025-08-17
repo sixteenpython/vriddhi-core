@@ -1,10 +1,87 @@
-
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import io
+from vriddhi_core import run_vriddhi_backend, plot_enhanced_projection
 
-import vriddhi_core  # generated from your notebook
+def display_investment_summary(summary_data):
+    """Display the detailed investment summary in Streamlit UI"""
+    
+    # Main header
+    st.markdown("---")
+    st.markdown("## 🎯 Investment Analysis Report")
+    
+    if summary_data["feasible"]:
+        st.success("🎉 SUCCESS: Your investment goals are ACHIEVABLE! 🎉")
+        
+        # Plan Summary Section
+        st.markdown("### 📋 Plan Summary")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("Investment Period", f"{summary_data['horizon_years']:.1f} years")
+            st.metric("Total Investment", f"₹{int(summary_data['total_invested']):,}")
+            st.metric("Money Multiplier", f"{summary_data['money_multiplier']:.2f}x")
+        
+        with col2:
+            st.metric("Final Portfolio Value", f"₹{int(summary_data['projected_value']):,}")
+            st.metric("Total Gains", f"₹{int(summary_data['gain']):,}")
+            st.metric("Monthly Avg Gain", f"₹{int(summary_data['monthly_avg_gain']):,}")
+        
+        # Success Insights
+        st.markdown("### ✨ What This Means For You")
+        st.info(f"""
+        - Your disciplined investment will grow your wealth by **₹{int(summary_data['gain']):,}**
+        - Every ₹1 you invest will become **₹{summary_data['money_multiplier']:.2f}**
+        - Your wealth will grow **{summary_data['total_return_pct']:.1f}%** over {summary_data['horizon_years']:.1f} years
+        - You're on the path to financial growth! 📈
+        """)
+        
+    else:
+        st.warning("⚠️ REALITY CHECK: Your expectations need adjustment")
+        
+        # Current Scenario
+        st.markdown("### 📋 Current Scenario")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Desired CAGR", f"{summary_data['expected_cagr']:.2f}%")
+        with col2:
+            st.metric("Achievable CAGR", f"{summary_data['achieved_cagr']:.2f}%")
+        with col3:
+            st.metric("CAGR Gap", f"{summary_data['cagr_gap']:.2f}%", delta=f"{summary_data['cagr_gap']:.2f}%")
+        
+        # Good News Section
+        st.markdown("### 💰 But Here's The Good News")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("You'll Still Gain", f"₹{int(summary_data['gain']):,}")
+            st.metric("Total Return", f"{summary_data['total_return_pct']:.1f}%")
+        
+        with col2:
+            st.metric("Final Value", f"₹{int(summary_data['projected_value']):,}")
+            st.metric("Monthly Avg Gain", f"₹{int(summary_data['monthly_avg_gain']):,}")
+        
+        # Smart Recommendations
+        st.markdown("### 💡 Smart Recommendations")
+        st.info(f"""
+        **Option 1:** Accept {summary_data['achieved_cagr']:.2f}% CAGR → Gain ₹{int(summary_data['gain']):,}
+        
+        **Option 2:** Extend to 60 months for up to {summary_data['best_horizon_60_cagr']:.2f}% CAGR
+        
+        **Option 3:** Increase monthly investment to reach your target faster
+        
+        **Option 4:** Adjust expectations - {summary_data['achieved_cagr']:.2f}% is still excellent!
+        """)
+        
+        # Perspective Check
+        st.markdown("### 🧠 Perspective Check")
+        st.success(f"""
+        - **Bank FD gives ~7%** → You're getting **{summary_data['achieved_cagr']:.1f}%**!
+        - **Inflation is ~6%** → You're beating it by **{summary_data['inflation_beat']:.1f}%**!
+        - This is solid wealth creation, even if not your original target!
+        """)
+    
+    st.markdown("---")
 
 st.set_page_config(page_title="Vriddhi Alpha Finder", layout="wide")
 
@@ -58,13 +135,10 @@ expected_cagr = expected_cagr_pct / 100.0
 run = st.sidebar.button("Run Optimization", type="primary")
 
 if run:
-    with st.spinner("Running Vriddhi optimizer..."):
+    with st.spinner("🚀 Running Vriddhi optimization..."):
         try:
-            optimized_df, summary = vriddhi_core.run_vriddhi_backend(
-                df.copy(),
-                monthly_investment=monthly_investment,
-                expected_cagr=expected_cagr,
-                horizon_months=horizon_months
+            allocation_df, fig, summary, summary_data = run_vriddhi_backend(
+                df, monthly_investment, expected_cagr, horizon_months
             )
         except Exception as e:
             st.exception(e)
@@ -85,11 +159,14 @@ if run:
     else:
         st.warning("Your expectations need adjustment — see chart and allocation for guidance.")
 
+    # Display detailed investment summary
+    display_investment_summary(summary_data)
+    
     st.subheader("Suggested Allocation")
-    st.dataframe(optimized_df, use_container_width=True)
+    st.dataframe(allocation_df, use_container_width=True)
 
     # Download allocations
-    csv_bytes = optimized_df.to_csv(index=False).encode("utf-8")
+    csv_bytes = allocation_df.to_csv(index=False).encode("utf-8")
     st.download_button("Download Allocation CSV", data=csv_bytes, file_name="vriddhi_allocation.csv", mime="text/csv")
 
     # ---- Chart: weights ----
