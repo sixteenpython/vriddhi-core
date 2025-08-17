@@ -405,8 +405,8 @@ def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
     # Create the frill output dictionary
     frill_output = {
         "Feasible": feasible,
-        "Expected CAGR": expected_cagr * 100,
-        "Achieved CAGR": achieved_cagr * 100,
+        "Expected CAGR": expected_cagr,
+        "Achieved CAGR": achieved_cagr,
         "Final Value": final_value,
         "Gain": gain
     }
@@ -572,7 +572,7 @@ def plot_enhanced_projection(monthly_investment, horizon_months, achieved_cagr, 
     """
     Creates comprehensive investment visualization with multiple subplots
     """
-    fig = plt.figure(figsize=(18, 14))  # Increased figure size for better spacing
+    fig = plt.figure(figsize=(16, 10))  # Optimized figure size for Streamlit
 
     # Calculate projections for the specified horizon
     months = np.arange(1, horizon_months + 1)
@@ -709,9 +709,9 @@ def plot_enhanced_projection(monthly_investment, horizon_months, achieved_cagr, 
              verticalalignment='top', bbox=dict(boxstyle="round,pad=0.6", facecolor="#E6F0FA", alpha=0.9),
              fontweight='bold', linespacing=1.5)
 
-    plt.tight_layout(pad=4.0)
-    plt.suptitle(f'🌟 VRIDDHI INVESTMENT PLAN - Complete Analysis 🌟', fontsize=14, fontweight='bold', y=0.97)
-    plt.show()
+    plt.tight_layout(pad=2.0)
+    plt.suptitle(f'🌟 VRIDDHI INVESTMENT PLAN - Complete Analysis 🌟', fontsize=14, fontweight='bold', y=0.95)
+    return fig
 
 # ===============================
 # 4. FINAL OUTPUT MODULE (Updated with Frill Integration)
@@ -799,8 +799,8 @@ def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
     # Create the frill output dictionary
     frill_output = {
         "Feasible": feasible,
-        "Expected CAGR": expected_cagr * 100,
-        "Achieved CAGR": achieved_cagr * 100,
+        "Expected CAGR": expected_cagr,
+        "Achieved CAGR": achieved_cagr,
         "Final Value": final_value,
         "Gain": gain
     }
