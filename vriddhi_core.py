@@ -60,9 +60,9 @@ def stock_selector(df, expected_cagr, horizon_months):
         df['Volatility'] = 1 / (df['PE_Ratio'] + 0.1) + (100 - df['Momentum Score']) / 100
 
     # Remove hardcoded CAGR filters to allow higher targets
-    df = df[df['average_cagr'] > 0.05].copy()  # Only filter out very poor performers
+    df = df[df['average_cagr'] > 5].copy()  # CAGR values are in percentage format
 
-    df['PEG'] = df['PE_Ratio'] / (df['average_cagr'] * 100 + 1e-6)
+    df['PEG'] = df['PE_Ratio'] / (df['average_cagr'] + 1e-6)  # No need to multiply by 100
     df['peg_adj_return'] = df[forecast_col] * np.exp(-0.5 * df['PEG'])
     df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=['PEG', 'peg_adj_return'])
 
@@ -71,7 +71,7 @@ def stock_selector(df, expected_cagr, horizon_months):
         (df["PB_Ratio"] > 0) & (df["PB_Ratio"] <= 10) &
         (df["Momentum Score"] >= 50) &  # Relaxed from 70 to allow more stocks
         #(df["ROE (%)"] >= 15) &
-        (df[forecast_col] >= 0.05)  # Allow much lower minimum CAGR
+        (df[forecast_col] >= 5)  # CAGR values are in percentage format
     ].copy()
 
     filtered = filtered.dropna(subset=[forecast_col, 'Volatility'])
@@ -84,7 +84,7 @@ def stock_selector(df, expected_cagr, horizon_months):
     sector_counts = defaultdict(int)
 
     for _, row in filtered.iterrows():
-        stock_cagr = row[forecast_col]
+        stock_cagr = row[forecast_col] / 100  # Convert percentage to decimal for comparison
         sector = row.get("Sector", "Unknown")
         if sector_counts[sector] >= 2 and count >= 6:
             continue
@@ -99,7 +99,7 @@ def stock_selector(df, expected_cagr, horizon_months):
 
     if not feasible:
         fallback_stocks = filtered.head(8)
-        fallback_cagr = fallback_stocks[forecast_col].mean()
+        fallback_cagr = fallback_stocks[forecast_col].mean() / 100  # Convert percentage to decimal
         return fallback_stocks.reset_index(drop=True), False, fallback_cagr
     else:
         selected_df = pd.DataFrame(selected_stocks).reset_index(drop=True)
@@ -427,7 +427,7 @@ def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
     frill_output = {
         "Feasible": feasible,
         "Expected CAGR": expected_cagr * 100,  # Convert to percentage for display
-        "Achieved CAGR": achieved_cagr * 100,  # Convert to percentage for display
+        "Achieved CAGR": achieved_cagr * 100,  # achieved_cagr is already decimal from stock_selector
         "Final Value": final_value,
         "Gain": gain
     }
