@@ -74,7 +74,8 @@ def stock_selector(df, expected_cagr, horizon_months):
     ].copy()
 
     filtered = filtered.dropna(subset=[forecast_col, 'Volatility'])
-    filtered = filtered.sort_values(by='peg_adj_return', ascending=False)
+    # Sort by peg_adj_return to ensure consistent selection order
+    filtered = filtered.sort_values(by=['peg_adj_return', 'Ticker'], ascending=[False, True]).reset_index(drop=True)
 
     selected_stocks = []
     cumulative_cagr = 0
@@ -404,8 +405,8 @@ def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
     # Create the frill output dictionary
     frill_output = {
         "Feasible": feasible,
-        "Expected CAGR": expected_cagr,
-        "Achieved CAGR": achieved_cagr,
+        "Expected CAGR": expected_cagr * 100,
+        "Achieved CAGR": achieved_cagr * 100,
         "Final Value": final_value,
         "Gain": gain
     }
@@ -490,7 +491,8 @@ def stock_selector(df, expected_cagr, horizon_months):
     ].copy()
 
     filtered = filtered.dropna(subset=[forecast_col, 'Volatility'])
-    filtered = filtered.sort_values(by='peg_adj_return', ascending=False)
+    # Sort by peg_adj_return to ensure consistent selection order
+    filtered = filtered.sort_values(by=['peg_adj_return', 'Ticker'], ascending=[False, True]).reset_index(drop=True)
 
     selected_stocks = []
     cumulative_cagr = 0
@@ -797,8 +799,8 @@ def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
     # Create the frill output dictionary
     frill_output = {
         "Feasible": feasible,
-        "Expected CAGR": expected_cagr,
-        "Achieved CAGR": achieved_cagr,
+        "Expected CAGR": expected_cagr * 100,
+        "Achieved CAGR": achieved_cagr * 100,
         "Final Value": final_value,
         "Gain": gain
     }
