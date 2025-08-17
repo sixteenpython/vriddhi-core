@@ -59,7 +59,8 @@ def stock_selector(df, expected_cagr, horizon_months):
     if 'Volatility' not in df.columns:
         df['Volatility'] = 1 / (df['PE_Ratio'] + 0.1) + (100 - df['Momentum Score']) / 100
 
-    df = df[df['average_cagr'] > 0.14].copy()
+    # Remove hardcoded CAGR filters to allow higher targets
+    df = df[df['average_cagr'] > 0.05].copy()  # Only filter out very poor performers
 
     df['PEG'] = df['PE_Ratio'] / (df['average_cagr'] * 100 + 1e-6)
     df['peg_adj_return'] = df[forecast_col] * np.exp(-0.5 * df['PEG'])
@@ -68,9 +69,9 @@ def stock_selector(df, expected_cagr, horizon_months):
     filtered = df[
         (df["PE_Ratio"] > 0) & (df["PE_Ratio"] <= 40) &
         (df["PB_Ratio"] > 0) & (df["PB_Ratio"] <= 10) &
-        (df["Momentum Score"] >= 70) &
+        (df["Momentum Score"] >= 50) &  # Relaxed from 70 to allow more stocks
         #(df["ROE (%)"] >= 15) &
-        (df[forecast_col] >= 0.14)
+        (df[forecast_col] >= 0.05)  # Allow much lower minimum CAGR
     ].copy()
 
     filtered = filtered.dropna(subset=[forecast_col, 'Volatility'])

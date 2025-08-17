@@ -150,7 +150,7 @@ horizon_years = st.sidebar.selectbox(
 )
 horizon_months = horizon_years * 12
 
-expected_cagr_pct = st.sidebar.slider("Target CAGR (%)", min_value=5, max_value=40, value=18, help="Your expected annual returns")
+expected_cagr_pct = st.sidebar.slider("Target CAGR (%)", min_value=5, max_value=99, value=18, help="Your expected annual returns")
 expected_cagr = expected_cagr_pct / 100.0
 
 # Display investment summary
@@ -186,9 +186,12 @@ if run:
     c4.metric("Gain", f"₹{summary.get('Gain', 0):,}")
 
     if feasible:
-        st.success("Your investment goals are achievable at the selected horizon and parameters.")
+        st.success("🎉 Your investment goals are achievable at the selected horizon and parameters!")
     else:
-        st.warning("Your expectations need adjustment — see chart and allocation for guidance.")
+        max_achievable_cagr = summary_data.get('achieved_cagr', 0)
+        target_cagr = summary_data.get('expected_cagr', 0)
+        st.warning(f"⚠️ Target {target_cagr:.1f}% CAGR is not feasible. Best achievable: {max_achievable_cagr:.1f}% CAGR")
+        st.info(f"💡 Consider: Lower your target to {max_achievable_cagr:.1f}% or extend your investment horizon for better returns.")
 
     # Display detailed investment summary
     display_investment_summary(summary_data)
