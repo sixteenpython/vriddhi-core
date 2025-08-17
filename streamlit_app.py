@@ -180,16 +180,22 @@ if run:
 
     c1, c2, c3, c4 = st.columns(4)
     feasible = summary.get("Feasible")
+    expected_cagr_display = summary.get("Expected CAGR", expected_cagr_pct)
+    achieved_cagr_display = summary.get("Achieved CAGR", 0)
+    
     c1.metric("Feasible", "Yes ✅" if feasible else "No ❌")
-    c2.metric("Achieved CAGR", f"{summary.get('Achieved CAGR', 0):.2f}%")
-    c3.metric("Final Value", f"₹{summary.get('Final Value', 0):,}")
-    c4.metric("Gain", f"₹{summary.get('Gain', 0):,}")
+    c2.metric("Expected CAGR", f"{expected_cagr_display:.1f}%")
+    c3.metric("Achieved CAGR", f"{achieved_cagr_display:.1f}%")
+    c4.metric("Final Value", f"₹{summary.get('Final Value', 0):,}")
+    
+    # Show gain in a separate row
+    st.metric("Total Gain", f"₹{summary.get('Gain', 0):,}")
 
     if feasible:
         st.success("🎉 Your investment goals are achievable at the selected horizon and parameters!")
     else:
-        max_achievable_cagr = summary_data.get('achieved_cagr', 0)
-        target_cagr = summary_data.get('expected_cagr', 0)
+        max_achievable_cagr = achieved_cagr_display
+        target_cagr = expected_cagr_display
         st.warning(f"⚠️ Target {target_cagr:.1f}% CAGR is not feasible. Best achievable: {max_achievable_cagr:.1f}% CAGR")
         st.info(f"💡 Consider: Lower your target to {max_achievable_cagr:.1f}% or extend your investment horizon for better returns.")
 
