@@ -316,7 +316,7 @@ def plot_enhanced_projection(monthly_investment, horizon_months, achieved_cagr, 
     plt.tight_layout(pad=3.0)
     plt.suptitle(f'🌟 VRIDDHI INVESTMENT PLAN - Complete Analysis 🌟',
                  fontsize=16, fontweight='bold', y=0.98)
-    plt.show()
+    return fig
 
 # ===============================
 # 4. FINAL OUTPUT MODULE (Updated with Frill Integration)

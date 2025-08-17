@@ -186,14 +186,17 @@ if run:
     # ---- Projection chart from your function ----
     st.subheader("Growth Projection")
     try:
-        # Use the fig returned from run_vriddhi_backend
-        st.pyplot(fig, use_container_width=True)
-        # Download chart
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", bbox_inches="tight")
-        st.download_button("Download Projection PNG", data=buf.getvalue(), file_name="projection.png", mime="image/png")
+        if fig is not None:
+            st.pyplot(fig, use_container_width=True)
+            # Download chart
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", bbox_inches="tight")
+            buf.seek(0)
+            st.download_button("Download Projection PNG", data=buf.getvalue(), file_name="projection.png", mime="image/png")
+        else:
+            st.warning("Projection chart could not be generated.")
     except Exception as e:
-        st.info("Projection plot not available: " + str(e))
+        st.error(f"Error displaying projection chart: {str(e)}")
 
 else:
     st.info("Set your parameters in the sidebar and click **Run Optimization** to generate results.")
