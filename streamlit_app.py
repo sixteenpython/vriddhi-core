@@ -76,7 +76,7 @@ if run:
     c1, c2, c3, c4 = st.columns(4)
     feasible = summary.get("Feasible")
     c1.metric("Feasible", "Yes ✅" if feasible else "No ❌")
-    c2.metric("Achieved CAGR", f"{summary.get('Achieved CAGR', 0)*100:.2f}%")
+    c2.metric("Achieved CAGR", f"{summary.get('Achieved CAGR', 0):.2f}%")
     c3.metric("Final Value", f"₹{summary.get('Final Value', 0):,}")
     c4.metric("Gain", f"₹{summary.get('Gain', 0):,}")
 
