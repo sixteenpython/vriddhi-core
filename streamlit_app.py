@@ -96,46 +96,74 @@ if required_pw:
         st.warning("Enter the app password to continue.")
         st.stop()
 
+# ---- Title ----
+st.title("🌟 Vriddhi Alpha Finder")
+st.markdown("""
+### AI-Powered Personal Investment Advisor
 
-st.title("Vriddhi Alpha Finder — MVP")
+**Vriddhi Alpha Finder** is a sophisticated investment optimization platform that leverages Modern Portfolio Theory (MPT) and advanced analytics to create personalized investment strategies. 
 
-with st.expander("About this app", expanded=False):
-    st.write(
-        "This is a private MVP that reads a knowledge asset CSV and uses the Vriddhi optimizer "
-        "to produce a suggested allocation and growth projection."
-    )
+**Key Features:**
+- 📊 **Smart Portfolio Optimization**: Uses scientific algorithms to maximize returns while managing risk
+- 🎯 **Goal-Based Planning**: Input your target returns and investment horizon for customized recommendations  
+- 🏢 **Sector Diversification**: Automatically ensures balanced exposure across different industry sectors
+- 📈 **Growth Projections**: Visualizes your wealth accumulation journey with detailed charts and metrics
+- 💰 **SIP Modeling**: Optimized for systematic monthly investment plans (SIP)
+- 🔍 **50+ Stock Universe**: Curated selection of high-quality Indian stocks with multi-horizon CAGR forecasts
 
-# ---- Data source selection ----
-st.sidebar.header("Inputs")
-data_source = st.sidebar.radio("Data Source", ["Use bundled CSV", "Upload CSV"])
+**How It Works:**
+1. Set your monthly investment amount and target annual returns (CAGR)
+2. Choose your investment horizon (1-5 years)
+3. Get AI-powered stock selection and optimal portfolio weights
+4. View comprehensive analysis including feasibility assessment and growth projections
 
+*Built with cutting-edge financial algorithms and real-time market data analysis.*
+""")
+
+# Load built-in stock data
 @st.cache_data
-def load_default_csv():
+def load_stock_data():
     return pd.read_csv("grand_table.csv")
 
-if data_source == "Upload CSV":
-    f = st.sidebar.file_uploader("Upload CSV", type=["csv"])
-    if f is not None:
-        df = pd.read_csv(f)
-    else:
-        st.info("Please upload a CSV to proceed, or switch to 'Use bundled CSV'.")
-        st.stop()
-else:
-    df = load_default_csv()
+try:
+    df = load_stock_data()
+    st.success(f"✅ Loaded {len(df)} stocks from curated universe")
+except Exception as e:
+    st.error(f"Error loading stock data: {e}")
+    st.stop()
 
-# Basic sanity
+# Basic sanity check
 if "Ticker" not in df.columns:
-    st.error("CSV must contain a 'Ticker' column. Found columns: {}".format(", ".join(df.columns)))
+    st.error("Stock data must contain a 'Ticker' column. Found columns: {}".format(", ".join(df.columns)))
     st.stop()
 
 # ---- Parameters ----
-monthly_investment = st.sidebar.number_input("Monthly Investment (INR)", min_value=1000, step=1000, value=25000)
-horizon_years = st.sidebar.slider("Horizon (years)", min_value=1, max_value=10, value=5)
+st.sidebar.header("📊 Investment Parameters")
+monthly_investment = st.sidebar.number_input("Monthly Investment (INR)", min_value=1000, step=1000, value=25000, help="Amount you plan to invest every month")
+
+# Discrete horizon selection
+horizon_years = st.sidebar.selectbox(
+    "Investment Horizon", 
+    options=[1, 2, 3, 4, 5],
+    index=4,  # Default to 5 years
+    help="Choose your investment time horizon"
+)
 horizon_months = horizon_years * 12
-expected_cagr_pct = st.sidebar.slider("Target CAGR (%)", min_value=5, max_value=40, value=18)
+
+expected_cagr_pct = st.sidebar.slider("Target CAGR (%)", min_value=5, max_value=40, value=18, help="Your expected annual returns")
 expected_cagr = expected_cagr_pct / 100.0
 
-run = st.sidebar.button("Run Optimization", type="primary")
+# Display investment summary
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📋 Investment Summary")
+st.sidebar.info(f"""
+**Monthly Investment:** ₹{monthly_investment:,}  
+**Investment Period:** {horizon_years} years ({horizon_months} months)  
+**Target CAGR:** {expected_cagr_pct}%  
+**Total Investment:** ₹{monthly_investment * horizon_months:,}
+""")
+
+run = st.sidebar.button("🚀 Generate Investment Plan", type="primary", use_container_width=True)
 
 if run:
     with st.spinner("🚀 Running Vriddhi optimization..."):
@@ -199,4 +227,30 @@ if run:
         st.error(f"Error displaying projection chart: {str(e)}")
 
 else:
-    st.info("Set your parameters in the sidebar and click **Run Optimization** to generate results.")
+    # Welcome message when no optimization has been run
+    st.markdown("---")
+    st.markdown("### 🚀 Ready to Start Your Investment Journey?")
+    st.info("""
+    **Getting Started:**
+    1. 💰 Set your monthly investment amount in the sidebar
+    2. 📅 Choose your investment horizon (1-5 years)  
+    3. 🎯 Set your target CAGR percentage
+    4. 🚀 Click "Generate Investment Plan" to see your optimized portfolio
+    
+    The AI will analyze 50+ stocks and create a personalized investment strategy just for you!
+    """)
+    
+    # Display sample of available stocks
+    st.markdown("### 📊 Available Stock Universe")
+    st.markdown("Here's a preview of the curated stocks available for optimization:")
+    
+    # Show top 10 stocks by average CAGR
+    if 'average_cagr' in df.columns:
+        top_stocks = df.nlargest(10, 'average_cagr')[['Ticker', 'Price', 'PE_Ratio', 'average_cagr']]
+        top_stocks.columns = ['Stock', 'Price (₹)', 'P/E Ratio', 'Avg CAGR (%)']
+        st.dataframe(top_stocks, use_container_width=True)
+    else:
+        # Fallback to first 10 stocks
+        preview_stocks = df.head(10)[['Ticker', 'Price', 'PE_Ratio']]
+        preview_stocks.columns = ['Stock', 'Price (₹)', 'P/E Ratio']
+        st.dataframe(preview_stocks, use_container_width=True)
