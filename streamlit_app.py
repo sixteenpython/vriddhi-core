@@ -1,5 +1,8 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import io
+import vriddhi_core
 from vriddhi_core import run_vriddhi_backend, plot_enhanced_projection
 
 def display_investment_summary(summary_data):
@@ -172,8 +175,8 @@ if run:
     # ---- Chart: weights ----
     st.subheader("Allocation Weights")
     fig1, ax1 = plt.subplots()
-    if "Weight" in optimized_df.columns and "Ticker" in optimized_df.columns:
-        ax1.bar(optimized_df["Ticker"], optimized_df["Weight"])
+    if "Weight" in allocation_df.columns and "Ticker" in allocation_df.columns:
+        ax1.bar(allocation_df["Ticker"], allocation_df["Weight"])
         ax1.set_ylabel("Weight")
         ax1.set_xlabel("Ticker")
         ax1.set_title("Portfolio Weights by Ticker")
@@ -183,19 +186,11 @@ if run:
     # ---- Projection chart from your function ----
     st.subheader("Growth Projection")
     try:
-        fig2 = vriddhi_core.plot_enhanced_projection(
-            monthly_investment=monthly_investment,
-            horizon_months=horizon_months,
-            achieved_cagr=summary.get("Achieved CAGR"),
-            optimized_df=optimized_df
-        )
-        if fig2 is None:
-            import matplotlib.pyplot as _plt
-            fig2 = _plt.gcf()
-        st.pyplot(fig2, use_container_width=True)
+        # Use the fig returned from run_vriddhi_backend
+        st.pyplot(fig, use_container_width=True)
         # Download chart
         buf = io.BytesIO()
-        fig2.savefig(buf, format="png", bbox_inches="tight")
+        fig.savefig(buf, format="png", bbox_inches="tight")
         st.download_button("Download Projection PNG", data=buf.getvalue(), file_name="projection.png", mime="image/png")
     except Exception as e:
         st.info("Projection plot not available: " + str(e))
