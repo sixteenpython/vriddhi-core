@@ -1,26 +1,8 @@
 
-# ---- CELL ----
-print("Namah Shivaya")
+# Vriddhi Alpha Finder - Core Investment Optimization Engine
+# AI-Powered Personal Investment Advisor
+# Built with Modern Portfolio Theory and Advanced Analytics
 
-# ---- CELL ----
-# ✅ STEP 2: Mount Google Drive (Optional)
-
-# ---- CELL ----
-# ✅ STEP 3: Copy Your Master Table (Assumes it's saved in Drive)
-
-# ---- CELL ----
-import pandas as pd
-
-# ---- CELL ----
-df = pd.read_csv("grand_table.csv")
-
-# ---- CELL ----
-grand_table = pd.read_csv("grand_table.csv")
-
-# ---- CELL ----
-df
-
-# ---- CELL ----
 import pandas as pd
 import numpy as np
 from scipy.optimize import minimize
@@ -333,16 +315,16 @@ def final_summary_output(feasible: bool, horizon_months: int, expected_cagr: flo
         "horizon_years": horizon_years,
         "horizon_months": horizon_months,
         "gain": gain,
-        "expected_cagr": expected_cagr,
-        "achieved_cagr": achieved_cagr,
+        "expected_cagr": expected_cagr * 100,  # Convert to percentage for UI display
+        "achieved_cagr": achieved_cagr * 100,  # Convert to percentage for UI display
         "projected_value": projected_value,
         "total_invested": total_invested,
         "money_multiplier": projected_value/total_invested,
         "monthly_avg_gain": gain/horizon_months,
         "total_return_pct": ((projected_value/total_invested - 1) * 100),
-        "cagr_gap": expected_cagr - max_possible_cagr_current_horizon,
-        "best_horizon_60_cagr": best_horizon_60_cagr,
-        "inflation_beat": achieved_cagr - 6
+        "cagr_gap": (expected_cagr - max_possible_cagr_current_horizon) * 100,  # Convert to percentage
+        "best_horizon_60_cagr": best_horizon_60_cagr * 100,  # Convert to percentage
+        "inflation_beat": (achieved_cagr * 100) - 6  # Convert to percentage for comparison
     }
 
     # Console output (existing functionality)
