@@ -181,7 +181,7 @@ if run:
     c1, c2, c3, c4 = st.columns(4)
     feasible = summary.get("Feasible")
     expected_cagr_display = summary.get("Expected CAGR", expected_cagr_pct)
-    achieved_cagr_display = summary.get("Achieved CAGR", 0)
+    achieved_cagr_display = summary.get("Achieved CAGR", 0) * 100  # Convert decimal to percentage
     
     c1.metric("Feasible", "Yes ✅" if feasible else "No ❌")
     c2.metric("Expected CAGR", f"{expected_cagr_display:.1f}%")
@@ -209,16 +209,6 @@ if run:
     csv_bytes = allocation_df.to_csv(index=False).encode("utf-8")
     st.download_button("Download Allocation CSV", data=csv_bytes, file_name="vriddhi_allocation.csv", mime="text/csv")
 
-    # ---- Chart: weights ----
-    st.subheader("Allocation Weights")
-    fig1, ax1 = plt.subplots()
-    if "Weight" in allocation_df.columns and "Ticker" in allocation_df.columns:
-        ax1.bar(allocation_df["Ticker"], allocation_df["Weight"])
-        ax1.set_ylabel("Weight")
-        ax1.set_xlabel("Ticker")
-        ax1.set_title("Portfolio Weights by Ticker")
-        plt.setp(ax1.get_xticklabels(), rotation=45, ha="right")
-        st.pyplot(fig1, use_container_width=True)
 
     # ---- Projection chart from your function ----
     st.subheader("Growth Projection")
