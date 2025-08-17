@@ -427,7 +427,7 @@ def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
     frill_output = {
         "Feasible": feasible,
         "Expected CAGR": expected_cagr * 100,  # Convert to percentage for display
-        "Achieved CAGR": achieved_cagr,  # Keep as decimal, UI will handle percentage conversion
+        "Achieved CAGR": achieved_cagr * 100,  # Convert to percentage for display
         "Final Value": final_value,
         "Gain": gain
     }

@@ -181,7 +181,7 @@ if run:
     c1, c2, c3, c4 = st.columns(4)
     feasible = summary.get("Feasible")
     expected_cagr_display = summary.get("Expected CAGR", expected_cagr_pct)
-    achieved_cagr_display = summary.get("Achieved CAGR", 0) * 100  # Convert decimal to percentage
+    achieved_cagr_display = summary.get("Achieved CAGR", 0)  # Already converted to percentage in backend
     
     c1.metric("Feasible", "Yes ✅" if feasible else "No ❌")
     c2.metric("Expected CAGR", f"{expected_cagr_display:.1f}%")
