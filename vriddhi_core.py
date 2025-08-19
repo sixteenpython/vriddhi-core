@@ -61,6 +61,20 @@ def stock_selector(df, expected_cagr, horizon_months):
     # Sort by peg_adj_return to ensure consistent selection order
     filtered = filtered.sort_values(by=['peg_adj_return', 'Ticker'], ascending=[False, True]).reset_index(drop=True)
 
+    # Track selection rationale
+    selection_rationale = {
+        "total_universe": len(df),
+        "after_quality_filters": len(filtered),
+        "filters_applied": [
+            f"PE Ratio ≤ 35 (reasonable valuation)",
+            f"PB Ratio ≤ 8 (good asset backing)", 
+            f"Momentum Score ≥ 60 (strong technical signals)",
+            f"{horizon_months}M CAGR ≥ 8% (minimum growth requirement)"
+        ],
+        "selection_method": "Greedy selection by PEG-adjusted returns",
+        "diversification": "Max 2 stocks per sector after 6 stocks selected"
+    }
+
     selected_stocks = []
     cumulative_cagr = 0
     count = 0
@@ -102,10 +116,21 @@ def stock_selector(df, expected_cagr, horizon_months):
         
         fallback_df = pd.DataFrame(fallback_stocks[:8])
         fallback_cagr = fallback_df[forecast_col].mean() / 100  # Convert percentage to decimal
-        return fallback_df.reset_index(drop=True), False, fallback_cagr
+        
+        # Add fallback rationale
+        selection_rationale["fallback_used"] = True
+        selection_rationale["fallback_reason"] = f"Target {expected_cagr*100:.1f}% CAGR not achievable, selected top {len(fallback_df)} stocks"
+        
+        return fallback_df.reset_index(drop=True), False, fallback_cagr, selection_rationale
     else:
         selected_df = pd.DataFrame(selected_stocks).reset_index(drop=True)
-        return selected_df, True, cumulative_cagr
+        
+        # Add success rationale
+        selection_rationale["fallback_used"] = False
+        selection_rationale["stocks_selected"] = len(selected_stocks)
+        selection_rationale["achieved_cagr"] = f"{cumulative_cagr*100:.1f}%"
+        
+        return selected_df, True, cumulative_cagr, selection_rationale
 
 # ===============================
 # 2. OPTIMIZATION MODULE (MPT)
@@ -413,7 +438,7 @@ def final_summary_output(feasible: bool, horizon_months: int, expected_cagr: flo
 def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
     print("🚀 Starting Vriddhi Investment Analysis...\n")
 
-    selected_df, feasible, achieved_cagr = stock_selector(df, expected_cagr, horizon_months)
+    selected_df, feasible, achieved_cagr, selection_rationale = stock_selector(df, expected_cagr, horizon_months)
     optimized_df = optimize_portfolio(selected_df, horizon_months)
     optimized_df["Monthly Allocation (INR)"] = optimized_df["Weight"] * monthly_investment
 
@@ -421,7 +446,7 @@ def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
         optimized_df, monthly_investment, horizon_months, achieved_cagr
     )
 
-    _, _, best_cagr_60 = stock_selector(df, expected_cagr, 60)
+    _, _, best_cagr_60, _ = stock_selector(df, expected_cagr, 60)
 
     # Create the frill output dictionary
     frill_output = {
@@ -448,4 +473,4 @@ def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
     print("\n📊 Generating comprehensive investment visualization...\n")
     fig = plot_enhanced_projection(monthly_investment, horizon_months, achieved_cagr, optimized_df)
 
-    return optimized_df[['Ticker', 'Weight', 'Monthly Allocation (INR)']], fig, frill_output, summary_data
+    return optimized_df[['Ticker', 'Weight', 'Monthly Allocation (INR)']], fig, frill_output, summary_data, selection_rationale

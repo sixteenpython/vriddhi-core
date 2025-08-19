@@ -5,6 +5,58 @@ import io
 import vriddhi_core
 from vriddhi_core import run_vriddhi_backend, plot_enhanced_projection
 
+# Educational Disclaimer
+def show_disclaimer():
+    st.error("""
+    ⚠️ **IMPORTANT EDUCATIONAL DISCLAIMER** ⚠️
+    
+    This application is designed for **EDUCATIONAL PURPOSES ONLY** and is currently in **BETA TESTING**.
+    
+    **DO NOT** use these recommendations for actual investment decisions. This tool:
+    - Uses simulated data and theoretical models
+    - Is not reviewed by financial professionals
+    - Does not constitute financial advice
+    - Should not replace consultation with qualified financial advisors
+    
+    **For educational learning about portfolio theory and investment concepts only.**
+    """)
+    st.markdown("---")
+
+def display_stock_selection_rationale(rationale):
+    """Display the stock selection rationale"""
+    st.markdown("### 🧠 Stock Selection Rationale")
+    
+    with st.expander("📋 How were these stocks selected?", expanded=False):
+        st.markdown(f"""
+        **Universe Filtering:**
+        - Started with **{rationale['total_universe']} stocks** from our curated database
+        - Applied quality filters, resulting in **{rationale['after_quality_filters']} eligible stocks**
+        
+        **Quality Filters Applied:**
+        """)
+        for filter_desc in rationale['filters_applied']:
+            st.markdown(f"- {filter_desc}")
+        
+        st.markdown(f"""
+        **Selection Method:** {rationale['selection_method']}
+        - Stocks ranked by PEG-adjusted returns (growth potential vs valuation)
+        - Selected greedily to maximize portfolio CAGR
+        
+        **Diversification Rule:** {rationale['diversification']}
+        """)
+        
+        if rationale.get('fallback_used', False):
+            st.warning(f"⚠️ **Fallback Selection Used:** {rationale['fallback_reason']}")
+        else:
+            st.success(f"✅ **Target Achieved:** Selected {rationale['stocks_selected']} stocks achieving {rationale['achieved_cagr']} CAGR")
+        
+        st.info("""
+        **Why This Approach?**
+        Our algorithm prioritizes maximum returns while maintaining quality standards. 
+        We use a greedy selection method because our goal is to find the highest possible 
+        CAGR from high-quality stocks, then optimize allocation using Modern Portfolio Theory.
+        """)
+
 def display_investment_summary(summary_data):
     """Display the detailed investment summary in Streamlit UI"""
     
@@ -94,8 +146,12 @@ if required_pw:
         st.warning("Enter the app password to continue.")
         st.stop()
 
-# ---- Main App ----
+# Main title and description
 st.title("🌟 Vriddhi Alpha Finder")
+st.markdown("### AI-Powered Personal Investment Advisor")
+
+# Show disclaimer prominently
+show_disclaimer()
 st.markdown("""
 ### AI-Powered Personal Investment Advisor
 
@@ -165,7 +221,7 @@ st.sidebar.info(f"""
 if st.button("🚀 Generate Investment Plan", type="primary"):
     with st.spinner("🔍 Analyzing market data and optimizing your portfolio..."):
         try:
-            allocation_df, fig, summary, summary_data = run_vriddhi_backend(
+            portfolio_df, fig, frill_output, summary_data, selection_rationale = run_vriddhi_backend(
                 df, monthly_investment, expected_cagr, horizon_months
             )
         except Exception as e:
@@ -181,19 +237,28 @@ if st.button("🚀 Generate Investment Plan", type="primary"):
     expected_cagr_display = summary.get("Expected CAGR", expected_cagr_pct)
     achieved_cagr_display = summary.get("Achieved CAGR", 0)
     
-    c1.metric("Feasible", "Yes ✅" if feasible else "No ❌")
     c2.metric("Target CAGR", f"{expected_cagr_display:.1f}%")
     c3.metric("Best Achievable CAGR", f"{achieved_cagr_display:.1f}%")
-    c4.metric("Final Value", f"₹{summary.get('Final Value', 0):,}")
+    c4.metric("Final Value", f"{summary.get('Final Value', 0):,}")
 
+    # Display stock selection rationale
+    display_stock_selection_rationale(selection_rationale)
+    
     # Display detailed investment summary
     display_investment_summary(summary_data)
     
-    st.subheader("Suggested Allocation")
-    st.dataframe(allocation_df, use_container_width=True)
+    # Display portfolio allocation
+    st.markdown("### Optimized Portfolio")
+    st.dataframe(portfolio_df, use_container_width=True)
+    
+    # Display the comprehensive chart
+    st.markdown("### Investment Growth Analysis")
+    st.pyplot(fig)
+    
+    st.success("Analysis complete! Review your personalized investment strategy above.")
 
     # Download allocations
-    csv_bytes = allocation_df.to_csv(index=False).encode("utf-8")
+    csv_bytes = portfolio_df.to_csv(index=False).encode("utf-8")
     st.download_button("Download Allocation CSV", data=csv_bytes, file_name="allocation.csv", mime="text/csv")
 
     # ---- Visualization ----
