@@ -237,9 +237,15 @@ if st.button("🚀 Generate Investment Plan", type="primary"):
     expected_cagr_display = frill_output.get("Expected CAGR", expected_cagr_pct)
     achieved_cagr_display = frill_output.get("Achieved CAGR", 0)
     
+    # Display feasibility with colored indicator
+    if feasible:
+        c1.metric("Feasible", "✅ Yes")
+    else:
+        c1.metric("Feasible", "❌ No")
+    
     c2.metric("Target CAGR", f"{expected_cagr_display:.1f}%")
     c3.metric("Best Achievable CAGR", f"{achieved_cagr_display:.1f}%")
-    c4.metric("Final Value", f"{frill_output.get('Final Value', 0):,}")
+    c4.metric("Final Value", f"₹{frill_output.get('Final Value', 0):,}")
 
     # Display stock selection rationale
     display_stock_selection_rationale(selection_rationale)
@@ -251,18 +257,8 @@ if st.button("🚀 Generate Investment Plan", type="primary"):
     st.markdown("### Optimized Portfolio")
     st.dataframe(portfolio_df, use_container_width=True)
     
-    # Display the comprehensive chart
-    st.markdown("### Investment Growth Analysis")
-    st.pyplot(fig)
-    
-    st.success("Analysis complete! Review your personalized investment strategy above.")
-
-    # Download allocations
-    csv_bytes = portfolio_df.to_csv(index=False).encode("utf-8")
-    st.download_button("Download Allocation CSV", data=csv_bytes, file_name="allocation.csv", mime="text/csv")
-
-    # ---- Visualization ----
-    st.subheader("Investment Projection")
+    # Display the comprehensive chart (single instance)
+    st.markdown("### 📈 Investment Growth Analysis")
     try:
         if fig:
             st.pyplot(fig)
@@ -274,6 +270,12 @@ if st.button("🚀 Generate Investment Plan", type="primary"):
             st.warning("Projection chart could not be generated.")
     except Exception as e:
         st.error(f"Error displaying projection chart: {str(e)}")
+    
+    # Download allocations
+    csv_bytes = portfolio_df.to_csv(index=False).encode("utf-8")
+    st.download_button("Download Allocation CSV", data=csv_bytes, file_name="allocation.csv", mime="text/csv")
+    
+    st.success("✅ Analysis complete! Review your personalized investment strategy above.")
 
 else:
     # Welcome message when no optimization has been run
