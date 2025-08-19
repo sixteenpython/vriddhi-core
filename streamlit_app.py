@@ -233,13 +233,13 @@ if st.button("🚀 Generate Investment Plan", type="primary"):
 
     # Quick Summary Metrics
     c1, c2, c3, c4 = st.columns(4)
-    feasible = summary.get("Feasible")
-    expected_cagr_display = summary.get("Expected CAGR", expected_cagr_pct)
-    achieved_cagr_display = summary.get("Achieved CAGR", 0)
+    feasible = frill_output.get("Feasible")
+    expected_cagr_display = frill_output.get("Expected CAGR", expected_cagr_pct)
+    achieved_cagr_display = frill_output.get("Achieved CAGR", 0)
     
     c2.metric("Target CAGR", f"{expected_cagr_display:.1f}%")
     c3.metric("Best Achievable CAGR", f"{achieved_cagr_display:.1f}%")
-    c4.metric("Final Value", f"{summary.get('Final Value', 0):,}")
+    c4.metric("Final Value", f"{frill_output.get('Final Value', 0):,}")
 
     # Display stock selection rationale
     display_stock_selection_rationale(selection_rationale)
