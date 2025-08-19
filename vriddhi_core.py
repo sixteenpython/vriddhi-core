@@ -522,7 +522,7 @@ def run_vriddhi_backend(monthly_investment, horizon_months, expected_cagr):
     # Create the frill output dictionary
     frill_output = {
         "Feasible": feasible,
-        "Expected CAGR": expected_cagr,  # Convert to percentage for display
+        "Expected CAGR": expected_cagr * 100,  # Convert decimal to percentage for display
         "Achieved CAGR": achieved_cagr * 100,  # achieved_cagr is already decimal from stock_selector
         "Final Value": final_value,
         "Gain": gain
