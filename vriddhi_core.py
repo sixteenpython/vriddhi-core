@@ -44,16 +44,17 @@ def stock_selector(df, expected_cagr, horizon_months):
     # Remove hardcoded CAGR filters to allow higher targets
     df = df[df['average_cagr'] > 5].copy()  # CAGR values are in percentage format
 
-    df['PEG'] = df['PE_Ratio'] / (df['average_cagr'] + 1e-6)  # No need to multiply by 100
+    # Use horizon-specific CAGR for more accurate PEG calculation
+    df['PEG'] = df['PE_Ratio'] / (df[forecast_col] + 1e-6)
     df['peg_adj_return'] = df[forecast_col] * np.exp(-0.5 * df['PEG'])
     df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=['PEG', 'peg_adj_return'])
 
+    # Enhanced quality filters for better stock selection
     filtered = df[
-        (df["PE_Ratio"] > 0) & (df["PE_Ratio"] <= 40) &
-        (df["PB_Ratio"] > 0) & (df["PB_Ratio"] <= 10) &
-        (df["Momentum Score"] >= 50) &  # Relaxed from 70 to allow more stocks
-        #(df["ROE (%)"] >= 15) &
-        (df[forecast_col] >= 5)  # CAGR values are in percentage format
+        (df["PE_Ratio"] > 0) & (df["PE_Ratio"] <= 35) &  # Tighter valuation filter
+        (df["PB_Ratio"] > 0) & (df["PB_Ratio"] <= 8) &   # Tighter asset backing filter
+        (df["Momentum Score"] >= 60) &                    # Higher momentum threshold
+        (df[forecast_col] >= 8)                           # Higher minimum growth requirement
     ].copy()
 
     filtered = filtered.dropna(subset=[forecast_col, 'Volatility'])
@@ -80,9 +81,28 @@ def stock_selector(df, expected_cagr, horizon_months):
     feasible = cumulative_cagr >= expected_cagr
 
     if not feasible:
-        fallback_stocks = filtered.head(8)
-        fallback_cagr = fallback_stocks[forecast_col].mean() / 100  # Convert percentage to decimal
-        return fallback_stocks.reset_index(drop=True), False, fallback_cagr
+        # Enhanced fallback: ensure some diversification even in fallback scenario
+        fallback_stocks = []
+        used_sectors = set()
+        
+        for _, row in filtered.iterrows():
+            if len(fallback_stocks) >= 8:
+                break
+            sector = row.get("Sector", "Unknown")
+            # Try to get at least 3 different sectors in fallback
+            if len(used_sectors) < 3 or sector in used_sectors or len(fallback_stocks) >= 6:
+                fallback_stocks.append(row)
+                used_sectors.add(sector)
+        
+        # If we don't have enough stocks, fill with remaining best stocks
+        if len(fallback_stocks) < 8:
+            remaining_needed = 8 - len(fallback_stocks)
+            remaining_stocks = filtered.head(8 + remaining_needed).tail(remaining_needed)
+            fallback_stocks.extend(remaining_stocks.to_dict('records'))
+        
+        fallback_df = pd.DataFrame(fallback_stocks[:8])
+        fallback_cagr = fallback_df[forecast_col].mean() / 100  # Convert percentage to decimal
+        return fallback_df.reset_index(drop=True), False, fallback_cagr
     else:
         selected_df = pd.DataFrame(selected_stocks).reset_index(drop=True)
         return selected_df, True, cumulative_cagr
