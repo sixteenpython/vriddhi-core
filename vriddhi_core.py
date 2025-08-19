@@ -510,6 +510,9 @@ def run_vriddhi_backend(monthly_investment, horizon_months, expected_cagr):
     expected_cagr_decimal = expected_cagr / 100
 
     selected_df, feasible, achieved_cagr, selection_rationale = stock_selector(df, expected_cagr_decimal, horizon_months)
+    
+    # Re-check feasibility after stock selection with proper comparison
+    feasible = achieved_cagr >= expected_cagr_decimal
     optimized_df = optimize_portfolio(selected_df, horizon_months)
     optimized_df["Monthly Allocation (INR)"] = optimized_df["Weight"] * monthly_investment
 
