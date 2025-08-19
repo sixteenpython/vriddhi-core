@@ -39,22 +39,47 @@ def display_stock_selection_rationale(rationale):
         
         st.markdown(f"""
         **Selection Method:** {rationale['selection_method']}
-        - Stocks ranked by PEG-adjusted returns (growth potential vs valuation)
-        - Selected greedily to maximize portfolio CAGR
-        
-        **Diversification Rule:** {rationale['diversification']}
         """)
+        
+        if 'scoring_factors' in rationale:
+            st.markdown(f"**Scoring System:** {rationale['scoring_factors']}")
+            st.markdown("- **Growth (30%):** Horizon-specific forecast performance")
+            st.markdown("- **Value (25%):** Risk-adjusted returns from expanded metrics")
+            st.markdown("- **Quality (20%):** Momentum score × Trend direction")
+            st.markdown("- **Risk (15%):** Historical volatility × Risk level")
+            st.markdown("- **Style (10%):** Investment style diversification")
+        else:
+            st.markdown("- Stocks ranked by PEG-adjusted returns (growth potential vs valuation)")
+            st.markdown("- Selected greedily to maximize portfolio CAGR")
+        
+        if 'diversification_rules' in rationale:
+            st.markdown(f"**Diversification Rules:** {rationale['diversification_rules']}")
+        else:
+            st.markdown(f"**Diversification Rule:** {rationale.get('diversification', 'Max 2 stocks per sector')}")
         
         if rationale.get('fallback_used', False):
             st.warning(f"⚠️ **Fallback Selection Used:** {rationale['fallback_reason']}")
+            if 'fallback_diversification' in rationale:
+                st.markdown("**Fallback Portfolio Diversification:**")
+                sectors = rationale['fallback_diversification']['sectors']
+                styles = rationale['fallback_diversification']['styles']
+                st.markdown(f"- Sectors: {dict(sectors)}")
+                st.markdown(f"- Investment Styles: {dict(styles)}")
         else:
-            st.success(f"✅ **Target Achieved:** Selected {rationale['stocks_selected']} stocks achieving {rationale['achieved_cagr']} CAGR")
+            st.success(f"✅ **Target Achieved:** Selected {rationale.get('stocks_selected', 'N/A')} stocks achieving {rationale.get('achieved_cagr', 'N/A')} CAGR")
+            if 'portfolio_diversification' in rationale:
+                st.markdown("**Portfolio Diversification Achieved:**")
+                div = rationale['portfolio_diversification']
+                st.markdown(f"- Sectors: {dict(div['sectors'])}")
+                st.markdown(f"- Investment Styles: {dict(div['styles'])}")
+                st.markdown(f"- Risk Levels: {dict(div['risk_levels'])}")
         
         st.info("""
-        **Why This Approach?**
-        Our algorithm prioritizes maximum returns while maintaining quality standards. 
-        We use a greedy selection method because our goal is to find the highest possible 
-        CAGR from high-quality stocks, then optimize allocation using Modern Portfolio Theory.
+        **Why This Enhanced Approach?**
+        Our multi-factor composite scoring system balances growth potential, value metrics, 
+        quality indicators, risk factors, and style diversification. This ensures optimal 
+        stock selection while maintaining sophisticated portfolio diversification across 
+        sectors, investment styles, and risk levels.
         """)
 
 def display_investment_summary(summary_data):
