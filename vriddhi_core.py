@@ -35,111 +35,176 @@ sns.set_palette("husl")
 def get_forecast_column(horizon_months):
     return FORECAST_MAP.get(horizon_months, "60M")
 
-def stock_selector(df, expected_cagr, horizon_months):
-    forecast_col = get_forecast_column(horizon_months)
-
-    if 'Volatility' not in df.columns:
-        df['Volatility'] = 1 / (df['PE_Ratio'] + 0.1) + (100 - df['Momentum Score']) / 100
-
-    # Remove hardcoded CAGR filters to allow higher targets
-    df = df[df['average_cagr'] > 5].copy()  # CAGR values are in percentage format
-
-    # Use horizon-specific CAGR for more accurate PEG calculation
-    df['PEG'] = df['PE_Ratio'] / (df[forecast_col] + 1e-6)
-    df['peg_adj_return'] = df[forecast_col] * np.exp(-0.5 * df['PEG'])
-    df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=['PEG', 'peg_adj_return'])
-
-    # Enhanced quality filters for better stock selection
+def advanced_stock_selector(df, expected_cagr, horizon_months):
+    """
+    Enhanced stock selection using expanded database with multi-factor scoring
+    """
+    # Map horizon to forecast column
+    forecast_map = {6: 'Forecast_6M', 12: 'Forecast_12M', 18: 'Forecast_18M', 24: 'Forecast_24M'}
+    forecast_col = forecast_map.get(horizon_months, 'Forecast_24M')
+    
+    # Create comprehensive scoring system
+    def calculate_composite_score(row):
+        # Growth Score (30%) - Based on horizon-specific forecast
+        growth_score = min(row[forecast_col] / 30, 1.0) * 0.30
+        
+        # Value Score (25%) - Lower PE/PB is better, use Risk_Adjusted_Return
+        value_score = min(row['Risk_Adjusted_Return'] / 25, 1.0) * 0.25
+        
+        # Quality Score (20%) - Momentum and trend
+        momentum_factor = row['Momentum_Score'] / 100
+        trend_factor = 1.0 if row['Trend_Direction'] == 'Improving' else 0.7
+        quality_score = (momentum_factor * trend_factor) * 0.20
+        
+        # Risk Score (15%) - Lower volatility and risk level preference
+        volatility_factor = max(0, (5.0 - row['Historical_Volatility']) / 5.0)
+        risk_factor = {'Low': 1.0, 'Medium': 0.8, 'High': 0.5}.get(row['Risk_Level'], 0.5)
+        risk_score = (volatility_factor * risk_factor) * 0.15
+        
+        # Style Diversification Score (10%) - Prefer mix of styles
+        style_score = {'Deep Value': 1.0, 'Value': 0.9, 'Growth': 0.8, 'Balanced': 0.7}.get(row['Investment_Style'], 0.5) * 0.10
+        
+        return growth_score + value_score + quality_score + risk_score + style_score
+    
+    # Apply comprehensive scoring
+    df['Composite_Score'] = df.apply(calculate_composite_score, axis=1)
+    
+    # Enhanced quality filters using expanded data
     filtered = df[
-        (df["PE_Ratio"] > 0) & (df["PE_Ratio"] <= 35) &  # Tighter valuation filter
-        (df["PB_Ratio"] > 0) & (df["PB_Ratio"] <= 8) &   # Tighter asset backing filter
-        (df["Momentum Score"] >= 60) &                    # Higher momentum threshold
-        (df[forecast_col] >= 8)                           # Higher minimum growth requirement
+        (df['PE_Ratio'] > 0) & (df['PE_Ratio'] <= 50) &           # Reasonable valuation
+        (df['PB_Ratio'] > 0) & (df['PB_Ratio'] <= 15) &           # Asset backing
+        (df['Momentum_Score'] >= 40) &                            # Technical strength
+        (df[forecast_col] >= 8) &                                 # Minimum growth
+        (df['Historical_Volatility'] <= 5.0) &                   # Risk control
+        (df['Trend_Direction'] == 'Improving')                   # Positive trend
     ].copy()
-
-    filtered = filtered.dropna(subset=[forecast_col, 'Volatility'])
-    # Sort by peg_adj_return to ensure consistent selection order
-    filtered = filtered.sort_values(by=['peg_adj_return', 'Ticker'], ascending=[False, True]).reset_index(drop=True)
-
-    # Track selection rationale
+    
+    # Sort by composite score
+    filtered = filtered.sort_values(['Composite_Score', 'Overall_Rank'], ascending=[False, True])
+    
+    # Advanced diversification strategy
+    selected_stocks = []
+    sector_counts = defaultdict(int)
+    style_counts = defaultdict(int)
+    risk_counts = defaultdict(int)
+    cumulative_cagr = 0
+    
+    # Diversification limits
+    max_per_sector = 3
+    max_per_style = 4
+    max_per_risk = 6
+    min_stocks = 8
+    max_stocks = 12
+    
     selection_rationale = {
         "total_universe": len(df),
         "after_quality_filters": len(filtered),
         "filters_applied": [
-            f"PE Ratio ≤ 35 (reasonable valuation)",
-            f"PB Ratio ≤ 8 (good asset backing)", 
-            f"Momentum Score ≥ 60 (strong technical signals)",
-            f"{horizon_months}M CAGR ≥ 8% (minimum growth requirement)"
+            "PE Ratio ≤ 50 (reasonable valuation)",
+            "PB Ratio ≤ 15 (good asset backing)",
+            "Momentum Score ≥ 40 (technical strength)",
+            f"{forecast_col} ≥ 8% (minimum growth)",
+            "Historical Volatility ≤ 5.0 (risk control)",
+            "Trend Direction = Improving (positive momentum)"
         ],
-        "selection_method": "Greedy selection by PEG-adjusted returns",
-        "diversification": "Max 2 stocks per sector after 6 stocks selected"
+        "selection_method": "Multi-factor composite scoring with advanced diversification",
+        "scoring_factors": "Growth (30%) + Value (25%) + Quality (20%) + Risk (15%) + Style (10%)",
+        "diversification_rules": f"Max {max_per_sector} per sector, {max_per_style} per style, {max_per_risk} per risk level"
     }
-
-    selected_stocks = []
-    cumulative_cagr = 0
-    count = 0
-    sector_counts = defaultdict(int)
-
+    
     for _, row in filtered.iterrows():
-        stock_cagr = row[forecast_col] / 100  # Convert percentage to decimal for comparison
-        sector = row.get("Sector", "Unknown")
-        if sector_counts[sector] >= 2 and count >= 6:
+        if len(selected_stocks) >= max_stocks:
+            break
+            
+        sector = row['Sector']
+        style = row['Investment_Style']
+        risk = row['Risk_Level']
+        
+        # Check diversification constraints
+        if (sector_counts[sector] >= max_per_sector or 
+            style_counts[style] >= max_per_style or 
+            risk_counts[risk] >= max_per_risk):
             continue
-        cumulative_cagr = ((cumulative_cagr * count) + stock_cagr) / (count + 1)
+        
+        # Add stock to portfolio
+        stock_cagr = row[forecast_col] / 100
+        cumulative_cagr = ((cumulative_cagr * len(selected_stocks)) + stock_cagr) / (len(selected_stocks) + 1)
+        
         selected_stocks.append(row)
         sector_counts[sector] += 1
-        count += 1
-        if cumulative_cagr >= expected_cagr and count >= 6:
+        style_counts[style] += 1
+        risk_counts[risk] += 1
+        
+        # Check if target is achieved with minimum stocks
+        if cumulative_cagr >= expected_cagr and len(selected_stocks) >= min_stocks:
             break
-
-    feasible = cumulative_cagr >= expected_cagr
+    
+    feasible = cumulative_cagr >= expected_cagr and len(selected_stocks) >= min_stocks
 
     if not feasible:
-        # Enhanced fallback: ensure some diversification even in fallback scenario
+        # Enhanced fallback with balanced diversification
         fallback_stocks = []
-        used_sectors = set()
+        sector_fallback = defaultdict(int)
+        style_fallback = defaultdict(int)
         
         for _, row in filtered.iterrows():
-            if len(fallback_stocks) >= 8:
+            if len(fallback_stocks) >= 10:
                 break
-            sector = row.get("Sector", "Unknown")
-            # Try to get at least 3 different sectors in fallback
-            if len(used_sectors) < 3 or sector in used_sectors or len(fallback_stocks) >= 6:
-                fallback_stocks.append(row)
-                used_sectors.add(sector)
+            
+            sector = row['Sector']
+            style = row['Investment_Style']
+            
+            # Ensure diversification in fallback
+            if sector_fallback[sector] >= 2 and style_fallback[style] >= 3:
+                continue
+                
+            fallback_stocks.append(row)
+            sector_fallback[sector] += 1
+            style_fallback[style] += 1
         
-        # If we don't have enough stocks, fill with remaining best stocks
-        if len(fallback_stocks) < 8:
-            remaining_needed = 8 - len(fallback_stocks)
-            remaining_stocks = filtered.head(8 + remaining_needed).tail(remaining_needed)
-            fallback_stocks.extend(remaining_stocks.to_dict('records'))
+        fallback_df = pd.DataFrame(fallback_stocks)
+        fallback_cagr = fallback_df[forecast_col].mean() / 100
         
-        fallback_df = pd.DataFrame(fallback_stocks[:8])
-        fallback_cagr = fallback_df[forecast_col].mean() / 100  # Convert percentage to decimal
-        
-        # Add fallback rationale
+        # Add fallback rationale with diversification info
         selection_rationale["fallback_used"] = True
-        selection_rationale["fallback_reason"] = f"Target {expected_cagr*100:.1f}% CAGR not achievable, selected top {len(fallback_df)} stocks"
+        selection_rationale["fallback_reason"] = f"Target {expected_cagr*100:.1f}% CAGR not achievable, selected top {len(fallback_df)} diversified stocks"
+        selection_rationale["fallback_diversification"] = {
+            "sectors": dict(sector_fallback),
+            "styles": dict(style_fallback)
+        }
         
         return fallback_df.reset_index(drop=True), False, fallback_cagr, selection_rationale
     else:
         selected_df = pd.DataFrame(selected_stocks).reset_index(drop=True)
         
-        # Add success rationale
+        # Add success rationale with detailed diversification
         selection_rationale["fallback_used"] = False
         selection_rationale["stocks_selected"] = len(selected_stocks)
         selection_rationale["achieved_cagr"] = f"{cumulative_cagr*100:.1f}%"
+        selection_rationale["portfolio_diversification"] = {
+            "sectors": dict(sector_counts),
+            "styles": dict(style_counts),
+            "risk_levels": dict(risk_counts)
+        }
         
         return selected_df, True, cumulative_cagr, selection_rationale
+
+# Legacy wrapper for backward compatibility
+def stock_selector(df, expected_cagr, horizon_months):
+    """Wrapper function to maintain compatibility with existing code"""
+    return advanced_stock_selector(df, expected_cagr, horizon_months)
 
 # ===============================
 # 2. OPTIMIZATION MODULE (MPT)
 # ===============================
 
 def optimize_portfolio(selected_df, horizon_months):
-    forecast_col = get_forecast_column(horizon_months)
+    # Map horizon to forecast column for expanded database
+    forecast_map = {6: 'Forecast_6M', 12: 'Forecast_12M', 18: 'Forecast_18M', 24: 'Forecast_24M'}
+    forecast_col = forecast_map.get(horizon_months, 'Forecast_24M')
+    
     returns = selected_df[forecast_col].values
-    risks = selected_df["Volatility"].values
+    risks = selected_df["Historical_Volatility"].values  # Use actual volatility data
     cov_matrix = np.diag(risks ** 2)
 
     def objective(weights):
@@ -435,10 +500,16 @@ def final_summary_output(feasible: bool, horizon_months: int, expected_cagr: flo
 # 6. WRAPPER FUNCTION (Updated)
 # ===============================
 
-def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
+def run_vriddhi_backend(monthly_investment, horizon_months, expected_cagr):
     print("🚀 Starting Vriddhi Investment Analysis...\n")
 
-    selected_df, feasible, achieved_cagr, selection_rationale = stock_selector(df, expected_cagr, horizon_months)
+    # Load expanded database
+    df = pd.read_csv("grand_table_expanded.csv")
+    
+    # Convert CAGR from percentage to decimal for calculations
+    expected_cagr_decimal = expected_cagr / 100
+
+    selected_df, feasible, achieved_cagr, selection_rationale = stock_selector(df, expected_cagr_decimal, horizon_months)
     optimized_df = optimize_portfolio(selected_df, horizon_months)
     optimized_df["Monthly Allocation (INR)"] = optimized_df["Weight"] * monthly_investment
 
@@ -446,12 +517,12 @@ def run_vriddhi_backend(df, monthly_investment, expected_cagr, horizon_months):
         optimized_df, monthly_investment, horizon_months, achieved_cagr
     )
 
-    _, _, best_cagr_60, _ = stock_selector(df, expected_cagr, 60)
+    _, _, best_cagr_60, _ = stock_selector(df, expected_cagr_decimal, 60)
 
     # Create the frill output dictionary
     frill_output = {
         "Feasible": feasible,
-        "Expected CAGR": expected_cagr * 100,  # Convert to percentage for display
+        "Expected CAGR": expected_cagr,  # Convert to percentage for display
         "Achieved CAGR": achieved_cagr * 100,  # achieved_cagr is already decimal from stock_selector
         "Final Value": final_value,
         "Gain": gain
