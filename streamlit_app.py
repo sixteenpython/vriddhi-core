@@ -82,7 +82,7 @@ def display_stock_selection_rationale(rationale):
         sectors, investment styles, and risk levels.
         """)
 
-def display_investment_summary(summary_data):
+def display_investment_summary(summary_data, actual_feasible):
     """Display the detailed investment summary in Streamlit UI"""
     
     # Main header
@@ -100,7 +100,7 @@ def display_investment_summary(summary_data):
         gap = summary_data['cagr_gap']
         st.metric("CAGR Gap", f"{gap:.1f}%", delta=f"{gap:.1f}%" if gap != 0 else "Perfect Match")
     
-    if summary_data["feasible"]:
+    if actual_feasible:
         st.success("🎉 SUCCESS: Your investment goals are ACHIEVABLE! 🎉")
         
         # Plan Summary Section
@@ -262,8 +262,11 @@ if st.button("🚀 Generate Investment Plan", type="primary"):
     expected_cagr_display = frill_output.get("Expected CAGR", expected_cagr_pct)
     achieved_cagr_display = frill_output.get("Achieved CAGR", 0)
     
+    # Re-check feasibility based on actual CAGR comparison
+    actual_feasible = achieved_cagr_display >= expected_cagr_display
+    
     # Display feasibility with colored indicator
-    if feasible:
+    if actual_feasible:
         c1.metric("Feasible", "✅ Yes")
     else:
         c1.metric("Feasible", "❌ No")
@@ -276,7 +279,7 @@ if st.button("🚀 Generate Investment Plan", type="primary"):
     display_stock_selection_rationale(selection_rationale)
     
     # Display detailed investment summary
-    display_investment_summary(summary_data)
+    display_investment_summary(summary_data, actual_feasible)
     
     # Display portfolio allocation
     st.markdown("### Optimized Portfolio")
