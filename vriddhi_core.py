@@ -37,13 +37,19 @@ def get_forecast_column(horizon_months):
 
 def advanced_stock_selector(df, expected_cagr, horizon_months):
     """
-    Enhanced stock selection using expanded database with multi-factor scoring
+    Advanced stock selection with composite scoring and diversification constraints
     """
-    # Map horizon to forecast column
-    forecast_map = {6: 'Forecast_6M', 12: 'Forecast_12M', 18: 'Forecast_18M', 24: 'Forecast_24M'}
-    forecast_col = forecast_map.get(horizon_months, 'Forecast_24M')
-    
-    # Create comprehensive scoring system
+    # Map horizon to forecast column - now includes all horizons up to 60M
+    forecast_map = {
+        6: 'Forecast_6M', 
+        12: 'Forecast_12M', 
+        18: 'Forecast_18M', 
+        24: 'Forecast_24M',
+        36: 'Forecast_36M',
+        48: 'Forecast_48M', 
+        60: 'Forecast_60M'
+    }
+    forecast_col = forecast_map.get(horizon_months, 'Forecast_24M')  # Default to 24M if not found  # Create comprehensive scoring system
     def calculate_composite_score(row):
         # Growth Score (30%) - Based on horizon-specific forecast
         growth_score = min(row[forecast_col] / 30, 1.0) * 0.30
@@ -200,7 +206,15 @@ def stock_selector(df, expected_cagr, horizon_months):
 
 def optimize_portfolio(selected_df, horizon_months):
     # Map horizon to forecast column for expanded database
-    forecast_map = {6: 'Forecast_6M', 12: 'Forecast_12M', 18: 'Forecast_18M', 24: 'Forecast_24M'}
+    forecast_map = {
+        6: 'Forecast_6M', 
+        12: 'Forecast_12M', 
+        18: 'Forecast_18M', 
+        24: 'Forecast_24M',
+        36: 'Forecast_36M',
+        48: 'Forecast_48M', 
+        60: 'Forecast_60M'
+    }
     forecast_col = forecast_map.get(horizon_months, 'Forecast_24M')
     
     returns = selected_df[forecast_col].values
