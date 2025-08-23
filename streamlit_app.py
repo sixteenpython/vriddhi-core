@@ -246,7 +246,7 @@ st.sidebar.info(f"""
 if st.button("🚀 Generate Investment Plan", type="primary"):
     with st.spinner("🔍 Analyzing market data and optimizing your portfolio..."):
         try:
-            portfolio_df, whole_share_df, fig, frill_output, summary_data, selection_rationale = run_vriddhi_backend(
+            portfolio_df, fig, frill_output, summary_data, selection_rationale, whole_share_df = run_vriddhi_backend(
                 monthly_investment, horizon_months, expected_cagr
             )
         except Exception as e:

@@ -602,4 +602,4 @@ def run_vriddhi_backend(monthly_investment, horizon_months, expected_cagr):
     # Calculate whole share allocation
     whole_share_df = calculate_whole_share_allocation(optimized_df, df)
     
-    return optimized_df[['Ticker', 'Weight', 'Monthly Allocation (INR)']], whole_share_df, fig, frill_output, summary_data, selection_rationale
+    return optimized_df[['Ticker', 'Weight', 'Monthly Allocation (INR)']], fig, frill_output, summary_data, selection_rationale, whole_share_df
