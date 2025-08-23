@@ -37,7 +37,7 @@ def get_forecast_column(horizon_months):
 
 def advanced_stock_selector(df, expected_cagr, horizon_months):
     """
-    Advanced stock selection with composite scoring and diversification constraints
+    Enhanced stock selection using expanded database with multi-factor scoring
     """
     # Map horizon to forecast column - now includes all horizons up to 60M
     forecast_map = {
@@ -49,7 +49,9 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
         48: 'Forecast_48M', 
         60: 'Forecast_60M'
     }
-    forecast_col = forecast_map.get(horizon_months, 'Forecast_24M')  # Default to 24M if not found  # Create comprehensive scoring system
+    forecast_col = forecast_map.get(horizon_months, 'Forecast_24M')
+    
+    # Create comprehensive scoring system
     def calculate_composite_score(row):
         # Growth Score (30%) - Based on horizon-specific forecast
         growth_score = min(row[forecast_col] / 30, 1.0) * 0.30
@@ -525,45 +527,13 @@ def calculate_whole_share_allocation(optimized_df, full_df):
     Returns:
         DataFrame with whole share recommendations
     """
-    # Debug: Print available columns before merge
-    print("Columns in optimized_df:", optimized_df.columns.tolist())
-    print("Columns in full_df:", full_df.columns.tolist())
-    
-    # Check if Current_Price exists in full_df
-    if 'Current_Price' not in full_df.columns:
-        print("Current_Price not found in full_df. Looking for price column...")
-        price_columns = [col for col in full_df.columns if 'price' in col.lower() or 'Price' in col]
-        print("Found price-related columns:", price_columns)
-        
-        # Use the first price column found, or fallback to a reasonable default
-        if price_columns:
-            price_col = price_columns[0]
-            print(f"Using column: {price_col}")
-        else:
-            raise KeyError("No price column found in dataset")
-    else:
-        price_col = 'Current_Price'
-    
-    # Merge to get current prices
-    merged_df = optimized_df.merge(full_df[['Ticker', price_col]], on='Ticker', how='left', suffixes=('', '_from_full'))
+    # Merge to get current prices - handle both Current_Price and Expected_Inc_Price columns
+    merged_df = optimized_df.merge(full_df[['Ticker', 'Current_Price']], on='Ticker', how='left', suffixes=('', '_from_full'))
     
     # Handle duplicate column names from merge
     if 'Current_Price_from_full' in merged_df.columns:
-        # Use the price from full_df and drop the original
         merged_df['Current_Price'] = merged_df['Current_Price_from_full']
         merged_df = merged_df.drop(columns=['Current_Price_from_full'])
-    elif f'{price_col}_from_full' in merged_df.columns:
-        # Rename the price column from full_df to Current_Price
-        merged_df['Current_Price'] = merged_df[f'{price_col}_from_full']
-        merged_df = merged_df.drop(columns=[f'{price_col}_from_full'])
-    elif price_col != 'Current_Price' and price_col in merged_df.columns:
-        # Rename the price column to Current_Price for consistency
-        merged_df = merged_df.rename(columns={price_col: 'Current_Price'})
-    
-    # Debug: Check merged dataframe
-    print("Columns after merge:", merged_df.columns.tolist())
-    print("Sample merged data:")
-    print(merged_df.head())
     
     # Verify Current_Price column exists and has valid data
     if 'Current_Price' not in merged_df.columns:
