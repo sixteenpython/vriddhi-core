@@ -537,6 +537,21 @@ def calculate_whole_share_allocation(optimized_df, full_df):
     if price_col != 'Current_Price':
         merged_df = merged_df.rename(columns={price_col: 'Current_Price'})
     
+    # Debug: Check merged dataframe
+    print("Columns after merge:", merged_df.columns.tolist())
+    print("Sample merged data:")
+    print(merged_df.head())
+    
+    # Verify Current_Price column exists and has valid data
+    if 'Current_Price' not in merged_df.columns:
+        raise KeyError(f"Current_Price column missing after merge. Available columns: {merged_df.columns.tolist()}")
+    
+    # Check for null values in Current_Price
+    null_prices = merged_df['Current_Price'].isnull().sum()
+    if null_prices > 0:
+        print(f"Warning: {null_prices} stocks have null prices")
+        print("Stocks with null prices:", merged_df[merged_df['Current_Price'].isnull()]['Ticker'].tolist())
+    
     # Calculate target shares based on optimal weights and current prices
     target_shares = []
     actual_shares = []
