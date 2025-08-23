@@ -246,7 +246,7 @@ st.sidebar.info(f"""
 if st.button("🚀 Generate Investment Plan", type="primary"):
     with st.spinner("🔍 Analyzing market data and optimizing your portfolio..."):
         try:
-            portfolio_df, fig, frill_output, summary_data, selection_rationale = run_vriddhi_backend(
+            portfolio_df, whole_share_df, fig, frill_output, summary_data, selection_rationale = run_vriddhi_backend(
                 monthly_investment, horizon_months, expected_cagr
             )
         except Exception as e:
@@ -281,9 +281,36 @@ if st.button("🚀 Generate Investment Plan", type="primary"):
     # Display detailed investment summary
     display_investment_summary(summary_data, actual_feasible)
     
-    # Display portfolio allocation
-    st.markdown("### Optimized Portfolio")
-    st.dataframe(portfolio_df, use_container_width=True)
+    # Display portfolio allocation - Side by side comparison
+    st.markdown("### 📊 Portfolio Allocation Options")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 💰 Fractional Share Plan")
+        st.markdown(f"**Monthly Investment:** ₹{monthly_investment:,}")
+        st.dataframe(portfolio_df, use_container_width=True)
+    
+    with col2:
+        st.markdown("#### 🔢 Whole Share Plan")
+        total_investment = whole_share_df['Total_Monthly_Investment'].iloc[0] if len(whole_share_df) > 0 else 0
+        st.markdown(f"**Monthly Investment Required:** ₹{total_investment:,.0f}")
+        
+        # Display whole share allocation with better formatting
+        display_df = whole_share_df[['Ticker', 'Current_Price', 'Whole_Shares', 'Share_Cost', 'Actual_Weight']].copy()
+        display_df['Current_Price'] = display_df['Current_Price'].apply(lambda x: f"₹{x:,.0f}")
+        display_df['Share_Cost'] = display_df['Share_Cost'].apply(lambda x: f"₹{x:,.0f}")
+        display_df['Actual_Weight'] = display_df['Actual_Weight'].apply(lambda x: f"{x:.1%}")
+        display_df.columns = ['Stock', 'Price/Share', 'Qty', 'Total Cost', 'Weight']
+        
+        st.dataframe(display_df, use_container_width=True)
+        
+        # Show investment difference
+        difference = total_investment - monthly_investment
+        if difference > 0:
+            st.info(f"💡 **Additional ₹{difference:,.0f}/month** needed for whole shares")
+        else:
+            st.success(f"💡 **Save ₹{abs(difference):,.0f}/month** with whole shares")
     
     # Display the comprehensive chart (single instance)
     st.markdown("### 📈 Investment Growth Analysis")

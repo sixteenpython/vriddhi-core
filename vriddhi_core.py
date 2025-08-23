@@ -497,7 +497,59 @@ def final_summary_output(feasible: bool, horizon_months: int, expected_cagr: flo
     return summary_data
 
 # ===============================
-# 6. WRAPPER FUNCTION (Updated)
+# 6. WHOLE SHARE ALLOCATION MODULE
+# ===============================
+
+def calculate_whole_share_allocation(optimized_df, full_df):
+    """
+    Calculate whole share allocation based on optimal weights
+    
+    Args:
+        optimized_df: DataFrame with optimal weights and monthly allocations
+        full_df: Full dataset with Current_Price information
+        
+    Returns:
+        DataFrame with whole share recommendations
+    """
+    # Merge to get current prices
+    merged_df = optimized_df.merge(full_df[['Ticker', 'Current_Price']], on='Ticker', how='left')
+    
+    # Calculate target shares based on optimal weights and current prices
+    target_shares = []
+    actual_shares = []
+    share_costs = []
+    
+    for _, row in merged_df.iterrows():
+        target_allocation = row['Monthly Allocation (INR)']
+        current_price = row['Current_Price']
+        
+        # Calculate ideal number of shares (fractional)
+        ideal_shares = target_allocation / current_price
+        
+        # Round to nearest whole number, but ensure minimum 1 share
+        whole_shares = max(1, round(ideal_shares))
+        
+        target_shares.append(ideal_shares)
+        actual_shares.append(whole_shares)
+        share_costs.append(whole_shares * current_price)
+    
+    # Create whole share allocation DataFrame
+    whole_share_df = merged_df.copy()
+    whole_share_df['Target_Shares'] = target_shares
+    whole_share_df['Whole_Shares'] = actual_shares
+    whole_share_df['Share_Cost'] = share_costs
+    whole_share_df['Actual_Weight'] = whole_share_df['Share_Cost'] / whole_share_df['Share_Cost'].sum()
+    
+    # Calculate total monthly investment required
+    total_monthly_investment = whole_share_df['Share_Cost'].sum()
+    
+    # Add summary information
+    whole_share_df['Total_Monthly_Investment'] = total_monthly_investment
+    
+    return whole_share_df[['Ticker', 'Current_Price', 'Weight', 'Whole_Shares', 'Share_Cost', 'Actual_Weight', 'Total_Monthly_Investment']]
+
+# ===============================
+# 7. WRAPPER FUNCTION (Updated)
 # ===============================
 
 def run_vriddhi_backend(monthly_investment, horizon_months, expected_cagr):
@@ -547,4 +599,7 @@ def run_vriddhi_backend(monthly_investment, horizon_months, expected_cagr):
     print("\n📊 Generating comprehensive investment visualization...\n")
     fig = plot_enhanced_projection(monthly_investment, horizon_months, achieved_cagr, optimized_df)
 
-    return optimized_df[['Ticker', 'Weight', 'Monthly Allocation (INR)']], fig, frill_output, summary_data, selection_rationale
+    # Calculate whole share allocation
+    whole_share_df = calculate_whole_share_allocation(optimized_df, df)
+    
+    return optimized_df[['Ticker', 'Weight', 'Monthly Allocation (INR)']], whole_share_df, fig, frill_output, summary_data, selection_rationale
