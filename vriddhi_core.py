@@ -514,6 +514,12 @@ def calculate_whole_share_allocation(optimized_df, full_df):
     # Merge to get current prices
     merged_df = optimized_df.merge(full_df[['Ticker', 'Current_Price']], on='Ticker', how='left')
     
+    # Debug: Check if merge was successful
+    if 'Current_Price' not in merged_df.columns:
+        print("Available columns in merged_df:", merged_df.columns.tolist())
+        print("Available columns in full_df:", full_df.columns.tolist())
+        raise KeyError("Current_Price column not found after merge")
+    
     # Calculate target shares based on optimal weights and current prices
     target_shares = []
     actual_shares = []
