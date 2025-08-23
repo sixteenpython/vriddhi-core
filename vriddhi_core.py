@@ -511,14 +511,31 @@ def calculate_whole_share_allocation(optimized_df, full_df):
     Returns:
         DataFrame with whole share recommendations
     """
-    # Merge to get current prices
-    merged_df = optimized_df.merge(full_df[['Ticker', 'Current_Price']], on='Ticker', how='left')
+    # Debug: Print available columns before merge
+    print("Columns in optimized_df:", optimized_df.columns.tolist())
+    print("Columns in full_df:", full_df.columns.tolist())
     
-    # Debug: Check if merge was successful
-    if 'Current_Price' not in merged_df.columns:
-        print("Available columns in merged_df:", merged_df.columns.tolist())
-        print("Available columns in full_df:", full_df.columns.tolist())
-        raise KeyError("Current_Price column not found after merge")
+    # Check if Current_Price exists in full_df
+    if 'Current_Price' not in full_df.columns:
+        print("Current_Price not found in full_df. Looking for price column...")
+        price_columns = [col for col in full_df.columns if 'price' in col.lower() or 'Price' in col]
+        print("Found price-related columns:", price_columns)
+        
+        # Use the first price column found, or fallback to a reasonable default
+        if price_columns:
+            price_col = price_columns[0]
+            print(f"Using column: {price_col}")
+        else:
+            raise KeyError("No price column found in dataset")
+    else:
+        price_col = 'Current_Price'
+    
+    # Merge to get current prices
+    merged_df = optimized_df.merge(full_df[['Ticker', price_col]], on='Ticker', how='left')
+    
+    # Rename the price column to Current_Price for consistency
+    if price_col != 'Current_Price':
+        merged_df = merged_df.rename(columns={price_col: 'Current_Price'})
     
     # Calculate target shares based on optimal weights and current prices
     target_shares = []
