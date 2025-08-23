@@ -531,10 +531,19 @@ def calculate_whole_share_allocation(optimized_df, full_df):
         price_col = 'Current_Price'
     
     # Merge to get current prices
-    merged_df = optimized_df.merge(full_df[['Ticker', price_col]], on='Ticker', how='left')
+    merged_df = optimized_df.merge(full_df[['Ticker', price_col]], on='Ticker', how='left', suffixes=('', '_from_full'))
     
-    # Rename the price column to Current_Price for consistency
-    if price_col != 'Current_Price':
+    # Handle duplicate column names from merge
+    if 'Current_Price_from_full' in merged_df.columns:
+        # Use the price from full_df and drop the original
+        merged_df['Current_Price'] = merged_df['Current_Price_from_full']
+        merged_df = merged_df.drop(columns=['Current_Price_from_full'])
+    elif f'{price_col}_from_full' in merged_df.columns:
+        # Rename the price column from full_df to Current_Price
+        merged_df['Current_Price'] = merged_df[f'{price_col}_from_full']
+        merged_df = merged_df.drop(columns=[f'{price_col}_from_full'])
+    elif price_col != 'Current_Price' and price_col in merged_df.columns:
+        # Rename the price column to Current_Price for consistency
         merged_df = merged_df.rename(columns={price_col: 'Current_Price'})
     
     # Debug: Check merged dataframe
