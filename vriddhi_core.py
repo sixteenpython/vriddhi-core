@@ -37,7 +37,8 @@ def get_forecast_column(horizon_months):
 
 def advanced_stock_selector(df, expected_cagr, horizon_months):
     """
-    Simplified sector-based stock selection: Best stock from each sector
+    Enhanced sector-based stock selection: Minimum 8 stocks (one per sector), 
+    then select additional stocks to maximize CAGR with balanced portfolio
     Selection criteria: CAGR (50%), PB ratio (40%), PE ratio (10%)
     """
     from collections import defaultdict
@@ -86,9 +87,10 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     # Get unique sectors
     sectors = df['Sector'].unique()
     
-    # Select best stock from each sector
+    # Phase 1: Select best stock from each sector (minimum 8 stocks)
     selected_stocks = []
     sector_selections = {}
+    used_tickers = set()
     
     for sector in sectors:
         sector_stocks = df[df['Sector'] == sector].copy()
@@ -99,6 +101,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
         # Select the best stock from this sector
         best_stock = sector_stocks.iloc[0]
         selected_stocks.append(best_stock)
+        used_tickers.add(best_stock['Ticker'])
         sector_selections[sector] = {
             'selected_stock': best_stock['Ticker'],
             'avg_cagr': best_stock['Avg_Historical_CAGR'],
@@ -107,6 +110,45 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
             'sector_score': best_stock['Sector_Score'],
             'total_in_sector': len(sector_stocks)
         }
+    
+    # Phase 2: Select additional high-quality stocks to maximize CAGR
+    # Define quality thresholds for additional selection
+    min_cagr_threshold = 20.0  # Minimum 20% historical CAGR
+    max_pb_threshold = 10.0    # Maximum PB ratio of 10
+    min_pe_threshold = 5.0     # Minimum PE ratio of 5
+    max_pe_threshold = 50.0    # Maximum PE ratio of 50
+    
+    # Get remaining stocks not already selected
+    remaining_stocks = df[~df['Ticker'].isin(used_tickers)].copy()
+    
+    # Apply quality filters for additional selection
+    quality_stocks = remaining_stocks[
+        (remaining_stocks['Avg_Historical_CAGR'] >= min_cagr_threshold) &
+        (remaining_stocks['PB_Ratio'] <= max_pb_threshold) &
+        (remaining_stocks['PE_Ratio'] >= min_pe_threshold) &
+        (remaining_stocks['PE_Ratio'] <= max_pe_threshold)
+    ].copy()
+    
+    # Sort by sector score and select all qualifying stocks
+    if len(quality_stocks) > 0:
+        quality_stocks = quality_stocks.sort_values('Sector_Score', ascending=False)
+        
+        # Add all qualifying stocks to maximize portfolio CAGR
+        for _, stock in quality_stocks.iterrows():
+            selected_stocks.append(stock)
+            
+            # Update sector selections to track additional picks
+            sector = stock['Sector']
+            if f"{sector}_additional" not in sector_selections:
+                sector_selections[f"{sector}_additional"] = []
+            
+            sector_selections[f"{sector}_additional"].append({
+                'selected_stock': stock['Ticker'],
+                'avg_cagr': stock['Avg_Historical_CAGR'],
+                'pe_ratio': stock['PE_Ratio'],
+                'pb_ratio': stock['PB_Ratio'],
+                'sector_score': stock['Sector_Score']
+            })
     
     # Convert to DataFrame
     selected_df = pd.DataFrame(selected_stocks)
@@ -118,7 +160,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
         portfolio_cagr = 0
     
     # Check feasibility
-    feasible = portfolio_cagr >= expected_cagr and len(selected_df) >= 6  # At least 6 sectors for diversification
+    feasible = portfolio_cagr >= expected_cagr and len(selected_df) >= 8  # At least 8 stocks (one per sector)
     
     # Create selection rationale
     selection_rationale = {
@@ -126,7 +168,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
         "after_quality_filters": len(df),
         "sectors_available": len(sectors),
         "stocks_selected": len(selected_df),
-        "selection_method": "Sector-based diversification: Best stock from each sector",
+        "selection_method": "Enhanced sector-based diversification: Minimum 8 stocks (one per sector) + additional high-quality stocks",
         "selection_criteria": [
             "Highest Average CAGR (50% weight)",
             "Lowest PB Ratio (40% weight)", 
@@ -137,7 +179,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
             "PB Ratio > 0 (valid book value)",
             "Average CAGR > 0 (positive performance)"
         ],
-        "diversification_approach": "One stock per sector ensures maximum sector diversification",
+        "diversification_approach": "Minimum one stock per sector + additional stocks meeting quality criteria to maximize CAGR",
         "sector_breakdown": sector_selections,
         "achieved_cagr": f"{portfolio_cagr*100:.1f}%",
         "feasible": feasible,

@@ -28,13 +28,16 @@ def display_stock_selection_rationale(rationale):
     
     with st.expander("📋 How were these stocks selected?", expanded=False):
         st.write("**📊 Stock Selection Rationale:**")
-        st.write(f"- **Selection Method**: Simplified sector-based diversification")
+        st.write(f"- **Selection Method**: Enhanced sector-based diversification")
         st.write(f"- **Universe Size**: {rationale.get('total_universe', 'N/A')} stocks analyzed")
         st.write(f"- **Sectors Available**: {rationale.get('sectors_available', 'N/A')} sectors")
-        st.write(f"- **Final Selection**: {rationale.get('stocks_selected', len(portfolio_df))} stocks (one per sector)")
+        st.write(f"- **Final Selection**: {rationale.get('stocks_selected', 'N/A')} stocks (minimum 8, maximum unlimited)")
         
         # Display updated selection criteria
-        st.write("**🎯 Selection Criteria (Updated Weights):**")
+        st.write("**🎯 Selection Approach:**")
+        st.write("  • **Phase 1**: Best stock from each sector (minimum 8 stocks)")
+        st.write("  • **Phase 2**: Additional high-quality stocks meeting criteria")
+        st.write("**📈 Selection Criteria (Weights):**")
         st.write("  • **Primary (50%)**: Highest Average Historical CAGR")
         st.write("  • **Secondary (40%)**: Lowest PB Ratio (better value)")
         st.write("  • **Tertiary (10%)**: PE Ratio preferably 15-25 range")
@@ -58,15 +61,16 @@ def display_stock_selection_rationale(rationale):
         **Portfolio Summary:**
         - **Achieved CAGR:** {rationale.get('achieved_cagr', 'N/A')}
         - **Feasibility:** {'✅ Target Achievable' if rationale.get('feasible', False) else '⚠️ Below Target'}
-        - **Diversification:** Perfect sector diversification (1 stock per sector)
+        - **Diversification:** Enhanced diversification (minimum 1 per sector + additional quality stocks)
         """)
         
         st.info("""
-        **Why This Simplified Approach?**
-        Our sector-based selection ensures maximum diversification by selecting the best stock 
-        from each sector based on fundamentals. Primary focus on CAGR (50%), secondary on 
-        low PB ratios (40%), and tertiary on optimal PE ranges (10%). This provides balanced 
-        exposure across all market sectors while maintaining quality standards.
+        **Why This Enhanced Approach?**
+        Our two-phase selection maximizes both diversification and CAGR potential:
+        - **Phase 1** ensures sector diversification with the best stock from each sector
+        - **Phase 2** adds high-quality stocks meeting strict criteria (CAGR ≥20%, PB ≤10, PE 5-50)
+        This approach balances risk through diversification while maximizing return potential 
+        by including all qualifying high-performance stocks.
         """)
 
 def display_investment_summary(summary_data, actual_feasible):
