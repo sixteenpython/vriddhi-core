@@ -307,34 +307,30 @@ def plot_enhanced_projection(monthly_investment, horizon_months, achieved_cagr, 
     ax2.legend()
     ax2.grid(True, alpha=0.3, axis='y')
 
-    # Subplot 3: Portfolio Allocation (if provided)
+    # Subplot 3: Sector Diversification (if provided)
     if optimized_df is not None and len(optimized_df) > 0:
         ax3 = plt.subplot(2, 3, 4)
-        top_holdings = optimized_df.nlargest(8, 'Weight')
-        others_weight = optimized_df[~optimized_df.index.isin(top_holdings.index)]['Weight'].sum()
-
-        if others_weight > 0:
-            plot_data = pd.concat([top_holdings, pd.DataFrame({
-                'Ticker': ['Others'], 'Weight': [others_weight]
-            })], ignore_index=True)
-        else:
-            plot_data = top_holdings
-
-        colors = plt.cm.Set3(np.linspace(0, 1, len(plot_data)))
-        wedges, texts, autotexts = ax3.pie(plot_data['Weight'], labels=plot_data['Ticker'],
+        
+        # Calculate sector-wise allocation amounts
+        sector_allocation = optimized_df.groupby('Sector')['Monthly Allocation (INR)'].sum()
+        sector_percentages = (sector_allocation / sector_allocation.sum()) * 100
+        
+        colors = plt.cm.Set3(np.linspace(0, 1, len(sector_allocation)))
+        wedges, texts, autotexts = ax3.pie(sector_percentages, labels=sector_allocation.index,
                                           autopct='%1.1f%%', colors=colors, startangle=90)
 
-        ax3.set_title('🎯 Portfolio Allocation', fontsize=12, fontweight='bold')
+        ax3.set_title('🎯 Sector Diversification %', fontsize=12, fontweight='bold')
 
         for autotext in autotexts:
             autotext.set_weight('bold')
             autotext.set_fontsize(9)
 
-    # Subplot 4: Monthly Investment Breakdown
+    # Subplot 4: Monthly Investment Breakdown (All Stocks)
     ax4 = plt.subplot(2, 3, 5)
     if optimized_df is not None and len(optimized_df) > 0:
-        monthly_allocations = optimized_df['Monthly Allocation (INR)'].head(8)
-        stock_names = optimized_df['Ticker'].head(8)
+        # Show all selected stocks, not just top 8
+        monthly_allocations = optimized_df['Monthly Allocation (INR)']
+        stock_names = optimized_df['Ticker']
 
         bars = ax4.barh(range(len(monthly_allocations)), monthly_allocations,
                        color=plt.cm.magma(np.linspace(0, 0.8, len(monthly_allocations))),
