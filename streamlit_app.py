@@ -86,79 +86,30 @@ def display_investment_summary(summary_data, actual_feasible):
     
     # Main header
     st.markdown("---")
-    st.markdown("## 🎯 Investment Analysis Report")
+    st.markdown("## 📊 Investment Plan Summary")
     
-    # Single source of truth comparison - Target vs Best Achievable
-    col1, col2, col3 = st.columns(3)
+    # Plan Summary Section
+    st.markdown("### 📋 Your Investment Journey")
+    col1, col2 = st.columns(2)
     
     with col1:
-        st.metric("Target CAGR", f"{summary_data['expected_cagr']:.1f}%")
-    with col2:
-        st.metric("Best Achievable CAGR", f"{summary_data['achieved_cagr']:.1f}%")
-    with col3:
-        gap = summary_data['cagr_gap']
-        st.metric("CAGR Gap", f"{gap:.1f}%", delta=f"{gap:.1f}%" if gap != 0 else "Perfect Match")
+        st.metric("Investment Period", f"{summary_data['horizon_years']:.1f} years")
+        st.metric("Total Investment", f"₹{int(summary_data['total_invested']):,}")
+        st.metric("Money Multiplier", f"{summary_data['money_multiplier']:.2f}x")
     
-    if actual_feasible:
-        st.success("🎉 SUCCESS: Your investment goals are ACHIEVABLE! 🎉")
-        
-        # Plan Summary Section
-        st.markdown("### 📋 Plan Summary")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.metric("Investment Period", f"{summary_data['horizon_years']:.1f} years")
-            st.metric("Total Investment", f"₹{int(summary_data['total_invested']):,}")
-            st.metric("Money Multiplier", f"{summary_data['money_multiplier']:.2f}x")
-        
-        with col2:
-            st.metric("Final Portfolio Value", f"₹{int(summary_data['projected_value']):,}")
-            st.metric("Total Gains", f"₹{int(summary_data['gain']):,}")
-            st.metric("Monthly Avg Gain", f"₹{int(summary_data['monthly_avg_gain']):,}")
-        
-        # Success Insights
-        st.markdown("### ✨ What This Means For You")
-        st.info(f"""
-        - Your disciplined investment will grow your wealth by **₹{int(summary_data['gain']):,}**
-        - Every ₹1 you invest will become **₹{summary_data['money_multiplier']:.2f}**
-        - Your wealth will grow **{summary_data['total_return_pct']:.1f}%** over {summary_data['horizon_years']:.1f} years
-        - You're on the path to financial growth! 📈
-        """)
-        
-    else:
-        st.warning("⚠️ REALITY CHECK: Your expectations need adjustment")
-        
-        # Current Scenario
-        st.markdown("### 📋 Current Scenario")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Desired CAGR", f"{summary_data['expected_cagr']:.1f}%")
-        with col2:
-            st.metric("Achievable CAGR", f"{summary_data['achieved_cagr']:.1f}%")
-        with col3:
-            st.metric("CAGR Gap", f"{summary_data['cagr_gap']:.1f}%")
-        
-        # But Here's The Good News Section
-        st.markdown("### 💰 But Here's The Good News")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.metric("You'll Still Gain", f"₹{int(summary_data['gain']):,}")
-            st.metric("Total Return", f"{summary_data['total_return_pct']:.1f}%")
-        with col2:
-            st.metric("Final Value", f"₹{int(summary_data['projected_value']):,}")
-            st.metric("Monthly Avg Gain", f"₹{int(summary_data['monthly_avg_gain']):,}")
-        
-        # Recommendations
-        st.markdown("### 💡 Recommendations")
-        st.info(f"""
-        **Option 1:** Lower your target CAGR to **{summary_data['achieved_cagr']:.1f}%** for this horizon
-        
-        **Option 2:** Extend your investment horizon for potentially higher returns
-        
-        **Current Reality:** Even at {summary_data['achieved_cagr']:.1f}% CAGR, you'll still earn ₹{int(summary_data['gain']):,} in gains!
-        """)
+    with col2:
+        st.metric("Final Portfolio Value", f"₹{int(summary_data['projected_value']):,}")
+        st.metric("Total Gains", f"₹{int(summary_data['gain']):,}")
+        st.metric("Monthly Avg Gain", f"₹{int(summary_data['monthly_avg_gain']):,}")
+    
+    # Success Insights
+    st.markdown("### ✨ What This Means For You")
+    st.info(f"""
+    - Your disciplined investment will grow your wealth by **₹{int(summary_data['gain']):,}**
+    - Every ₹1 you invest will become **₹{summary_data['money_multiplier']:.2f}**
+    - Your wealth will grow **{summary_data['total_return_pct']:.1f}%** over {summary_data['horizon_years']:.1f} years
+    - You're on the path to financial growth! 📈
+    """)
 
 st.set_page_config(page_title="Vriddhi Alpha Finder", layout="wide")
 
