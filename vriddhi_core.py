@@ -60,7 +60,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     # Calculate PEG ratio for all stocks
     df['PEG_Ratio'] = df['PE_Ratio'] / df['Avg_Historical_CAGR']
     
-    # Filter out invalid PEG ratios (negative or infinite)
+    # Filter out invalid PEG ratios and negative CAGR stocks
     df = df[(df['PE_Ratio'] > 0) & (df['Avg_Historical_CAGR'] > 0)].copy()
     
     # Get unique sectors
@@ -90,11 +90,11 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
             'total_in_sector': len(sector_stocks)
         }
     
-    # Round 2: Select all remaining stocks with PEG < 3.0
+    # Round 2: Select all remaining stocks with PEG < 1.0
     remaining_stocks = df[~df['Ticker'].isin(used_tickers)].copy()
     
     # Apply PEG filter for additional selection
-    quality_stocks = remaining_stocks[remaining_stocks['PEG_Ratio'] < 3.0].copy()
+    quality_stocks = remaining_stocks[remaining_stocks['PEG_Ratio'] < 1.0].copy()
     
     # Sort by PEG ratio and select all qualifying stocks
     if len(quality_stocks) > 0:
@@ -138,11 +138,11 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
         "selection_method": "PEG-based stock selection for maximum CAGR optimization",
         "selection_criteria": [
             "Round 1: Lowest PEG ratio per sector (PE / Avg_Historical_CAGR)",
-            "Round 2: All remaining stocks with PEG < 3.0"
+            "Round 2: All remaining stocks with PEG < 1.0"
         ],
         "quality_filters": [
             "PE Ratio > 0 (valid valuation)",
-            "Average CAGR > 0 (positive performance)",
+            "Average CAGR > 0 (positive performance - no negative CAGR stocks)",
             "Valid PEG ratio calculation"
         ],
         "diversification_approach": "Sector diversification through Round 1 + PEG-filtered growth stocks in Round 2",

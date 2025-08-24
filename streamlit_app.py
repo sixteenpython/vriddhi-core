@@ -36,11 +36,12 @@ def display_stock_selection_rationale(rationale):
         # Display updated selection criteria
         st.write("**🎯 PEG-Based Selection Approach:**")
         st.write("  • **Round 1**: Best stock from each sector with lowest PEG ratio")
-        st.write("  • **Round 2**: All remaining stocks with PEG < 3.0")
+        st.write("  • **Round 2**: All remaining stocks with PEG < 1.0")
         st.write("**📈 Selection Criteria:**")
         st.write("  • **PEG Ratio**: PE Ratio ÷ Average Historical CAGR")
         st.write("  • **Lower PEG = Better Value**: Growth at reasonable price")
-        st.write("  • **PEG < 3.0**: Quality threshold for additional stocks")
+        st.write("  • **PEG < 1.0**: Premium quality threshold for additional stocks")
+        st.write("  • **No Negative CAGR**: Only positive performance stocks selected")
         
         # Display sector breakdown if available
         sector_breakdown = rationale.get('sector_breakdown', {})
