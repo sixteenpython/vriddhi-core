@@ -113,8 +113,8 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     
     # Phase 2: Select additional high-quality stocks to maximize CAGR
     # Define quality thresholds for additional selection
-    min_cagr_threshold = 20.0  # Minimum 20% historical CAGR
-    max_pb_threshold = 10.0    # Maximum PB ratio of 10
+    min_cagr_threshold = 10.0  # Minimum 10% historical CAGR
+    max_pb_threshold = 5.0     # Maximum PB ratio of 5.0
     min_pe_threshold = 5.0     # Minimum PE ratio of 5
     max_pe_threshold = 50.0    # Maximum PE ratio of 50
     

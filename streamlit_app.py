@@ -68,7 +68,7 @@ def display_stock_selection_rationale(rationale):
         **Why This Enhanced Approach?**
         Our two-phase selection maximizes both diversification and CAGR potential:
         - **Phase 1** ensures sector diversification with the best stock from each sector
-        - **Phase 2** adds high-quality stocks meeting strict criteria (CAGR ≥20%, PB ≤10, PE 5-50)
+        - **Phase 2** adds high-quality stocks meeting strict criteria (CAGR ≥10%, PB ≤5.0, PE 5-50)
         This approach balances risk through diversification while maximizing return potential 
         by including all qualifying high-performance stocks.
         """)
