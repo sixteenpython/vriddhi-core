@@ -124,7 +124,7 @@ if required_pw:
 
 # Main title and description
 st.title("🌟 Vriddhi Alpha Finder")
-st.markdown("### Professional AI Investment Advisor | 9.5/10 Technical Excellence")
+st.markdown("### Professional AI Investment Advisor")
 
 # Show disclaimer prominently
 show_disclaimer()
