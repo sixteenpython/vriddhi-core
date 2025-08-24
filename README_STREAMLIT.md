@@ -16,7 +16,7 @@ Open http://localhost:8501
 ## Files
 - `streamlit_app.py` — Streamlit UI
 - `vriddhi_core.py` — code auto-extracted from your notebook
-- `grand_table.csv` — bundled knowledge asset
+- `grand_table_expanded.csv` — bundled knowledge asset
 
 ## Deploy on Streamlit Cloud (fastest)
 1. Push these files to a **GitHub** repository (Streamlit Cloud integrates best with GitHub).

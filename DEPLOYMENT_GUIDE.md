@@ -73,7 +73,7 @@
 ### Common Issues:
 - **Port binding**: Ensure Procfile uses `$PORT` variable
 - **Dependencies**: Check requirements.txt versions
-- **File paths**: Ensure `grand_table.csv` is in same directory
+- **File paths**: Ensure `grand_table_expanded.csv` is in same directory
 - **Memory limits**: Free tiers have 512MB-1GB limits
 
 ### Performance Tips:
