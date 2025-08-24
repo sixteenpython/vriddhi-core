@@ -56,8 +56,8 @@ def display_stock_selection_rationale(rationale):
         
         st.markdown(f"""
         **Portfolio Summary:**
-        - **Achieved CAGR:** {rationale['achieved_cagr']}
-        - **Feasibility:** {'✅ Target Achievable' if rationale['feasible'] else '⚠️ Below Target'}
+        - **Achieved CAGR:** {rationale.get('achieved_cagr', 'N/A')}
+        - **Feasibility:** {'✅ Target Achievable' if rationale.get('feasible', False) else '⚠️ Below Target'}
         - **Diversification:** Perfect sector diversification (1 stock per sector)
         """)
         

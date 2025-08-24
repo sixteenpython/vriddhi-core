@@ -140,6 +140,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
         "diversification_approach": "One stock per sector ensures maximum sector diversification",
         "sector_breakdown": sector_selections,
         "achieved_cagr": f"{portfolio_cagr*100:.1f}%",
+        "feasible": feasible,
         "fallback_used": False
     }
     
