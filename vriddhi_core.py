@@ -38,82 +38,80 @@ def get_forecast_column(horizon_months):
 def advanced_stock_selector(df, expected_cagr, horizon_months):
     """
     Simplified sector-based stock selection: Best stock from each sector
-    Selection criteria: Highest Avg_Historical_CAGR, lowest PB_Ratio, PE_Ratio preferably 15-25
+    Selection criteria: CAGR (50%), PB ratio (40%), PE ratio (10%)
     """
+    from collections import defaultdict
+    
     # Map horizon to forecast column - matches grand_table_expanded.csv columns
-    forecast_map = {
-        12: '12M', 
-        18: '18M', 
-        24: '24M',
-        36: '36M',
-        48: '48M', 
-        60: '60M'
-    }
-    forecast_col = forecast_map.get(horizon_months, '24M')
+    if horizon_months <= 12:
+        forecast_col = 'Forecast_12M'
+    elif horizon_months <= 18:
+        forecast_col = 'Forecast_18M'  
+    elif horizon_months <= 24:
+        forecast_col = 'Forecast_24M'
+    elif horizon_months <= 36:
+        forecast_col = 'Forecast_36M'
+    elif horizon_months <= 48:
+        forecast_col = 'Forecast_48M'
+    else:
+        forecast_col = 'Forecast_60M'
     
-    # Basic quality filters
-    filtered = df[
-        (df['PE_Ratio'] > 0) &           # Valid PE ratio
-        (df['PB_Ratio'] > 0) &           # Valid PB ratio
-        (df['Avg_Historical_CAGR'] > 0)         # Positive historical performance
-    ].copy()
-    
-    # Get unique sectors
-    sectors = filtered['Sector'].unique()
-    
-    # Selection scoring function for each stock
     def calculate_sector_score(row):
-        # Primary: Avg_Historical_CAGR (50%)
-        cagr_score = min(row['Avg_Historical_CAGR'] / 50, 1.0) * 0.50
+        """Calculate score for best stock selection within each sector"""
         
-        # Secondary: Lower PB ratio is better (40%)
-        # Normalize PB ratio (lower is better, so invert)
-        pb_score = max(0, (10 - min(row['PB_Ratio'], 10)) / 10) * 0.40
+        # Primary: Avg_Historical_CAGR (50% weight)
+        avg_cagr_score = min(row['Avg_Historical_CAGR'] / 50.0, 1.0) * 0.50
         
-        # Tertiary: PE ratio preference for 15-25 range (10%)
+        # Secondary: PB_Ratio (40% weight) - lower is better
+        pb_ratio = row['PB_Ratio']
+        pb_score = max(0, (15 - min(pb_ratio, 15)) / 15) * 0.40
+        
+        # Tertiary: PE_Ratio preference (10% weight) - prefer 15-25 range
         pe_ratio = row['PE_Ratio']
         if 15 <= pe_ratio <= 25:
-            pe_score = 1.0 * 0.10  # Perfect score for preferred range
+            pe_score = 1.0  # Perfect score for preferred range
         elif pe_ratio < 15:
-            pe_score = (pe_ratio / 15) * 0.10  # Penalty for too low PE
+            pe_score = 0.8  # Good but not ideal
+        elif 25 < pe_ratio <= 35:
+            pe_score = 0.6  # Acceptable
         else:
-            pe_score = max(0, (50 - pe_ratio) / 25) * 0.10  # Penalty for high PE
+            pe_score = 0.2  # Poor (too expensive)
+        pe_score *= 0.10
         
-        return cagr_score + pb_score + pe_score
+        return avg_cagr_score + pb_score + pe_score
     
-    # Apply scoring to all stocks
-    filtered['Sector_Score'] = filtered.apply(calculate_sector_score, axis=1)
+    # Apply sector-based scoring
+    df['Sector_Score'] = df.apply(calculate_sector_score, axis=1)
+    
+    # Get unique sectors
+    sectors = df['Sector'].unique()
     
     # Select best stock from each sector
     selected_stocks = []
-    sector_details = {}
+    sector_selections = {}
     
     for sector in sectors:
-        sector_stocks = filtered[filtered['Sector'] == sector].copy()
+        sector_stocks = df[df['Sector'] == sector].copy()
         
-        if len(sector_stocks) == 0:
-            continue
-            
-        # Sort by sector score (descending) and select the best
+        # Sort by sector score (highest first)
         sector_stocks = sector_stocks.sort_values('Sector_Score', ascending=False)
+        
+        # Select the best stock from this sector
         best_stock = sector_stocks.iloc[0]
-        
         selected_stocks.append(best_stock)
-        
-        # Store sector selection details
-        sector_details[sector] = {
+        sector_selections[sector] = {
             'selected_stock': best_stock['Ticker'],
-            'cagr': best_stock['Avg_Historical_CAGR'],
+            'avg_cagr': best_stock['Avg_Historical_CAGR'],
             'pe_ratio': best_stock['PE_Ratio'],
             'pb_ratio': best_stock['PB_Ratio'],
             'sector_score': best_stock['Sector_Score'],
-            'candidates_evaluated': len(sector_stocks)
+            'total_in_sector': len(sector_stocks)
         }
     
-    # Create final DataFrame
-    selected_df = pd.DataFrame(selected_stocks).reset_index(drop=True)
+    # Convert to DataFrame
+    selected_df = pd.DataFrame(selected_stocks)
     
-    # Calculate portfolio CAGR using horizon-specific forecast
+    # Calculate portfolio statistics using Avg_Historical_CAGR
     if len(selected_df) > 0:
         portfolio_cagr = selected_df[forecast_col].mean() / 100
     else:
@@ -125,14 +123,14 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     # Create selection rationale
     selection_rationale = {
         "total_universe": len(df),
-        "after_quality_filters": len(filtered),
+        "after_quality_filters": len(df),
         "sectors_available": len(sectors),
         "stocks_selected": len(selected_df),
         "selection_method": "Sector-based diversification: Best stock from each sector",
         "selection_criteria": [
-            "Highest Average CAGR (40% weight)",
-            "Lowest PB Ratio (30% weight)", 
-            "PE Ratio preferably 15-25 (30% weight)"
+            "Highest Average CAGR (50% weight)",
+            "Lowest PB Ratio (40% weight)", 
+            "PE Ratio preferably 15-25 (10% weight)"
         ],
         "quality_filters": [
             "PE Ratio > 0 (valid valuation)",
@@ -140,7 +138,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
             "Average CAGR > 0 (positive performance)"
         ],
         "diversification_approach": "One stock per sector ensures maximum sector diversification",
-        "sector_breakdown": sector_details,
+        "sector_breakdown": sector_selections,
         "achieved_cagr": f"{portfolio_cagr*100:.1f}%",
         "fallback_used": False
     }

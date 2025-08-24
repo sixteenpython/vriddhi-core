@@ -27,32 +27,32 @@ def display_stock_selection_rationale(rationale):
     st.markdown("### 🧠 Stock Selection Rationale")
     
     with st.expander("📋 How were these stocks selected?", expanded=False):
-        st.markdown(f"""
-        **Simplified Sector-Based Selection:**
-        - Started with **{rationale['total_universe']} stocks** from our curated database
-        - Covered **{rationale['sectors_covered']} sectors** for maximum diversification
-        - Selected **{rationale['stocks_selected']} stocks** (one best stock per sector)
+        st.write("**📊 Stock Selection Rationale:**")
+        st.write(f"- **Selection Method**: Simplified sector-based diversification")
+        st.write(f"- **Universe Size**: {rationale.get('total_universe', 'N/A')} stocks analyzed")
+        st.write(f"- **Sectors Available**: {rationale.get('sectors_available', 'N/A')} sectors")
+        st.write(f"- **Final Selection**: {rationale.get('stocks_selected', len(portfolio_df))} stocks (one per sector)")
         
-        **Selection Method:** {rationale['selection_method']}
+        # Display updated selection criteria
+        st.write("**🎯 Selection Criteria (Updated Weights):**")
+        st.write("  • **Primary (50%)**: Highest Average Historical CAGR")
+        st.write("  • **Secondary (40%)**: Lowest PB Ratio (better value)")
+        st.write("  • **Tertiary (10%)**: PE Ratio preferably 15-25 range")
         
-        **Selection Criteria:**
-        """)
-        for criteria in rationale['selection_criteria']:
-            st.markdown(f"- {criteria}")
+        # Display sector breakdown if available
+        sector_breakdown = rationale.get('sector_breakdown', {})
+        if sector_breakdown:
+            st.write("**🏭 Sector-wise Selection:**")
+            for sector, details in sector_breakdown.items():
+                st.write(f"  • **{sector}**: {details.get('selected_stock', 'N/A')} "
+                        f"(CAGR: {details.get('avg_cagr', 0):.1f}%, "
+                        f"PE: {details.get('pe_ratio', 0):.1f}, "
+                        f"PB: {details.get('pb_ratio', 0):.1f})")
         
-        st.markdown("### 📊 Sector-wise Selection Details")
-        
-        # Display sector selections in a nice format
-        for sector, details in rationale['sector_selections'].items():
-            st.markdown(f"""
-            **{sector} Sector:**
-            - Selected: **{details['selected_stock']}**
-            - Avg CAGR: **{details['avg_cagr']:.1f}%**
-            - PE Ratio: **{details['pe_ratio']:.1f}**
-            - PB Ratio: **{details['pb_ratio']:.1f}**
-            - Sector Score: **{details['sector_score']:.3f}**
-            - (Chosen from {details['total_in_sector']} stocks in sector)
-            """)
+        # Feasibility note if applicable
+        feasibility_note = rationale.get('feasibility_note')
+        if feasibility_note:
+            st.warning(f"⚠️ {feasibility_note}")
         
         st.markdown(f"""
         **Portfolio Summary:**
