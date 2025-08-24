@@ -34,13 +34,13 @@ def display_stock_selection_rationale(rationale):
         st.write(f"- **Final Selection**: {rationale.get('stocks_selected', 'N/A')} stocks (minimum 8, maximum unlimited)")
         
         # Display updated selection criteria
-        st.write("**🎯 Selection Approach:**")
-        st.write("  • **Phase 1**: Best stock from each sector (minimum 8 stocks)")
-        st.write("  • **Phase 2**: Additional high-quality stocks meeting criteria")
-        st.write("**📈 Selection Criteria (Weights):**")
-        st.write("  • **Primary (50%)**: Highest Average Historical CAGR")
-        st.write("  • **Secondary (40%)**: Lowest PB Ratio (better value)")
-        st.write("  • **Tertiary (10%)**: PE Ratio preferably 15-25 range")
+        st.write("**🎯 PEG-Based Selection Approach:**")
+        st.write("  • **Round 1**: Best stock from each sector with lowest PEG ratio")
+        st.write("  • **Round 2**: All remaining stocks with PEG < 3.0")
+        st.write("**📈 Selection Criteria:**")
+        st.write("  • **PEG Ratio**: PE Ratio ÷ Average Historical CAGR")
+        st.write("  • **Lower PEG = Better Value**: Growth at reasonable price")
+        st.write("  • **PEG < 3.0**: Quality threshold for additional stocks")
         
         # Display sector breakdown if available
         sector_breakdown = rationale.get('sector_breakdown', {})
@@ -53,7 +53,7 @@ def display_stock_selection_rationale(rationale):
                     st.write(f"  • **{sector}**: {details.get('selected_stock', 'N/A')} "
                             f"(CAGR: {details.get('avg_cagr', 0):.1f}%, "
                             f"PE: {details.get('pe_ratio', 0):.1f}, "
-                            f"PB: {details.get('pb_ratio', 0):.1f})")
+                            f"PEG: {details.get('peg_ratio', 0):.2f})")
                 elif isinstance(details, list):
                     # Additional sector selections (multiple stocks)
                     st.write(f"  • **{sector}** (Additional):")
@@ -61,7 +61,7 @@ def display_stock_selection_rationale(rationale):
                         st.write(f"    - {stock.get('selected_stock', 'N/A')} "
                                 f"(CAGR: {stock.get('avg_cagr', 0):.1f}%, "
                                 f"PE: {stock.get('pe_ratio', 0):.1f}, "
-                                f"PB: {stock.get('pb_ratio', 0):.1f})")
+                                f"PEG: {stock.get('peg_ratio', 0):.2f})")
         
         # Remove feasibility messaging - app now focuses on best possible recommendations
         

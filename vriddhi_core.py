@@ -37,9 +37,9 @@ def get_forecast_column(horizon_months):
 
 def advanced_stock_selector(df, expected_cagr, horizon_months):
     """
-    Enhanced sector-based stock selection: Minimum 8 stocks (one per sector), 
-    then select additional stocks to maximize CAGR with balanced portfolio
-    Selection criteria: CAGR (50%), PB ratio (40%), PE ratio (10%)
+    Simplified PEG-based stock selection for maximum CAGR:
+    Round 1: Best stock per sector with lowest PEG ratio (PE / Avg_Historical_CAGR)
+    Round 2: All remaining stocks with PEG < 3.0
     """
     from collections import defaultdict
     
@@ -57,37 +57,16 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     else:
         forecast_col = 'Forecast_60M'
     
-    def calculate_sector_score(row):
-        """Calculate score for best stock selection within each sector"""
-        
-        # Primary: Avg_Historical_CAGR (50% weight)
-        avg_cagr_score = min(row['Avg_Historical_CAGR'] / 50.0, 1.0) * 0.50
-        
-        # Secondary: PB_Ratio (40% weight) - lower is better
-        pb_ratio = row['PB_Ratio']
-        pb_score = max(0, (15 - min(pb_ratio, 15)) / 15) * 0.40
-        
-        # Tertiary: PE_Ratio preference (10% weight) - prefer 15-25 range
-        pe_ratio = row['PE_Ratio']
-        if 15 <= pe_ratio <= 25:
-            pe_score = 1.0  # Perfect score for preferred range
-        elif pe_ratio < 15:
-            pe_score = 0.8  # Good but not ideal
-        elif 25 < pe_ratio <= 35:
-            pe_score = 0.6  # Acceptable
-        else:
-            pe_score = 0.2  # Poor (too expensive)
-        pe_score *= 0.10
-        
-        return avg_cagr_score + pb_score + pe_score
+    # Calculate PEG ratio for all stocks
+    df['PEG_Ratio'] = df['PE_Ratio'] / df['Avg_Historical_CAGR']
     
-    # Apply sector-based scoring
-    df['Sector_Score'] = df.apply(calculate_sector_score, axis=1)
+    # Filter out invalid PEG ratios (negative or infinite)
+    df = df[(df['PE_Ratio'] > 0) & (df['Avg_Historical_CAGR'] > 0)].copy()
     
     # Get unique sectors
     sectors = df['Sector'].unique()
     
-    # Phase 1: Select best stock from each sector (minimum 8 stocks)
+    # Round 1: Select best stock from each sector with lowest PEG ratio
     selected_stocks = []
     sector_selections = {}
     used_tickers = set()
@@ -95,10 +74,10 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     for sector in sectors:
         sector_stocks = df[df['Sector'] == sector].copy()
         
-        # Sort by sector score (highest first)
-        sector_stocks = sector_stocks.sort_values('Sector_Score', ascending=False)
+        # Sort by PEG ratio (lowest first - best value)
+        sector_stocks = sector_stocks.sort_values('PEG_Ratio', ascending=True)
         
-        # Select the best stock from this sector
+        # Select the stock with lowest PEG ratio from this sector
         best_stock = sector_stocks.iloc[0]
         selected_stocks.append(best_stock)
         used_tickers.add(best_stock['Ticker'])
@@ -107,33 +86,21 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
             'avg_cagr': best_stock['Avg_Historical_CAGR'],
             'pe_ratio': best_stock['PE_Ratio'],
             'pb_ratio': best_stock['PB_Ratio'],
-            'sector_score': best_stock['Sector_Score'],
+            'peg_ratio': best_stock['PEG_Ratio'],
             'total_in_sector': len(sector_stocks)
         }
     
-    # Phase 2: Select additional high-quality stocks to maximize CAGR
-    # Define quality thresholds for additional selection
-    min_cagr_threshold = 10.0  # Minimum 10% historical CAGR
-    max_pb_threshold = 5.0     # Maximum PB ratio of 5.0
-    min_pe_threshold = 5.0     # Minimum PE ratio of 5
-    max_pe_threshold = 50.0    # Maximum PE ratio of 50
-    
-    # Get remaining stocks not already selected
+    # Round 2: Select all remaining stocks with PEG < 3.0
     remaining_stocks = df[~df['Ticker'].isin(used_tickers)].copy()
     
-    # Apply quality filters for additional selection
-    quality_stocks = remaining_stocks[
-        (remaining_stocks['Avg_Historical_CAGR'] >= min_cagr_threshold) &
-        (remaining_stocks['PB_Ratio'] <= max_pb_threshold) &
-        (remaining_stocks['PE_Ratio'] >= min_pe_threshold) &
-        (remaining_stocks['PE_Ratio'] <= max_pe_threshold)
-    ].copy()
+    # Apply PEG filter for additional selection
+    quality_stocks = remaining_stocks[remaining_stocks['PEG_Ratio'] < 3.0].copy()
     
-    # Sort by sector score and select all qualifying stocks
+    # Sort by PEG ratio and select all qualifying stocks
     if len(quality_stocks) > 0:
-        quality_stocks = quality_stocks.sort_values('Sector_Score', ascending=False)
+        quality_stocks = quality_stocks.sort_values('PEG_Ratio', ascending=True)
         
-        # Add all qualifying stocks to maximize portfolio CAGR
+        # Add all qualifying stocks
         for _, stock in quality_stocks.iterrows():
             selected_stocks.append(stock)
             
@@ -147,7 +114,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
                 'avg_cagr': stock['Avg_Historical_CAGR'],
                 'pe_ratio': stock['PE_Ratio'],
                 'pb_ratio': stock['PB_Ratio'],
-                'sector_score': stock['Sector_Score']
+                'peg_ratio': stock['PEG_Ratio']
             })
     
     # Convert to DataFrame
@@ -168,18 +135,17 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
         "after_quality_filters": len(df),
         "sectors_available": len(sectors),
         "stocks_selected": len(selected_df),
-        "selection_method": "Enhanced sector-based diversification: Minimum 8 stocks (one per sector) + additional high-quality stocks",
+        "selection_method": "PEG-based stock selection for maximum CAGR optimization",
         "selection_criteria": [
-            "Highest Average CAGR (50% weight)",
-            "Lowest PB Ratio (40% weight)", 
-            "PE Ratio preferably 15-25 (10% weight)"
+            "Round 1: Lowest PEG ratio per sector (PE / Avg_Historical_CAGR)",
+            "Round 2: All remaining stocks with PEG < 3.0"
         ],
         "quality_filters": [
             "PE Ratio > 0 (valid valuation)",
-            "PB Ratio > 0 (valid book value)",
-            "Average CAGR > 0 (positive performance)"
+            "Average CAGR > 0 (positive performance)",
+            "Valid PEG ratio calculation"
         ],
-        "diversification_approach": "Minimum one stock per sector + additional stocks meeting quality criteria to maximize CAGR",
+        "diversification_approach": "Sector diversification through Round 1 + PEG-filtered growth stocks in Round 2",
         "sector_breakdown": sector_selections,
         "achieved_cagr": f"{portfolio_cagr*100:.1f}%",
         "feasible": feasible,
