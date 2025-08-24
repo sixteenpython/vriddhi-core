@@ -55,7 +55,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     filtered = df[
         (df['PE_Ratio'] > 0) &           # Valid PE ratio
         (df['PB_Ratio'] > 0) &           # Valid PB ratio
-        (df['average_cagr'] > 0)         # Positive historical performance
+        (df['Avg_Historical_CAGR'] > 0)         # Positive historical performance
     ].copy()
     
     # Get unique sectors
@@ -63,21 +63,21 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     
     # Selection scoring function for each stock
     def calculate_sector_score(row):
-        # Primary: average_cagr (40%)
-        cagr_score = min(row['average_cagr'] / 40, 1.0) * 0.40
+        # Primary: Avg_Historical_CAGR (50%)
+        cagr_score = min(row['Avg_Historical_CAGR'] / 50, 1.0) * 0.50
         
-        # Secondary: Lower PB ratio is better (30%)
+        # Secondary: Lower PB ratio is better (40%)
         # Normalize PB ratio (lower is better, so invert)
-        pb_score = max(0, (10 - min(row['PB_Ratio'], 10)) / 10) * 0.30
+        pb_score = max(0, (10 - min(row['PB_Ratio'], 10)) / 10) * 0.40
         
-        # Tertiary: PE ratio preference for 15-25 range (30%)
+        # Tertiary: PE ratio preference for 15-25 range (10%)
         pe_ratio = row['PE_Ratio']
         if 15 <= pe_ratio <= 25:
-            pe_score = 1.0 * 0.30  # Perfect score for preferred range
+            pe_score = 1.0 * 0.10  # Perfect score for preferred range
         elif pe_ratio < 15:
-            pe_score = (pe_ratio / 15) * 0.30  # Penalty for too low PE
+            pe_score = (pe_ratio / 15) * 0.10  # Penalty for too low PE
         else:
-            pe_score = max(0, (50 - pe_ratio) / 25) * 0.30  # Penalty for high PE
+            pe_score = max(0, (50 - pe_ratio) / 25) * 0.10  # Penalty for high PE
         
         return cagr_score + pb_score + pe_score
     
@@ -103,7 +103,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
         # Store sector selection details
         sector_details[sector] = {
             'selected_stock': best_stock['Ticker'],
-            'cagr': best_stock['average_cagr'],
+            'cagr': best_stock['Avg_Historical_CAGR'],
             'pe_ratio': best_stock['PE_Ratio'],
             'pb_ratio': best_stock['PB_Ratio'],
             'sector_score': best_stock['Sector_Score'],
