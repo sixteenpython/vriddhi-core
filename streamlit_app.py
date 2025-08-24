@@ -47,10 +47,21 @@ def display_stock_selection_rationale(rationale):
         if sector_breakdown:
             st.write("**🏭 Sector-wise Selection:**")
             for sector, details in sector_breakdown.items():
-                st.write(f"  • **{sector}**: {details.get('selected_stock', 'N/A')} "
-                        f"(CAGR: {details.get('avg_cagr', 0):.1f}%, "
-                        f"PE: {details.get('pe_ratio', 0):.1f}, "
-                        f"PB: {details.get('pb_ratio', 0):.1f})")
+                # Handle both single stock entries and additional stock lists
+                if isinstance(details, dict):
+                    # Primary sector selection (single stock)
+                    st.write(f"  • **{sector}**: {details.get('selected_stock', 'N/A')} "
+                            f"(CAGR: {details.get('avg_cagr', 0):.1f}%, "
+                            f"PE: {details.get('pe_ratio', 0):.1f}, "
+                            f"PB: {details.get('pb_ratio', 0):.1f})")
+                elif isinstance(details, list):
+                    # Additional sector selections (multiple stocks)
+                    st.write(f"  • **{sector}** (Additional):")
+                    for stock in details:
+                        st.write(f"    - {stock.get('selected_stock', 'N/A')} "
+                                f"(CAGR: {stock.get('avg_cagr', 0):.1f}%, "
+                                f"PE: {stock.get('pe_ratio', 0):.1f}, "
+                                f"PB: {stock.get('pb_ratio', 0):.1f})")
         
         # Feasibility note if applicable
         feasibility_note = rationale.get('feasibility_note')
