@@ -63,16 +63,13 @@ def display_stock_selection_rationale(rationale):
                                 f"PE: {stock.get('pe_ratio', 0):.1f}, "
                                 f"PB: {stock.get('pb_ratio', 0):.1f})")
         
-        # Feasibility note if applicable
-        feasibility_note = rationale.get('feasibility_note')
-        if feasibility_note:
-            st.warning(f"⚠️ {feasibility_note}")
+        # Remove feasibility messaging - app now focuses on best possible recommendations
         
         st.markdown(f"""
         **Portfolio Summary:**
-        - **Achieved CAGR:** {rationale.get('achieved_cagr', 'N/A')}
-        - **Feasibility:** {'✅ Target Achievable' if rationale.get('feasible', False) else '⚠️ Below Target'}
+        - **Expected CAGR:** {rationale.get('achieved_cagr', 'N/A')}
         - **Diversification:** Enhanced diversification (minimum 1 per sector + additional quality stocks)
+        - **Total Stocks Selected:** {rationale.get('stocks_selected', 'N/A')} stocks
         """)
         
         st.info("""
@@ -193,10 +190,10 @@ st.markdown("""
 - 🔍 **50+ Stock Universe**: Curated selection of high-quality Indian stocks with multi-horizon CAGR forecasts
 
 **How It Works:**
-1. Set your monthly investment amount and target annual returns (CAGR)
+1. Set your monthly investment amount (minimum ₹50,000)
 2. Choose your investment horizon (1-5 years)
-3. Get AI-powered stock selection and optimal portfolio weights
-4. View comprehensive analysis including feasibility assessment and growth projections
+3. Get AI-powered stock selection with optimal portfolio weights
+4. View comprehensive analysis and growth projections for maximum CAGR
 
 *Built with cutting-edge financial algorithms and real-time market data analysis.*
 """)
@@ -220,7 +217,7 @@ if "Ticker" not in df.columns:
 
 # ---- Parameters ----
 st.sidebar.header("📊 Investment Parameters")
-monthly_investment = st.sidebar.number_input("Monthly Investment (INR)", min_value=1000, step=1000, value=25000, help="Amount you plan to invest every month")
+monthly_investment = st.sidebar.number_input("Monthly Investment (INR)", min_value=50000, step=5000, value=50000, help="Amount you plan to invest every month (minimum ₹50,000)")
 
 # Discrete horizon selection
 horizon_years = st.sidebar.selectbox(
@@ -231,57 +228,37 @@ horizon_years = st.sidebar.selectbox(
 )
 horizon_months = horizon_years * 12
 
-expected_cagr_pct = st.sidebar.slider("Target CAGR (%)", min_value=8, max_value=99, value=35, step=1, help="Your expected annual returns")
-expected_cagr = expected_cagr_pct / 100
-
 # Investment Summary in Sidebar
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📋 Investment Summary")
 st.sidebar.info(f"""
 **Monthly Investment:** ₹{monthly_investment:,}  
 **Investment Horizon:** {horizon_years} years  
-**Target CAGR:** {expected_cagr_pct}%  
 **Total Investment:** ₹{monthly_investment * horizon_months:,}
 """)
 
 # ---- Run Optimization ----
 if st.button("🚀 Generate Investment Plan", type="primary"):
     with st.spinner("🔍 Analyzing market data and optimizing your portfolio..."):
-        try:
-            portfolio_df, fig, frill_output, summary_data, selection_rationale, whole_share_df = run_vriddhi_backend(
-                monthly_investment, horizon_months, expected_cagr
-            )
-        except Exception as e:
-            st.exception(e)
-            st.stop()
-
-    # ---- Results ----
-    st.subheader("Summary")
+        # Run the backend analysis with default expected CAGR (algorithm will find best possible)
+        expected_cagr = 0.15  # Default 15% - algorithm will optimize for best possible CAGR
+        portfolio_df, fig, frill_output, summary_data, selection_rationale, whole_share_df = run_vriddhi_backend(
+            monthly_investment, horizon_months, expected_cagr
+        )
 
     # Quick Summary Metrics
-    c1, c2, c3, c4 = st.columns(4)
-    feasible = frill_output.get("Feasible")
-    expected_cagr_display = frill_output.get("Expected CAGR", expected_cagr_pct)
+    c1, c2, c3 = st.columns(3)
     achieved_cagr_display = frill_output.get("Achieved CAGR", 0)
     
-    # Re-check feasibility based on actual CAGR comparison
-    actual_feasible = achieved_cagr_display >= expected_cagr_display
-    
-    # Display feasibility with colored indicator
-    if actual_feasible:
-        c1.metric("Feasible", "✅ Yes")
-    else:
-        c1.metric("Feasible", "❌ No")
-    
-    c2.metric("Target CAGR", f"{expected_cagr_display:.1f}%")
-    c3.metric("Best Achievable CAGR", f"{achieved_cagr_display:.1f}%")
-    c4.metric("Final Value", f"₹{frill_output.get('Final Value', 0):,}")
+    c1.metric("Expected CAGR", f"{achieved_cagr_display:.1f}%")
+    c2.metric("Final Value", f"₹{frill_output.get('Final Value', 0):,}")
+    c3.metric("Total Stocks", f"{len(portfolio_df)} stocks")
 
     # Display stock selection rationale
     display_stock_selection_rationale(selection_rationale)
     
     # Display detailed investment summary
-    display_investment_summary(summary_data, actual_feasible)
+    display_investment_summary(summary_data, True)
     
     # Display portfolio allocation - Side by side comparison
     st.markdown("### 📊 Portfolio Allocation Options")

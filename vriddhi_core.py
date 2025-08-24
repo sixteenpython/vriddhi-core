@@ -159,8 +159,8 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     else:
         portfolio_cagr = 0
     
-    # Check feasibility
-    feasible = portfolio_cagr >= expected_cagr and len(selected_df) >= 8  # At least 8 stocks (one per sector)
+    # Always return best possible portfolio (no feasibility check needed)
+    feasible = True  # App now focuses on best recommendations rather than target matching
     
     # Create selection rationale
     selection_rationale = {
