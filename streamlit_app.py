@@ -81,12 +81,67 @@ def display_stock_selection_rationale(rationale):
         This approach balances risk through diversification while maximizing return potential 
         by including all qualifying high-performance stocks.
         """)
+        **Universe Filtering:**
+        - Started with **{rationale['total_universe']} stocks** from our curated database
+        - Applied quality filters, resulting in **{rationale['after_quality_filters']} eligible stocks**
+        
+        **Quality Filters Applied:**
+        """)
+        for filter_desc in rationale['filters_applied']:
+            st.markdown(f"- {filter_desc}")
+        
+        st.markdown(f"""
+        **Selection Method:** {rationale['selection_method']}
+        """)
+        
+        if 'scoring_factors' in rationale:
+            st.markdown(f"**Scoring System:** {rationale['scoring_factors']}")
+            st.markdown("- **Growth (30%):** Horizon-specific forecast performance")
+            st.markdown("- **Value (25%):** Risk-adjusted returns from expanded metrics")
+            st.markdown("- **Quality (20%):** Momentum score × Trend direction")
+            st.markdown("- **Risk (15%):** Historical volatility × Risk level")
+            st.markdown("- **Style (10%):** Investment style diversification")
+        else:
+            st.markdown("- Stocks ranked by PEG-adjusted returns (growth potential vs valuation)")
+            st.markdown("- Selected greedily to maximize portfolio CAGR")
+        
+        if 'diversification_rules' in rationale:
+            st.markdown(f"**Diversification Rules:** {rationale['diversification_rules']}")
+        else:
+            st.markdown(f"**Diversification Rule:** {rationale.get('diversification', 'Max 2 stocks per sector')}")
+        
+        if rationale.get('fallback_used', False):
+            st.warning(f"⚠️ **Fallback Selection Used:** {rationale['fallback_reason']}")
+            if 'fallback_diversification' in rationale:
+                st.markdown("**Fallback Portfolio Diversification:**")
+                sectors = rationale['fallback_diversification']['sectors']
+                styles = rationale['fallback_diversification']['styles']
+                st.markdown(f"- Sectors: {dict(sectors)}")
+                st.markdown(f"- Investment Styles: {dict(styles)}")
+        else:
+            st.success(f"✅ **Target Achieved:** Selected {rationale.get('stocks_selected', 'N/A')} stocks achieving {rationale.get('achieved_cagr', 'N/A')} CAGR")
+            if 'portfolio_diversification' in rationale:
+                st.markdown("**Portfolio Diversification Achieved:**")
+                div = rationale['portfolio_diversification']
+                st.markdown(f"- Sectors: {dict(div['sectors'])}")
+                st.markdown(f"- Investment Styles: {dict(div['styles'])}")
+                st.markdown(f"- Risk Levels: {dict(div['risk_levels'])}")
+        
+        st.info("""
+        **Why This Enhanced Approach?**
+        Our multi-factor composite scoring system balances growth potential, value metrics, 
+        quality indicators, risk factors, and style diversification. This ensures optimal 
+        stock selection while maintaining sophisticated portfolio diversification across 
+        sectors, investment styles, and risk levels.
+>>>>>>> 3a031820e97cca0b7d03077b9f46fe0012679329
+        """)
 
 def display_investment_summary(summary_data, actual_feasible):
     """Display the detailed investment summary in Streamlit UI"""
     
     # Main header
     st.markdown("---")
+<<<<<<< HEAD
     st.markdown("## 📊 Investment Plan Summary")
     
     # Plan Summary Section
@@ -111,6 +166,81 @@ def display_investment_summary(summary_data, actual_feasible):
     - Your wealth will grow **{summary_data['total_return_pct']:.1f}%** over {summary_data['horizon_years']:.1f} years
     - You're on the path to financial growth! 📈
     """)
+=======
+    st.markdown("## 🎯 Investment Analysis Report")
+    
+    # Single source of truth comparison - Target vs Best Achievable
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Target CAGR", f"{summary_data['expected_cagr']:.1f}%")
+    with col2:
+        st.metric("Best Achievable CAGR", f"{summary_data['achieved_cagr']:.1f}%")
+    with col3:
+        gap = summary_data['cagr_gap']
+        st.metric("CAGR Gap", f"{gap:.1f}%", delta=f"{gap:.1f}%" if gap != 0 else "Perfect Match")
+    
+    if actual_feasible:
+        st.success("🎉 SUCCESS: Your investment goals are ACHIEVABLE! 🎉")
+        
+        # Plan Summary Section
+        st.markdown("### 📋 Plan Summary")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("Investment Period", f"{summary_data['horizon_years']:.1f} years")
+            st.metric("Total Investment", f"₹{int(summary_data['total_invested']):,}")
+            st.metric("Money Multiplier", f"{summary_data['money_multiplier']:.2f}x")
+        
+        with col2:
+            st.metric("Final Portfolio Value", f"₹{int(summary_data['projected_value']):,}")
+            st.metric("Total Gains", f"₹{int(summary_data['gain']):,}")
+            st.metric("Monthly Avg Gain", f"₹{int(summary_data['monthly_avg_gain']):,}")
+        
+        # Success Insights
+        st.markdown("### ✨ What This Means For You")
+        st.info(f"""
+        - Your disciplined investment will grow your wealth by **₹{int(summary_data['gain']):,}**
+        - Every ₹1 you invest will become **₹{summary_data['money_multiplier']:.2f}**
+        - Your wealth will grow **{summary_data['total_return_pct']:.1f}%** over {summary_data['horizon_years']:.1f} years
+        - You're on the path to financial growth! 📈
+        """)
+        
+    else:
+        st.warning("⚠️ REALITY CHECK: Your expectations need adjustment")
+        
+        # Current Scenario
+        st.markdown("### 📋 Current Scenario")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Desired CAGR", f"{summary_data['expected_cagr']:.1f}%")
+        with col2:
+            st.metric("Achievable CAGR", f"{summary_data['achieved_cagr']:.1f}%")
+        with col3:
+            st.metric("CAGR Gap", f"{summary_data['cagr_gap']:.1f}%")
+        
+        # But Here's The Good News Section
+        st.markdown("### 💰 But Here's The Good News")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("You'll Still Gain", f"₹{int(summary_data['gain']):,}")
+            st.metric("Total Return", f"{summary_data['total_return_pct']:.1f}%")
+        with col2:
+            st.metric("Final Value", f"₹{int(summary_data['projected_value']):,}")
+            st.metric("Monthly Avg Gain", f"₹{int(summary_data['monthly_avg_gain']):,}")
+        
+        # Recommendations
+        st.markdown("### 💡 Recommendations")
+        st.info(f"""
+        **Option 1:** Lower your target CAGR to **{summary_data['achieved_cagr']:.1f}%** for this horizon
+        
+        **Option 2:** Extend your investment horizon for potentially higher returns
+        
+        **Current Reality:** Even at {summary_data['achieved_cagr']:.1f}% CAGR, you'll still earn ₹{int(summary_data['gain']):,} in gains!
+        """)
+>>>>>>> 3a031820e97cca0b7d03077b9f46fe0012679329
 
 st.set_page_config(page_title="Vriddhi Alpha Finder", layout="wide")
 
@@ -124,7 +254,11 @@ if required_pw:
 
 # Main title and description
 st.title("🌟 Vriddhi Alpha Finder")
+<<<<<<< HEAD
 st.markdown("### Professional AI Investment Advisor | 9.5/10 Technical Excellence")
+=======
+st.markdown("### AI-Powered Personal Investment Advisor")
+>>>>>>> 3a031820e97cca0b7d03077b9f46fe0012679329
 
 # Show disclaimer prominently
 show_disclaimer()
@@ -134,6 +268,7 @@ st.markdown("""
 **Vriddhi Alpha Finder** is a sophisticated investment optimization platform that leverages Modern Portfolio Theory (MPT) and advanced analytics to create personalized investment strategies. 
 
 **Key Features:**
+<<<<<<< HEAD
 - 🔬 **ML-Powered Forecasting**: Advanced Prophet + LSTM + XGBoost ensemble predictions with 20-year lookback
 - 🎯 **PEG-Based Selection**: Intelligent growth-at-reasonable-price algorithm (Round 1: sector diversification, Round 2: PEG < 1.0)
 - 📊 **Modern Portfolio Theory**: Professional MPT optimization with risk-adjusted returns and sector constraints
@@ -146,6 +281,20 @@ st.markdown("""
 2. Choose your investment horizon (1-5 years)
 3. Get AI-powered stock selection with optimal portfolio weights
 4. View comprehensive analysis and growth projections for maximum CAGR
+=======
+- 📊 **Smart Portfolio Optimization**: Uses scientific algorithms to maximize returns while managing risk
+- 🎯 **Goal-Based Planning**: Input your target returns and investment horizon for customized recommendations  
+- 🏢 **Sector Diversification**: Automatically ensures balanced exposure across different industry sectors
+- 📈 **Growth Projections**: Visualizes your wealth accumulation journey with detailed charts and metrics
+- 💰 **SIP Modeling**: Optimized for systematic monthly investment plans (SIP)
+- 🔍 **50+ Stock Universe**: Curated selection of high-quality Indian stocks with multi-horizon CAGR forecasts
+
+**How It Works:**
+1. Set your monthly investment amount and target annual returns (CAGR)
+2. Choose your investment horizon (1-5 years)
+3. Get AI-powered stock selection and optimal portfolio weights
+4. View comprehensive analysis including feasibility assessment and growth projections
+>>>>>>> 3a031820e97cca0b7d03077b9f46fe0012679329
 
 *Built with cutting-edge financial algorithms and real-time market data analysis.*
 """)
@@ -153,7 +302,11 @@ st.markdown("""
 # Load built-in stock data
 @st.cache_data
 def load_stock_data():
+<<<<<<< HEAD
     return pd.read_csv("grand_table_expanded.csv")
+=======
+    return pd.read_csv("grand_table.csv")
+>>>>>>> 3a031820e97cca0b7d03077b9f46fe0012679329
 
 try:
     df = load_stock_data()
@@ -169,7 +322,11 @@ if "Ticker" not in df.columns:
 
 # ---- Parameters ----
 st.sidebar.header("📊 Investment Parameters")
+<<<<<<< HEAD
 monthly_investment = st.sidebar.number_input("Monthly Investment (INR)", min_value=50000, step=5000, value=50000, help="Amount you plan to invest every month (minimum ₹50,000)")
+=======
+monthly_investment = st.sidebar.number_input("Monthly Investment (INR)", min_value=1000, step=1000, value=25000, help="Amount you plan to invest every month")
+>>>>>>> 3a031820e97cca0b7d03077b9f46fe0012679329
 
 # Discrete horizon selection
 horizon_years = st.sidebar.selectbox(
@@ -180,18 +337,29 @@ horizon_years = st.sidebar.selectbox(
 )
 horizon_months = horizon_years * 12
 
+<<<<<<< HEAD
+=======
+expected_cagr_pct = st.sidebar.slider("Target CAGR (%)", min_value=8, max_value=99, value=35, step=1, help="Your expected annual returns")
+expected_cagr = expected_cagr_pct / 100
+
+>>>>>>> 3a031820e97cca0b7d03077b9f46fe0012679329
 # Investment Summary in Sidebar
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📋 Investment Summary")
 st.sidebar.info(f"""
 **Monthly Investment:** ₹{monthly_investment:,}  
 **Investment Horizon:** {horizon_years} years  
+<<<<<<< HEAD
+=======
+**Target CAGR:** {expected_cagr_pct}%  
+>>>>>>> 3a031820e97cca0b7d03077b9f46fe0012679329
 **Total Investment:** ₹{monthly_investment * horizon_months:,}
 """)
 
 # ---- Run Optimization ----
 if st.button("🚀 Generate Investment Plan", type="primary"):
     with st.spinner("🔍 Analyzing market data and optimizing your portfolio..."):
+<<<<<<< HEAD
         # Run the backend analysis with default expected CAGR (algorithm will find best possible)
         expected_cagr = 0.15  # Default 15% - algorithm will optimize for best possible CAGR
         portfolio_df, fig, frill_output, summary_data, selection_rationale, whole_share_df = run_vriddhi_backend(
@@ -205,12 +373,47 @@ if st.button("🚀 Generate Investment Plan", type="primary"):
     c1.metric("Expected CAGR", f"{achieved_cagr_display:.1f}%")
     c2.metric("Final Value", f"₹{frill_output.get('Final Value', 0):,}")
     c3.metric("Total Stocks", f"{len(portfolio_df)} stocks")
+=======
+        try:
+            portfolio_df, fig, frill_output, summary_data, selection_rationale, whole_share_df = run_vriddhi_backend(
+                monthly_investment, horizon_months, expected_cagr
+            )
+        except Exception as e:
+            st.exception(e)
+            st.stop()
+
+    # ---- Results ----
+    st.subheader("Summary")
+
+    # Quick Summary Metrics
+    c1, c2, c3, c4 = st.columns(4)
+    feasible = frill_output.get("Feasible")
+    expected_cagr_display = frill_output.get("Expected CAGR", expected_cagr_pct)
+    achieved_cagr_display = frill_output.get("Achieved CAGR", 0)
+    
+    # Re-check feasibility based on actual CAGR comparison
+    actual_feasible = achieved_cagr_display >= expected_cagr_display
+    
+    # Display feasibility with colored indicator
+    if actual_feasible:
+        c1.metric("Feasible", "✅ Yes")
+    else:
+        c1.metric("Feasible", "❌ No")
+    
+    c2.metric("Target CAGR", f"{expected_cagr_display:.1f}%")
+    c3.metric("Best Achievable CAGR", f"{achieved_cagr_display:.1f}%")
+    c4.metric("Final Value", f"₹{frill_output.get('Final Value', 0):,}")
+>>>>>>> 3a031820e97cca0b7d03077b9f46fe0012679329
 
     # Display stock selection rationale
     display_stock_selection_rationale(selection_rationale)
     
     # Display detailed investment summary
+<<<<<<< HEAD
     display_investment_summary(summary_data, True)
+=======
+    display_investment_summary(summary_data, actual_feasible)
+>>>>>>> 3a031820e97cca0b7d03077b9f46fe0012679329
     
     # Display portfolio allocation - Side by side comparison
     st.markdown("### 📊 Portfolio Allocation Options")
@@ -257,9 +460,6 @@ if st.button("🚀 Generate Investment Plan", type="primary"):
     except Exception as e:
         st.error(f"Error displaying projection chart: {str(e)}")
     
-    # Download allocations
-    csv_bytes = portfolio_df.to_csv(index=False).encode("utf-8")
-    st.download_button("Download Allocation CSV", data=csv_bytes, file_name="allocation.csv", mime="text/csv")
     
     st.success("✅ Analysis complete! Review your personalized investment strategy above.")
 
@@ -271,20 +471,7 @@ else:
     **Getting Started:**
     1. 💰 Set your monthly investment amount in the sidebar
     2. 📅 Choose your investment horizon (1-5 years)  
-    3. 🎯 Set your target CAGR percentage
-    4. 🚀 Click "Generate Investment Plan" to see your optimized portfolio
+    3. 🚀 Click "Generate Investment Plan" to see your optimized portfolio
     
-    The AI will analyze 50+ stocks and create a personalized investment strategy just for you!
+    The AI will analyze 50+ curated stocks and create a personalized investment strategy just for you!
     """)
-    
-    # Display sample of available stocks
-    st.markdown("### 📊 Available Stock Universe")
-    st.markdown("Here's a preview of the curated stocks available for optimization:")
-    
-    # Show top 10 stocks by average CAGR
-    if 'average_cagr' in df.columns:
-        top_stocks = df.nlargest(10, 'average_cagr')[['Ticker', 'Price', 'PE_Ratio', 'average_cagr']]
-        top_stocks.columns = ['Stock', 'Price (₹)', 'P/E Ratio', 'Avg CAGR (%)']
-        st.dataframe(top_stocks, use_container_width=True)
-    else:
-        st.dataframe(df.head(10), use_container_width=True)
