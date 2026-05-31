@@ -7,11 +7,17 @@ import os
 import json
 import pandas as pd
 import numpy as np
-from scipy.optimize import minimize
 import matplotlib.pyplot as plt
-import seaborn as sns
 from collections import defaultdict
 import warnings
+
+# seaborn is purely cosmetic here. Guard it so a broken/incompatible install
+# (e.g. numpy ABI mismatch on the deploy host) can never break module import,
+# which would otherwise crash the whole app via `from vriddhi_core import ...`.
+try:
+    import seaborn as sns
+except Exception:  # pragma: no cover - optional dependency
+    sns = None
 
 # ===============================
 # CONFIGURATION & WARNING SUPPRESSION
@@ -28,7 +34,8 @@ FORECAST_MAP = {
 
 # Set style for better visuals
 plt.style.use('default')
-sns.set_palette("husl")
+if sns is not None:
+    sns.set_palette("husl")
 
 # ===============================
 # 1. STOCK SELECTION MODULE (Enhanced with Sector Diversification)
@@ -196,6 +203,9 @@ def optimize_portfolio(selected_df, horizon_months):
     bounds = [(0, 1)] * n
     init_guess = np.ones(n) / n
 
+    # Imported lazily so a scipy/numpy ABI mismatch on the host can't break
+    # module import for the dashboard, which never calls this optimizer.
+    from scipy.optimize import minimize
     result = minimize(objective, init_guess, method='SLSQP', bounds=bounds, constraints=constraints)
 
     if result.success:
