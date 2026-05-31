@@ -48,8 +48,9 @@ TRADING_DAYS = 252
 RISK_FREE_RATE = 0.065          # 6.5% annual, typical Indian risk-free proxy
 ANNUAL_COST = 0.005             # 0.5%/yr assumed cost drag for "after costs"
 MAX_PORTFOLIO_STOCKS = 12       # spec: final portfolio of 11-12 names
-SINGLE_STOCK_CAP = 0.20         # 20% single-stock cap (no over-concentration)
-MIN_STOCK_WEIGHT = 0.03         # 3% floor so every held name is meaningful
+TARGET_SCREEN_CANDIDATES = 18   # spec: screen ~15-20 before optimizing down
+SINGLE_STOCK_CAP = 0.15         # 15% single-stock cap (avoid a top-heavy barbell)
+MIN_STOCK_WEIGHT = 0.05         # 5% floor so every held name is genuinely meaningful
 
 HORIZONS = [3, 4, 5]
 
@@ -276,33 +277,76 @@ def walk_forward(prices_df, tickers, lookback_years):
 # ===============================
 # EXPLANATIONS
 # ===============================
-def build_explanation(row, stock_metric, weight, forecast_col):
-    """Three-reason explainability per the spec (fundamental/forecast/risk)
-    plus the stock's contribution to expected portfolio return."""
+def build_explanation(row, stock_metric, weight, forecast_col, horizon_years):
+    """Per-stock explainability (fundamental / forecast / risk / contribution).
+
+    Two honesty fixes vs v1:
+      * The valuation sentence is conditional, not a blanket "reasonable price"
+        on every name (so a PB-18 / PE-58 stock is flagged as premium).
+      * "Contribution" is reconciled to ONE return definition - the stock's
+        *validated historical* CAGR over the chosen horizon - so it can no
+        longer contradict the (separate, forward) forecast line. The forecast
+        is explicitly framed as an optimistic model signal we do not rely on.
+    """
     pe = row.get("PE_Ratio", float("nan"))
     pb = row.get("PB_Ratio", float("nan"))
     peg = row.get("PEG_Ratio", float("nan"))
     forecast = row.get(forecast_col, float("nan"))
-    hist_cagr = row.get("Avg_Historical_CAGR", float("nan"))
 
     vol = stock_metric.get("volatility") if stock_metric else None
     dd = stock_metric.get("max_drawdown") if stock_metric else None
-    realized = stock_metric.get("cagr_5y") if stock_metric else None
+    # Single, consistent expected-return proxy: realized CAGR for THIS horizon
+    # (falls back to the nearest available window), not a different series.
+    realized = None
+    if stock_metric:
+        realized = (stock_metric.get(f"cagr_{horizon_years}y")
+                    or stock_metric.get("cagr_5y")
+                    or stock_metric.get("cagr_3y"))
 
-    fundamental = (
-        f"PEG {peg:.2f} (PE {pe:.1f} vs hist CAGR {hist_cagr:.1f}%), PB {pb:.1f} "
-        f"- growth at a reasonable price."
+    # ---- Fundamental: conditional language on valuation ----
+    if not np.isnan(peg) and peg < 1.0:
+        verdict = "attractively priced for its historical growth"
+    elif not np.isnan(peg) and peg <= 1.3:
+        verdict = "fairly priced for its growth"
+    else:
+        verdict = "priced at a premium - held for quality/diversification, not cheapness"
+    flags = []
+    if not np.isnan(pb) and pb >= 8:
+        flags.append("rich price-to-book")
+    if not np.isnan(pe) and pe >= 45:
+        flags.append("high P/E")
+    flag_txt = f" Note: {', '.join(flags)}." if flags else ""
+    peg_txt = f"{peg:.2f}" if not np.isnan(peg) else "n/a"
+    fundamental = f"PEG {peg_txt} (PE {pe:.1f}, PB {pb:.1f}) - {verdict}.{flag_txt}"
+
+    # ---- Forecast: clearly an optimistic, non-binding model signal ----
+    forecast_reason = (
+        f"Model signal (forward, not relied upon): ~{forecast:.0f}% annualized. "
+        f"The recommendation is anchored to validated walk-forward returns, not this."
     )
-    forecast_reason = f"Forecast model projects {forecast:.1f}% over the horizon."
+
+    # ---- Risk ----
     if vol is not None and dd is not None:
         risk_reason = f"Annualized volatility {vol:.1f}%, historical max drawdown {dd:.1f}%."
     else:
         risk_reason = "Risk profile from limited history."
-    contribution = (realized if realized is not None else hist_cagr) * weight
-    contribution_reason = (
-        f"Contributes ~{contribution:.1f}% to expected portfolio return "
-        f"(weight {weight*100:.1f}%)."
-    )
+
+    # ---- Contribution: reconciled to historical CAGR; never a silent contradiction ----
+    if realized is not None:
+        contribution = realized * weight
+        if contribution >= 0.3:
+            contribution_reason = (
+                f"Added ~{contribution:.1f}% to the portfolio's historical "
+                f"{horizon_years}-yr CAGR (weight {weight*100:.1f}%)."
+            )
+        else:
+            contribution_reason = (
+                f"Held mainly as a diversifier (weight {weight*100:.1f}%): small or "
+                f"negative standalone historical contribution, but lowers overall risk."
+            )
+    else:
+        contribution_reason = f"Weight {weight*100:.1f}% (limited history for contribution)."
+
     return {
         "fundamental": fundamental,
         "forecast": forecast_reason,
@@ -373,6 +417,20 @@ def build_horizon_bundle(horizon_years, df, prices_df, stock_metrics, benchmark)
     # the same methodology the walk-forward validates, so the displayed
     # portfolio and its walk-forward record are one and the same.
     candidates = [t for t in selected_df["Ticker"].tolist() if t in prices_df.columns]
+
+    # Ensure a genuine 15-20 name screen going INTO the optimizer (so the funnel
+    # narrows 15-20 -> 11-12 rather than keeping everything). If the PEG screen
+    # produced fewer, top up with the next lowest-PEG names that have price data.
+    if len(candidates) < TARGET_SCREEN_CANDIDATES:
+        pool = df[(df["PE_Ratio"] > 0) & (df["Avg_Historical_CAGR"] > 0)].copy()
+        pool["PEG_Ratio"] = pool["PE_Ratio"] / pool["Avg_Historical_CAGR"]
+        pool = pool.sort_values("PEG_Ratio", ascending=True)
+        for tkr in pool["Ticker"]:
+            if len(candidates) >= TARGET_SCREEN_CANDIDATES:
+                break
+            if tkr not in candidates and tkr in prices_df.columns:
+                candidates.append(tkr)
+
     cand_rets = prices_df[candidates].pct_change().dropna()
 
     # Pass 1: rank candidates by unconstrained max-Sharpe weight, take the 11-12 names.
@@ -468,7 +526,7 @@ def build_horizon_bundle(horizon_years, df, prices_df, stock_metrics, benchmark)
             "pe_ratio": float(meta.get("PE_Ratio", 0) or 0),
             "pb_ratio": float(meta.get("PB_Ratio", 0) or 0),
             "backtest": sm,
-            "explanation": build_explanation(meta, sm, w, forecast_col),
+            "explanation": build_explanation(meta, sm, w, forecast_col, horizon_years),
             "has_price_data": t in prices_df.columns,
         })
 
@@ -482,6 +540,7 @@ def build_horizon_bundle(horizon_years, df, prices_df, stock_metrics, benchmark)
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "data_through": prices_df.index[-1].strftime("%Y-%m-%d"),
         "universe_size": int(len(df)),
+        "screened_count": int(len(candidates)),
         "num_stocks": len(stocks),
         "verdict": verdict,
         "portfolio_metrics": port_metrics,
