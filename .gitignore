@@ -50,3 +50,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Monthly refresh local artifacts
+backups/
+_demo_safe/
