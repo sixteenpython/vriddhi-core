@@ -588,6 +588,17 @@ def build_horizon_bundle(horizon_years, df, prices_df, stock_metrics, benchmark)
 # MAIN
 # ===============================
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--asof", default=None,
+                        help="Reconstruct the portfolio as of this date (YYYY-MM-DD) by "
+                             "truncating price history - used to seed a 'previous month' "
+                             "snapshot for the rebalance view.")
+    parser.add_argument("--suffix", default="",
+                        help="Filename suffix for outputs, e.g. _prev (keeps the live "
+                             "bundles untouched).")
+    args = parser.parse_args()
+
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     df = pd.read_csv(DATA_CSV)
@@ -596,12 +607,21 @@ def main():
 
     prices_df, benchmark = download_prices(tickers)
 
+    if args.asof:
+        cutoff = pd.to_datetime(args.asof)
+        prices_df = prices_df[prices_df.index <= cutoff]
+        if benchmark is not None:
+            benchmark = benchmark[benchmark.index <= cutoff]
+        print(f"  AS-OF {args.asof}: truncated to {prices_df.shape[0]} days "
+              f"(through {prices_df.index[-1].date()}).")
+
     print("Computing per-stock backtest metrics...")
     stock_metrics = per_stock_metrics(prices_df)
     print(f"  Metrics computed for {len(stock_metrics)} stocks.")
 
-    # Save benchmark series for the app's walk-forward / comparison chart
-    if benchmark is not None:
+    # Save benchmark series for the app's walk-forward / comparison chart.
+    # Skip for snapshot builds (--suffix) so the live benchmark.csv is untouched.
+    if benchmark is not None and not args.suffix:
         bench_norm = benchmark / benchmark.iloc[0]
         bench_out = pd.DataFrame({
             "Date": [d.strftime("%Y-%m-%d") for d in bench_norm.index],
@@ -610,10 +630,20 @@ def main():
         bench_out.to_csv(os.path.join(OUTPUT_DIR, "benchmark.csv"), index=False)
         print(f"  Saved {OUTPUT_DIR}/benchmark.csv")
 
+    # Auto-rotate on a LIVE build: this month's bundles become next month's
+    # "previous" snapshot (powers the rebalance view) before we overwrite them.
+    if not args.suffix:
+        import shutil
+        for hy in HORIZONS:
+            cur = os.path.join(OUTPUT_DIR, f"portfolio_{hy}y.json")
+            if os.path.exists(cur):
+                shutil.copyfile(cur, os.path.join(OUTPUT_DIR, f"portfolio_{hy}y_prev.json"))
+        print("  Rotated existing bundles -> *_prev.json (previous-month snapshot).")
+
     for hy in HORIZONS:
         print(f"\nBuilding horizon bundle: {hy}yr ...")
         bundle = build_horizon_bundle(hy, df, prices_df, stock_metrics, benchmark)
-        out_path = os.path.join(OUTPUT_DIR, f"portfolio_{hy}y.json")
+        out_path = os.path.join(OUTPUT_DIR, f"portfolio_{hy}y{args.suffix}.json")
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(bundle, f, indent=2, default=str)
         v = bundle["verdict"]

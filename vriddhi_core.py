@@ -629,6 +629,19 @@ def load_portfolio_bundle(horizon_years):
         return None
 
 
+def load_previous_bundle(horizon_years):
+    """Load last month's snapshot for a horizon (portfolio_Ny_prev.json), used by
+    the rebalance view to compute pick/drop/hold deltas. Returns None if absent."""
+    path = os.path.join(RESEARCH_DIR, f"portfolio_{int(horizon_years)}y_prev.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
 def load_benchmark_series():
     """Load the normalized Nifty 50 benchmark series (DataFrame) or None."""
     path = os.path.join(RESEARCH_DIR, "benchmark.csv")

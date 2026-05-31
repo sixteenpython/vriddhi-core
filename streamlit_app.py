@@ -9,6 +9,7 @@ import streamlit as st
 import vriddhi_core
 from vriddhi_core import (
     load_portfolio_bundle,
+    load_previous_bundle,
     load_benchmark_series,
     scale_allocations,
 )
@@ -478,6 +479,85 @@ def panel_risk(bundle):
     )
 
 
+def panel_rebalance(bundle, monthly_investment):
+    st.markdown("#### E. Monthly Rebalance")
+    prev = load_previous_bundle(bundle["horizon_years"])
+
+    st.info(
+        "**In plain English: what do I actually buy this month?**\n\n"
+        "You don't rebuild everything each month - you just nudge. Every month the engine refreshes "
+        "and this tab tells you the few changes versus last month: a stock to start buying (**PICK**), one "
+        "to stop and sell (**DROP**), a name to buy a little **more** (TOP-UP) or **less** (TRIM), and the "
+        "rest you simply **HOLD**. Small changes are good news - low churn means low cost and taxes."
+    )
+
+    if prev is None:
+        st.success(
+            "**This is your very first portfolio**, so there's nothing to rebalance against yet - just buy "
+            "the basket in the Final Portfolio tab. From next month, this tab will show your exact "
+            "buy / sell / top-up / hold actions versus the previous month."
+        )
+        return
+
+    cur_w = {s["ticker"]: s["weight"] for s in bundle["stocks"]}
+    prev_w = {s["ticker"]: s["weight"] for s in prev["stocks"]}
+    price = {s["ticker"]: (s.get("current_price") or 0) for s in bundle["stocks"]}
+    for s in prev["stocks"]:
+        price.setdefault(s["ticker"], s.get("current_price") or 0)
+
+    THRESH = 0.01  # ignore weight wiggles under 1%
+    PRIORITY = {"PICK (new buy)": 0, "DROP (exit)": 1, "TOP-UP": 2, "TRIM": 3, "HOLD": 4}
+    rows, counts = [], {"PICK (new buy)": 0, "DROP (exit)": 0, "TOP-UP": 0, "TRIM": 0, "HOLD": 0}
+    turnover = 0.0
+    for t in set(cur_w) | set(prev_w):
+        pw, cw = prev_w.get(t, 0.0), cur_w.get(t, 0.0)
+        turnover += abs(cw - pw)
+        prev_amt, cur_amt = pw * monthly_investment, cw * monthly_investment
+        d_amt = cur_amt - prev_amt
+        p = price.get(t, 0) or 0
+        if pw == 0 and cw > 0:
+            action = "PICK (new buy)"
+        elif cw == 0 and pw > 0:
+            action = "DROP (exit)"
+        elif cw - pw > THRESH:
+            action = "TOP-UP"
+        elif pw - cw > THRESH:
+            action = "TRIM"
+        else:
+            action = "HOLD"
+        counts[action] += 1
+        rows.append({
+            "Stock": t,
+            "Action": action,
+            "Last month \u20b9": f"\u20b9{prev_amt:,.0f}",
+            "This month \u20b9": f"\u20b9{cur_amt:,.0f}",
+            "Change \u20b9": f"{'+' if d_amt >= 0 else '-'}\u20b9{abs(d_amt):,.0f}",
+            "Change (shares)": f"{int(round(d_amt / p)):+d}" if p > 0 else "n/a",
+        })
+    rows.sort(key=lambda r: (PRIORITY[r["Action"]], r["Stock"]))
+
+    pdate = prev.get("data_through", "last month")
+    cdate = bundle.get("data_through", "this month")
+    st.caption(f"Comparing **{pdate}** (last month) -> **{cdate}** (this month), "
+               f"at \u20b9{monthly_investment:,}/month.")
+
+    summary = (f"**This month's plan:** {counts['PICK (new buy)']} new pick(s), "
+               f"{counts['DROP (exit)']} exit(s), {counts['TOP-UP']} top-up(s), "
+               f"{counts['TRIM']} trim(s), {counts['HOLD']} hold(s). "
+               f"Turnover ~{turnover/2*100:.0f}% of the portfolio.")
+    if counts["PICK (new buy)"] or counts["DROP (exit)"]:
+        st.warning(summary)
+    else:
+        st.success(summary + " A quiet month - mostly just keep buying as usual.")
+
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.caption(
+        "How to act: **PICK** - start buying it with this month's money. **DROP** - stop buying and sell "
+        "what you hold of it. **TOP-UP / TRIM** - buy a bit more / less than before. **HOLD** - no change, "
+        "keep buying the same. (Change in shares is per month at your chosen contribution.)"
+    )
+
+
 def _passing_horizons(exclude=None):
     """Return the list of horizons whose bundle currently clears every gate."""
     passing = []
@@ -491,7 +571,7 @@ def _passing_horizons(exclude=None):
 
 
 def render_panels(bundle, benchmark_df, monthly_investment):
-    tabs = st.tabs(["Summary", "Backtest Evidence", "Final Portfolio", "Risk"])
+    tabs = st.tabs(["Summary", "Backtest Evidence", "Final Portfolio", "Risk", "Monthly Rebalance"])
     with tabs[0]:
         panel_summary(bundle, monthly_investment)
     with tabs[1]:
@@ -500,6 +580,8 @@ def render_panels(bundle, benchmark_df, monthly_investment):
         panel_portfolio(bundle, monthly_investment)
     with tabs[3]:
         panel_risk(bundle)
+    with tabs[4]:
+        panel_rebalance(bundle, monthly_investment)
 
 
 def render_dashboard(horizon_years, monthly_investment):
@@ -589,8 +671,9 @@ else:
 
 st.markdown("---")
 st.caption(
-    "v1 MVP - genuine: adjusted price history, CAGR, drawdown, volatility, Sharpe, "
-    "walk-forward, Markowitz optimization, pass/fail gates, benchmark beat. Simplified "
-    "for v1 (finishing next): ML/time-series forecast ensemble (currently uses precomputed "
-    "forecast signals), quarterly fundamentals depth, full turnover/cost modeling."
+    "v1 MVP - genuine: yfinance adjusted prices, damped-trend (Holt) time-series forecasts, "
+    "CAGR / drawdown / volatility / Sharpe, walk-forward validation, Markowitz optimization, "
+    "pass/fail gates, benchmark beat, and month-over-month rebalancing. Simplified for v1 "
+    "(finishing next): point-in-time fundamentals (PE/PB are current, not historical), explicit "
+    "transaction-cost & tax modeling, and a richer multi-model forecast ensemble."
 )
