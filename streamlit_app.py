@@ -201,6 +201,16 @@ def panel_summary(bundle, monthly_investment):
 
 def panel_backtest(bundle, benchmark_df):
     st.markdown("#### B. Backtest Evidence")
+    st.info(
+        "**In plain English: did this actually work in the past - or does it just look good on paper?**\n\n"
+        "Anyone can build a portfolio that looks brilliant *after* the fact. The honest test is harder: "
+        "we hand the model **only old data**, let it pick a portfolio, then fast-forward and watch how it "
+        "did on dates it had **never seen** - exactly like real life, where you invest today and the future "
+        "is unknown. That 'never seen' result is the **Out-of-sample** column below, and it's the only one "
+        "we trust. (The **In-sample** column is the model graded on its own homework - always flattering, so "
+        "we don't lean on it.) A big gap where in-sample looks amazing but out-of-sample is weak is a red "
+        "flag; we want the out-of-sample number to stand on its own."
+    )
     pm = bundle["portfolio_metrics"]
     bench = bundle["benchmark"]["metrics"]
     wf_all = bundle.get("walk_forward", {})
@@ -245,6 +255,15 @@ def panel_backtest(bundle, benchmark_df):
         ax.legend(loc="upper left")
         ax.grid(True, alpha=0.3)
         st.pyplot(fig)
+        st.success(
+            "**How to read this chart (the simple version):** imagine you put **\u20b91** into the portfolio "
+            "at the start of the test, on data the model had never seen. The **solid line is your money**; the "
+            "**dashed line is the Nifty 50** (the overall market). The flat grey line at **1.0 is your starting "
+            "point - break-even**. Two things tell you it worked: (1) the solid line ends **well above 1.0** "
+            "(your \u20b91 grew into more), and (2) it stays **above the dashed line** (you beat simply buying "
+            "the market). Dips along the way are normal - what matters is the destination and that it kept "
+            "ahead of the market on data it couldn't have memorised."
+        )
 
 
 def _inr(x):
@@ -333,6 +352,17 @@ def panel_portfolio(bundle, monthly_investment):
             f"**{bundle['num_stocks']}** holdings (Markowitz max-Sharpe, "
             f"15% single-name cap, 5% floor)."
         )
+    st.info(
+        "**In plain English: how were these stocks chosen - and is it just guesswork?**\n\n"
+        "No hunches, no tips, no news headlines. It's a two-step sieve. **Step 1 - value for money:** out of "
+        "the Nifty 50 we keep only companies that are *reasonably priced for how fast they've actually grown* "
+        f"(the PEG idea, explained below) - that left **{screened or 'a shortlist of'} candidates**. "
+        "**Step 2 - the smartest mix:** a maths engine (Markowitz optimisation) then blends them into the "
+        f"combination that historically gave the **best return for the least bumpiness**, landing on these "
+        f"**{bundle['num_stocks']}**. We deliberately **cap any single stock at 15%** so no one company can "
+        "sink you, and spread the money across several sectors. Think of it as a recipe, not a gamble: "
+        "the same inputs always produce the same portfolio."
+    )
 
     # ---- projection.png-style growth visual (validated CAGR) ----
     fig, total_invested, final_value, total_gains = build_projection_figure(
@@ -375,7 +405,22 @@ def panel_portfolio(bundle, monthly_investment):
             ax.set_title("Allocation by Sector", fontweight="bold")
             st.pyplot(fig)
 
-    with st.expander("Why these stocks? (per-stock rationale)", expanded=False):
+    with st.expander("Why these stocks? (per-stock rationale + how to read the numbers)", expanded=False):
+        st.markdown(
+            "**Quick guide to the jargon, in everyday terms:**\n"
+            "- **PEG** - *are you paying a fair price for the growth?* Below **1.0** = a bargain "
+            "(you're paying less than \u20b91 for each \u20b91 of growth); around **1** = fair; "
+            "well above **1** = expensive, so we only keep it for quality or balance, not because it's cheap.\n"
+            "- **PE (price-to-earnings)** - roughly *how many years of the company's profit you're paying for "
+            "one share*. Lower is cheaper; a very high PE means big expectations are already baked in.\n"
+            "- **PB (price-to-book)** - *price versus the company's accounting net worth*. A high PB means the "
+            "market is paying a big premium over what's on the books.\n"
+            "- **Volatility** - *how bumpy the ride is* month to month. **Max drawdown** - *the worst drop from "
+            "a previous high* you'd have had to sit through.\n"
+            "- **Contribution** - how much this one holding actually added to the portfolio's past growth.\n\n"
+            "_Below: the plain-language reason each stock earned its place._"
+        )
+        st.markdown("---")
         for s in bundle["stocks"]:
             e = s.get("explanation", {})
             st.markdown(
@@ -389,6 +434,18 @@ def panel_portfolio(bundle, monthly_investment):
 
 def panel_risk(bundle):
     st.markdown("#### D. Risk View")
+    st.info(
+        "**In plain English: how badly could this hurt along the way?**\n\n"
+        "Returns are only half the story - a good adviser also tells you how rough the ride can get. "
+        "Here's how to read the numbers below:\n"
+        "- **Largest holding / Top-3 concentration** - *how many eggs are in a few baskets.* The smaller "
+        "these are, the less any single company can hurt you (we cap any one stock at 15%).\n"
+        "- **Largest sector** - the same idea for industries, so you're not secretly betting on just one theme.\n"
+        "- **Annualized volatility** - *how bumpy* the journey is. Higher = bigger swings up **and** down.\n"
+        "- **Max drawdown** - the single most important one: *the worst peak-to-trough fall* you'd have had "
+        "to live through. If it says 20%, it means at some point \u20b91,00,000 would have shown as ~\u20b980,000 "
+        "on your statement before recovering. The honest question is: **could you stay calm and not sell?**"
+    )
     pm = bundle["portfolio_metrics"]
     bench = bundle["benchmark"]["metrics"]
     stocks = sorted(bundle["stocks"], key=lambda x: x["weight"], reverse=True)
@@ -411,6 +468,13 @@ def panel_risk(bundle):
     st.caption(
         "Concentration is capped at 15% per stock with a 5% floor, so no single name can "
         "sink the portfolio and every holding is meaningful. Drawdown is held under the 25% gate."
+    )
+    st.success(
+        f"**The takeaway:** notice the portfolio's worst fall ({pct(pm.get('max_drawdown'))}) is compared "
+        f"against the Nifty 50's ({pct(bench.get('max_drawdown'))}) - we aim to fall *less* than the market "
+        "in bad times while still beating it overall. **Golden rule:** only invest money you won't need for "
+        f"the next {bundle['horizon_years']} years. That way a temporary drop is just a number on a screen - "
+        "you're never forced to sell at the bottom, and time does the healing."
     )
 
 
