@@ -1,0 +1,5 @@
+# Build-time only dependencies (NOT needed by the deployed Streamlit app).
+# Used by build_research_db.py to pull historical prices and precompute the
+# research bundles. The live app reads only the committed static files.
+yfinance>=0.2.40
+scipy>=1.9.0

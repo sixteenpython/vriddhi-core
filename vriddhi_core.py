@@ -3,6 +3,8 @@
 # AI-Powered Personal Investment Advisor
 # Built with Modern Portfolio Theory and Advanced Analytics
 
+import os
+import json
 import pandas as pd
 import numpy as np
 from scipy.optimize import minimize
@@ -39,7 +41,7 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     """
     Simplified PEG-based stock selection for maximum CAGR:
     Round 1: Best stock per sector with lowest PEG ratio (PE / Avg_Historical_CAGR)
-    Round 2: All remaining stocks with PEG < 3.0
+    Round 2: All remaining stocks with PEG < 1.0
     """
     from collections import defaultdict
     
@@ -180,9 +182,8 @@ def optimize_portfolio(selected_df, horizon_months):
     forecast_col = forecast_map.get(horizon_months, 'Forecast_24M')
     
     returns = selected_df[forecast_col].values
-    # Use a simple risk proxy based on PE ratio since Historical_Volatility doesn't exist
-    # Higher PE ratios indicate higher risk
-    risks = selected_df["PE_Ratio"].values / 100  # Normalize PE ratios as risk proxy
+    # Use PE ratio as risk proxy (normalized); Historical_Volatility not in current dataset
+    risks = selected_df["PE_Ratio"].values / 100
     cov_matrix = np.diag(risks ** 2)
 
     def objective(weights):
@@ -592,3 +593,66 @@ def run_vriddhi_backend(monthly_investment, horizon_months, expected_cagr):
     whole_share_df = calculate_whole_share_allocation(optimized_df, df)
     
     return optimized_df[['Ticker', 'Weight', 'Monthly Allocation (INR)']], fig, frill_output, summary_data, selection_rationale, whole_share_df
+
+
+# ===============================
+# 8. RESEARCH BUNDLE LOADERS (consumed by the investor dashboard)
+# ===============================
+
+RESEARCH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "research")
+
+
+def load_portfolio_bundle(horizon_years):
+    """Load the precomputed research bundle for a given horizon (3, 4 or 5 yr).
+
+    Bundles are produced offline by build_research_db.py and committed under
+    ./research/. Returns the parsed dict, or None if the file is missing so the
+    UI can degrade gracefully instead of crashing.
+    """
+    path = os.path.join(RESEARCH_DIR, f"portfolio_{int(horizon_years)}y.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def load_benchmark_series():
+    """Load the normalized Nifty 50 benchmark series (DataFrame) or None."""
+    path = os.path.join(RESEARCH_DIR, "benchmark.csv")
+    if not os.path.exists(path):
+        return None
+    try:
+        return pd.read_csv(path, parse_dates=["Date"])
+    except (OSError, ValueError):
+        return None
+
+
+def scale_allocations(bundle, monthly_investment):
+    """Turn a bundle's portfolio weights into a concrete monthly SIP plan.
+
+    Allocations are linear in the monthly contribution, so a single precomputed
+    bundle per horizon covers the full 50K-1L input range. Returns a DataFrame
+    with per-stock monthly amount, whole-share quantity and share cost.
+    """
+    if not bundle or not bundle.get("stocks"):
+        return pd.DataFrame()
+
+    rows = []
+    for s in bundle["stocks"]:
+        weight = float(s.get("weight", 0) or 0)
+        price = float(s.get("current_price", 0) or 0)
+        monthly_amount = weight * monthly_investment
+        whole_shares = int(monthly_amount // price) if price > 0 else 0
+        rows.append({
+            "Ticker": s.get("ticker"),
+            "Sector": s.get("sector"),
+            "Weight": weight,
+            "Monthly Allocation (INR)": round(monthly_amount, 2),
+            "Current_Price": price,
+            "Whole_Shares": whole_shares,
+            "Share_Cost": round(whole_shares * price, 2),
+        })
+    return pd.DataFrame(rows)

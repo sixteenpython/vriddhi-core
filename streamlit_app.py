@@ -1,273 +1,278 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
 import io
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import streamlit as st
+
 import vriddhi_core
-from vriddhi_core import run_vriddhi_backend, plot_enhanced_projection
+from vriddhi_core import (
+    load_portfolio_bundle,
+    load_benchmark_series,
+    scale_allocations,
+)
 
-# Educational Disclaimer
-def show_disclaimer():
-    st.error("""
-    ⚠️ **IMPORTANT EDUCATIONAL DISCLAIMER** ⚠️
-    
-    This application is designed for **EDUCATIONAL PURPOSES ONLY** and is currently in **BETA TESTING**.
-    
-    **DO NOT** use these recommendations for actual investment decisions. This tool:
-    - Uses simulated data and theoretical models
-    - Is not reviewed by financial professionals
-    - Does not constitute financial advice
-    - Should not replace consultation with qualified financial advisors
-    
-    **For educational learning about portfolio theory and investment concepts only.**
-    """)
-    st.markdown("---")
-
-def display_stock_selection_rationale(rationale):
-    """Display the stock selection rationale"""
-    st.markdown("### 🧠 Stock Selection Rationale")
-    
-    with st.expander("📋 How were these stocks selected?", expanded=False):
-        st.write("**📊 Stock Selection Rationale:**")
-        st.write(f"- **Selection Method**: Enhanced sector-based diversification")
-        st.write(f"- **Universe Size**: {rationale.get('total_universe', 'N/A')} stocks analyzed")
-        st.write(f"- **Sectors Available**: {rationale.get('sectors_available', 'N/A')} sectors")
-        st.write(f"- **Final Selection**: {rationale.get('stocks_selected', 'N/A')} stocks (minimum 8, maximum unlimited)")
-        
-        # Display updated selection criteria
-        st.write("**🎯 PEG-Based Selection Approach:**")
-        st.write("  • **Round 1**: Best stock from each sector with lowest PEG ratio")
-        st.write("  • **Round 2**: All remaining stocks with PEG < 1.0")
-        st.write("**📈 Selection Criteria:**")
-        st.write("  • **PEG Ratio**: PE Ratio ÷ Average Historical CAGR")
-        st.write("  • **Lower PEG = Better Value**: Growth at reasonable price")
-        st.write("  • **PEG < 1.0**: Premium quality threshold for additional stocks")
-        st.write("  • **No Negative CAGR**: Only positive performance stocks selected")
-        
-        # Display sector breakdown if available
-        sector_breakdown = rationale.get('sector_breakdown', {})
-        if sector_breakdown:
-            st.write("**🏭 Sector-wise Selection:**")
-            for sector, details in sector_breakdown.items():
-                # Handle both single stock entries and additional stock lists
-                if isinstance(details, dict):
-                    # Primary sector selection (single stock)
-                    st.write(f"  • **{sector}**: {details.get('selected_stock', 'N/A')} "
-                            f"(CAGR: {details.get('avg_cagr', 0):.1f}%, "
-                            f"PE: {details.get('pe_ratio', 0):.1f}, "
-                            f"PEG: {details.get('peg_ratio', 0):.2f})")
-                elif isinstance(details, list):
-                    # Additional sector selections (multiple stocks)
-                    st.write(f"  • **{sector}** (Additional):")
-                    for stock in details:
-                        st.write(f"    - {stock.get('selected_stock', 'N/A')} "
-                                f"(CAGR: {stock.get('avg_cagr', 0):.1f}%, "
-                                f"PE: {stock.get('pe_ratio', 0):.1f}, "
-                                f"PEG: {stock.get('peg_ratio', 0):.2f})")
-        
-        # Remove feasibility messaging - app now focuses on best possible recommendations
-        
-        st.markdown(f"""
-        **Portfolio Summary:**
-        - **Expected CAGR:** {rationale.get('achieved_cagr', 'N/A')}
-        - **Diversification:** Enhanced diversification (minimum 1 per sector + additional quality stocks)
-        - **Total Stocks Selected:** {rationale.get('stocks_selected', 'N/A')} stocks
-        """)
-        
-        st.info("""
-        **Why This Enhanced Approach?**
-        Our two-phase selection maximizes both diversification and CAGR potential:
-        - **Phase 1** ensures sector diversification with the best stock from each sector
-        - **Phase 2** adds high-quality stocks meeting strict criteria (CAGR ≥10%, PB ≤5.0, PE 5-50)
-        This approach balances risk through diversification while maximizing return potential 
-        by including all qualifying high-performance stocks.
-        """)
-
-def display_investment_summary(summary_data, actual_feasible):
-    """Display the detailed investment summary in Streamlit UI"""
-    
-    # Main header
-    st.markdown("---")
-    st.markdown("## 📊 Investment Plan Summary")
-    
-    # Plan Summary Section
-    st.markdown("### 📋 Your Investment Journey")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.metric("Investment Period", f"{summary_data['horizon_years']:.1f} years")
-        st.metric("Total Investment", f"₹{int(summary_data['total_invested']):,}")
-        st.metric("Money Multiplier", f"{summary_data['money_multiplier']:.2f}x")
-    
-    with col2:
-        st.metric("Final Portfolio Value", f"₹{int(summary_data['projected_value']):,}")
-        st.metric("Total Gains", f"₹{int(summary_data['gain']):,}")
-        st.metric("Monthly Avg Gain", f"₹{int(summary_data['monthly_avg_gain']):,}")
-    
-    # Success Insights
-    st.markdown("### ✨ What This Means For You")
-    st.info(f"""
-    - Your disciplined investment will grow your wealth by **₹{int(summary_data['gain']):,}**
-    - Every ₹1 you invest will become **₹{summary_data['money_multiplier']:.2f}**
-    - Your wealth will grow **{summary_data['total_return_pct']:.1f}%** over {summary_data['horizon_years']:.1f} years
-    - You're on the path to financial growth! 📈
-    """)
-
-st.set_page_config(page_title="Vriddhi Alpha Finder", layout="wide")
+st.set_page_config(page_title="Vriddhi | Nifty 50 Portfolio Decision Aid", layout="wide")
 
 # ---- Optional simple password gate (set APP_PASSWORD in Streamlit secrets) ----
-required_pw = st.secrets.get("APP_PASSWORD", None)
+try:
+    required_pw = st.secrets.get("APP_PASSWORD", None)
+except Exception:
+    required_pw = None  # No secrets.toml configured -> gate disabled
 if required_pw:
     pw = st.sidebar.text_input("App password", type="password")
     if pw != required_pw:
         st.warning("Enter the app password to continue.")
         st.stop()
 
-# Main title and description
-st.title("🌟 Vriddhi Alpha Finder")
-st.markdown("### Professional AI Investment Advisor")
 
-# Show disclaimer prominently
-show_disclaimer()
-st.markdown("""
-### AI-Powered Personal Investment Advisor
+# ===============================
+# HELPERS
+# ===============================
+def pct(x, nd=1):
+    return "n/a" if x is None else f"{x:.{nd}f}%"
 
-**Vriddhi Alpha Finder** is a sophisticated investment optimization platform that leverages Modern Portfolio Theory (MPT) and advanced analytics to create personalized investment strategies. 
 
-**Key Features:**
-- 🔬 **ML-Powered Forecasting**: Advanced Prophet + LSTM + XGBoost ensemble predictions with 20-year lookback
-- 🎯 **PEG-Based Selection**: Intelligent growth-at-reasonable-price algorithm (Round 1: sector diversification, Round 2: PEG < 1.0)
-- 📊 **Modern Portfolio Theory**: Professional MPT optimization with risk-adjusted returns and sector constraints
-- 🏢 **Automatic Diversification**: Balanced exposure across industries with quality filtering
-- 📈 **Multi-Horizon Analysis**: Comprehensive 12M/24M/36M/48M/60M CAGR forecasts and growth projections
-- 💰 **SIP Optimization**: Systematic monthly investment modeling with both fractional and whole-share allocations
+def binding_walk_forward(bundle):
+    """Return the walk-forward record matching the bundle's horizon."""
+    wf = bundle.get("walk_forward", {})
+    return wf.get(str(bundle["horizon_years"])) or {}
 
-**How It Works:**
-1. Set your monthly investment amount (minimum ₹50,000)
-2. Choose your investment horizon (1-5 years)
-3. Get AI-powered stock selection with optimal portfolio weights
-4. View comprehensive analysis and growth projections for maximum CAGR
 
-*Built with cutting-edge financial algorithms and real-time market data analysis.*
-""")
+def show_disclaimer():
+    st.caption(
+        "Educational decision aid in beta. Backtests and walk-forward use "
+        "corporate-action-adjusted historical prices; past performance does not "
+        "guarantee future results. Not investment advice."
+    )
 
-# Load built-in stock data
-@st.cache_data
-def load_stock_data():
-    return pd.read_csv("grand_table_expanded.csv")
 
-try:
-    df = load_stock_data()
-    st.success(f"✅ Loaded {len(df)} stocks from curated universe")
-except Exception as e:
-    st.error(f"Error loading stock data: {e}")
-    st.stop()
-
-# Basic sanity check
-if "Ticker" not in df.columns:
-    st.error("Stock data must contain a 'Ticker' column. Found columns: {}".format(", ".join(df.columns)))
-    st.stop()
-
-# ---- Parameters ----
-st.sidebar.header("📊 Investment Parameters")
-monthly_investment = st.sidebar.number_input("Monthly Investment (INR)", min_value=50000, step=5000, value=50000, help="Amount you plan to invest every month (minimum ₹50,000)")
-
-# Discrete horizon selection
-horizon_years = st.sidebar.selectbox(
-    "Investment Horizon", 
-    options=[1, 2, 3, 4, 5],
-    index=4,  # Default to 5 years
-    help="Choose your investment time horizon"
-)
-horizon_months = horizon_years * 12
-
-# Investment Summary in Sidebar
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📋 Investment Summary")
-st.sidebar.info(f"""
-**Monthly Investment:** ₹{monthly_investment:,}  
-**Investment Horizon:** {horizon_years} years  
-**Total Investment:** ₹{monthly_investment * horizon_months:,}
-""")
-
-# ---- Run Optimization ----
-if st.button("🚀 Generate Investment Plan", type="primary"):
-    with st.spinner("🔍 Analyzing market data and optimizing your portfolio..."):
-        # Run the backend analysis with default expected CAGR (algorithm will find best possible)
-        expected_cagr = 0.15  # Default 15% - algorithm will optimize for best possible CAGR
-        portfolio_df, fig, frill_output, summary_data, selection_rationale, whole_share_df = run_vriddhi_backend(
-            monthly_investment, horizon_months, expected_cagr
+def verdict_banner(bundle):
+    v = bundle["verdict"]
+    h = bundle["horizon_years"]
+    base = bundle["scenarios"]["base"]
+    beat = bundle["benchmark"].get("beat_after_costs")
+    if v["recommended"]:
+        st.success(
+            f"### RECOMMENDED for a {h}-year horizon\n"
+            f"This 11-12 stock portfolio cleared every credibility gate: "
+            f"~{pct(base)} walk-forward CAGR, beats Nifty 50 by {pct(beat)} after costs, "
+            f"with risk inside our limits. Would you trust it with new monthly money? "
+            f"The evidence says yes."
+        )
+    else:
+        reasons = ", ".join(v["failing_gates"]) if v["failing_gates"] else "one or more gates"
+        st.error(
+            f"### NOT RECOMMENDED for a {h}-year horizon\n"
+            f"This basket failed: **{reasons}**. We only recommend portfolios that pass "
+            f"every gate, so we are not putting our name on this one for {h} years. "
+            f"The full analysis is shown below for transparency."
         )
 
-    # Quick Summary Metrics
-    c1, c2, c3 = st.columns(3)
-    achieved_cagr_display = frill_output.get("Achieved CAGR", 0)
-    
-    c1.metric("Expected CAGR", f"{achieved_cagr_display:.1f}%")
-    c2.metric("Final Value", f"₹{frill_output.get('Final Value', 0):,}")
-    c3.metric("Total Stocks", f"{len(portfolio_df)} stocks")
 
-    # Display stock selection rationale
-    display_stock_selection_rationale(selection_rationale)
-    
-    # Display detailed investment summary
-    display_investment_summary(summary_data, True)
-    
-    # Display portfolio allocation - Side by side comparison
-    st.markdown("### 📊 Portfolio Allocation Options")
-    
-    col1, col2 = st.columns(2)
-    
+def panel_summary(bundle):
+    st.markdown("#### A. Portfolio Summary")
+    s = bundle["scenarios"]
+    pm = bundle["portfolio_metrics"]
+    wf = binding_walk_forward(bundle)
+    bench = bundle["benchmark"]
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Expected CAGR (base)", pct(s["base"]),
+              help="Anchored to validated out-of-sample walk-forward returns.")
+    c2.metric("Best / Worst case", f"{pct(s['best'])} / {pct(s['worst'])}")
+    c3.metric("Max Drawdown", pct(pm.get("max_drawdown")),
+              help="Largest peak-to-trough loss over the backtest.")
+    c4.metric("Sharpe (walk-forward)", f"{wf.get('oos_sharpe', 0):.2f}" if wf.get("oos_sharpe") is not None else "n/a")
+
+    c5, c6, c7 = st.columns(3)
+    c5.metric(f"Portfolio {bundle['horizon_years']}yr CAGR",
+              pct(pm.get(f"cagr_{bundle['horizon_years']}y")))
+    c6.metric("Nifty 50 (same window)",
+              pct(bench["metrics"].get(f"cagr_{bundle['horizon_years']}y")))
+    c7.metric("Beat after costs", pct(bench.get("beat_after_costs")),
+              delta="vs Nifty 50")
+
+    st.caption(
+        f"Forward forecast model suggests upside toward {pct(s.get('forecast_signal'))} "
+        f"CAGR, but the base case above is deliberately anchored to walk-forward evidence, "
+        f"not the forecast."
+    )
+
+
+def panel_backtest(bundle, benchmark_df):
+    st.markdown("#### B. Backtest Evidence")
+    pm = bundle["portfolio_metrics"]
+    bench = bundle["benchmark"]["metrics"]
+    wf_all = bundle.get("walk_forward", {})
+
+    rows = []
+    for yr in (3, 4, 5):
+        wf = wf_all.get(str(yr), {})
+        rows.append({
+            "Window": f"{yr}-year",
+            "Portfolio CAGR": pct(pm.get(f"cagr_{yr}y")),
+            "Nifty 50 CAGR": pct(bench.get(f"cagr_{yr}y")),
+            "In-sample CAGR": pct(wf.get("in_sample_cagr")),
+            "Out-of-sample CAGR": pct(wf.get("oos_cagr")),
+            "OOS Sharpe": f"{wf.get('oos_sharpe'):.2f}" if wf.get("oos_sharpe") is not None else "n/a",
+        })
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.caption(
+        "In-sample = model fit on data it has seen. Out-of-sample = performance on "
+        "unseen periods (walk-forward). We judge credibility on the out-of-sample column."
+    )
+
+    # Walk-forward chart: out-of-sample portfolio equity vs Nifty 50
+    wf = binding_walk_forward(bundle)
+    eq = wf.get("equity_curve")
+    if eq and eq.get("dates"):
+        dates = pd.to_datetime(eq["dates"])
+        port = np.array(eq["portfolio"], dtype=float)
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot(dates, port, color="#A23B72", linewidth=2,
+                label="Portfolio (out-of-sample)")
+        if benchmark_df is not None:
+            bsub = benchmark_df[benchmark_df["Date"].isin(dates)].copy()
+            if len(bsub) > 1:
+                bvals = bsub["Nifty50_Normalized"].values
+                bvals = bvals / bvals[0]
+                ax.plot(bsub["Date"], bvals, color="#2E86AB", linewidth=2,
+                        linestyle="--", label="Nifty 50")
+        ax.axhline(1.0, color="gray", alpha=0.4, linewidth=1)
+        ax.set_title(f"Walk-Forward: Out-of-Sample Growth of \u20b91 ({bundle['horizon_years']}-yr lookback)",
+                     fontweight="bold")
+        ax.set_ylabel("Growth multiple")
+        ax.legend(loc="upper left")
+        ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+
+
+def panel_portfolio(bundle, monthly_investment):
+    st.markdown("#### C. Final Portfolio")
+    alloc = scale_allocations(bundle, monthly_investment)
+
+    col1, col2 = st.columns([3, 2])
     with col1:
-        st.markdown("#### 💰 Fractional Share Plan")
-        st.markdown(f"**Monthly Investment:** ₹{monthly_investment:,}")
-        st.dataframe(portfolio_df, use_container_width=True)
-    
-    with col2:
-        st.markdown("#### 🔢 Whole Share Plan")
-        total_investment = whole_share_df['Total_Monthly_Investment'].iloc[0] if len(whole_share_df) > 0 else 0
-        st.markdown(f"**Monthly Investment Required:** ₹{total_investment:,.0f}")
-        
-        # Display whole share allocation with better formatting
-        display_df = whole_share_df[['Ticker', 'Current_Price', 'Whole_Shares', 'Share_Cost', 'Actual_Weight']].copy()
-        display_df['Current_Price'] = display_df['Current_Price'].apply(lambda x: f"₹{x:,.0f}")
-        display_df['Share_Cost'] = display_df['Share_Cost'].apply(lambda x: f"₹{x:,.0f}")
-        display_df['Actual_Weight'] = display_df['Actual_Weight'].apply(lambda x: f"{x:.1%}")
-        display_df.columns = ['Stock', 'Price/Share', 'Qty', 'Total Cost', 'Weight']
-        
-        st.dataframe(display_df, use_container_width=True)
-        
-        # Show investment difference
-        difference = total_investment - monthly_investment
-        if difference > 0:
-            st.info(f"💡 **Additional ₹{difference:,.0f}/month** needed for whole shares")
-        else:
-            st.success(f"💡 **Save ₹{abs(difference):,.0f}/month** with whole shares")
-    
-    # Display the comprehensive chart (single instance)
-    st.markdown("### 📈 Investment Growth Analysis")
-    try:
-        if fig:
-            st.pyplot(fig)
-            buf = io.BytesIO()
-            fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
-            buf.seek(0)
-            st.download_button("Download Projection PNG", data=buf.getvalue(), file_name="projection.png", mime="image/png")
-        else:
-            st.warning("Projection chart could not be generated.")
-    except Exception as e:
-        st.error(f"Error displaying projection chart: {str(e)}")
-    
-    st.success("✅ Analysis complete! Review your personalized investment strategy above.")
+        st.markdown(f"**{bundle['num_stocks']} stocks | \u20b9{monthly_investment:,}/month**")
+        disp = alloc.copy()
+        disp["Weight"] = disp["Weight"].apply(lambda x: f"{x*100:.1f}%")
+        disp["Monthly Allocation (INR)"] = disp["Monthly Allocation (INR)"].apply(lambda x: f"\u20b9{x:,.0f}")
+        disp["Current_Price"] = disp["Current_Price"].apply(lambda x: f"\u20b9{x:,.0f}")
+        disp = disp[["Ticker", "Sector", "Weight", "Monthly Allocation (INR)", "Current_Price", "Whole_Shares"]]
+        disp.columns = ["Stock", "Sector", "Weight", "Monthly \u20b9", "Price", "Whole Shares"]
+        st.dataframe(disp, use_container_width=True, hide_index=True)
 
-else:
-    # Welcome message when no optimization has been run
-    st.markdown("---")
-    st.markdown("### 🚀 Ready to Start Your Investment Journey?")
-    st.info("""
-    **Getting Started:**
-    1. 💰 Set your monthly investment amount in the sidebar
-    2. 📅 Choose your investment horizon (1-5 years)  
-    3. 🚀 Click "Generate Investment Plan" to see your optimized portfolio
-    
-    The AI will analyze 50+ curated stocks and create a personalized investment strategy just for you!
-    """)
+    with col2:
+        sectors = bundle.get("sector_allocation", {})
+        sectors = {k: v for k, v in sectors.items() if v > 0.0001}
+        if sectors:
+            fig, ax = plt.subplots(figsize=(5, 5))
+            colors = plt.cm.Set3(np.linspace(0, 1, len(sectors)))
+            ax.pie(list(sectors.values()), labels=list(sectors.keys()),
+                   autopct="%1.0f%%", colors=colors, startangle=90)
+            ax.set_title("Allocation by Sector", fontweight="bold")
+            st.pyplot(fig)
+
+    with st.expander("Why these stocks? (per-stock rationale)", expanded=False):
+        for s in bundle["stocks"]:
+            e = s.get("explanation", {})
+            st.markdown(
+                f"**{s['ticker']}** ({s['sector']}, {s['weight']*100:.1f}%)  \n"
+                f"- Fundamental: {e.get('fundamental', '')}  \n"
+                f"- Forecast: {e.get('forecast', '')}  \n"
+                f"- Risk: {e.get('risk', '')}  \n"
+                f"- {e.get('contribution', '')}"
+            )
+
+
+def panel_risk(bundle):
+    st.markdown("#### D. Risk View")
+    pm = bundle["portfolio_metrics"]
+    bench = bundle["benchmark"]["metrics"]
+    stocks = sorted(bundle["stocks"], key=lambda x: x["weight"], reverse=True)
+    sectors = bundle.get("sector_allocation", {})
+
+    top1 = stocks[0]["weight"] if stocks else 0
+    top3 = sum(s["weight"] for s in stocks[:3])
+    max_sector = max(sectors.items(), key=lambda kv: kv[1]) if sectors else ("n/a", 0)
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Largest holding", f"{top1*100:.1f}%")
+    c2.metric("Top-3 concentration", f"{top3*100:.1f}%")
+    c3.metric("Largest sector", f"{max_sector[0]} {max_sector[1]*100:.0f}%")
+    c4.metric("Annualized volatility", pct(pm.get("volatility")))
+
+    st.markdown("**Worst historical period (max drawdown)**")
+    d1, d2 = st.columns(2)
+    d1.metric("Portfolio max drawdown", pct(pm.get("max_drawdown")))
+    d2.metric("Nifty 50 max drawdown", pct(bench.get("max_drawdown")))
+    st.caption(
+        "Concentration is capped at 20% per stock with a diversification floor, so no "
+        "single name can sink the portfolio. Drawdown is held under the 25% gate."
+    )
+
+
+def render_dashboard(horizon_years, monthly_investment):
+    bundle = load_portfolio_bundle(horizon_years)
+    if bundle is None:
+        st.error(
+            f"No research bundle found for a {horizon_years}-year horizon. "
+            f"Run `py build_research_db.py` to generate the research database."
+        )
+        return
+    benchmark_df = load_benchmark_series()
+
+    verdict_banner(bundle)
+    st.caption(
+        f"Universe: Nifty 50 | Data through {bundle.get('data_through', 'n/a')} | "
+        f"Selection: {bundle.get('selection_method', 'PEG screen + Markowitz')}"
+    )
+
+    tabs = st.tabs(["Summary", "Backtest Evidence", "Final Portfolio", "Risk"])
+    with tabs[0]:
+        panel_summary(bundle)
+    with tabs[1]:
+        panel_backtest(bundle, benchmark_df)
+    with tabs[2]:
+        panel_portfolio(bundle, monthly_investment)
+    with tabs[3]:
+        panel_risk(bundle)
+
+
+# ===============================
+# PAGE
+# ===============================
+st.title("Vriddhi - Nifty 50 Portfolio Decision Aid")
+st.markdown(
+    "**Would you trust this portfolio with new monthly money?** "
+    "We screen the Nifty 50, validate with backtest + walk-forward, optimize with "
+    "Markowitz, and only recommend portfolios that clear robust return and risk gates."
+)
+show_disclaimer()
+st.markdown("---")
+
+# ---- Inputs ----
+st.sidebar.header("Your Plan")
+horizon_years = st.sidebar.selectbox(
+    "Investment horizon (years)", options=[3, 4, 5], index=2,
+    help="The walk-forward gate is matched to your chosen horizon.",
+)
+monthly_investment = st.sidebar.slider(
+    "Monthly contribution (INR)", min_value=50000, max_value=100000,
+    step=5000, value=50000,
+)
+st.sidebar.markdown("---")
+st.sidebar.caption(
+    "Gates: walk-forward CAGR >= 18% (3-4yr) / 20% (5yr), max drawdown < 25%, "
+    "walk-forward Sharpe > 1.0, and a benchmark beat after costs."
+)
+
+render_dashboard(horizon_years, monthly_investment)
+
+st.markdown("---")
+st.caption(
+    "v1 MVP - genuine: adjusted price history, CAGR, drawdown, volatility, Sharpe, "
+    "walk-forward, Markowitz optimization, pass/fail gates, benchmark beat. Simplified "
+    "for v1 (finishing next): ML/time-series forecast ensemble (currently uses precomputed "
+    "forecast signals), quarterly fundamentals depth, full turnover/cost modeling."
+)
