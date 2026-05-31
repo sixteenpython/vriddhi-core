@@ -1,5 +1,8 @@
 # Build-time only dependencies (NOT needed by the deployed Streamlit app).
-# Used by build_research_db.py to pull historical prices and precompute the
-# research bundles. The live app reads only the committed static files.
+# Used by the offline builders to pull market data and precompute the static
+# knowledge asset. The live app reads only the committed static files.
+#   build_grand_table.py  -> grand_table_expanded.csv (fundamentals + forecasts)
+#   build_research_db.py  -> research/*.json (portfolios, walk-forward, gates)
 yfinance>=0.2.40
 scipy>=1.9.0
+statsmodels>=0.14
