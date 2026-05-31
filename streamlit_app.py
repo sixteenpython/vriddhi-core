@@ -70,10 +70,17 @@ def verdict_banner(bundle):
     if v["recommended"]:
         st.success(
             f"### RECOMMENDED for a {h}-year horizon\n"
-            f"This 11-12 stock portfolio cleared every credibility gate: "
+            f"This {bundle['num_stocks']}-stock portfolio cleared every credibility gate: "
             f"~{pct(base)} walk-forward CAGR, beats Nifty 50 by {pct(beat)} after costs, "
             f"with risk inside our limits. Would you trust it with new monthly money? "
             f"The evidence says yes."
+        )
+    elif v.get("insufficient_history"):
+        st.warning(
+            f"### NOT VALIDATED for a {h}-year horizon\n"
+            f"A {h}-year window is too short for a credible out-of-sample (walk-forward) test, "
+            f"so we will not pretend to certify it. Validated portfolios begin at a 3-year "
+            f"horizon - please lengthen the horizon."
         )
     else:
         reasons = ", ".join(v["failing_gates"]) if v["failing_gates"] else "one or more gates"
@@ -85,7 +92,82 @@ def verdict_banner(bundle):
         )
 
 
-def panel_summary(bundle):
+def finance_doctor_note(bundle, monthly_investment):
+    """Plain-English, balanced 'finance doctor' narrative for a common investor:
+    what to do, what to realistically expect, and the honest risks - tuned to
+    the portfolio's actual health (verdict + metrics)."""
+    h = bundle["horizon_years"]
+    n = bundle["num_stocks"]
+    v = bundle["verdict"]
+    s = bundle["scenarios"]
+    pm = bundle["portfolio_metrics"]
+    bench = bundle["benchmark"]
+    wf = binding_walk_forward(bundle)
+    amt = f"\u20b9{monthly_investment:,}"
+
+    base = s.get("base")
+    beat = bench.get("beat_after_costs")
+    nifty = bench["metrics"].get(f"cagr_{h}y")
+    sharpe = wf.get("oos_sharpe")
+    dd = pm.get("max_drawdown")
+    stocks = sorted(bundle["stocks"], key=lambda x: x["weight"], reverse=True)
+    top3 = sum(x["weight"] for x in stocks[:3]) * 100 if stocks else 0
+    sectors = bundle.get("sector_allocation", {})
+    n_sectors = len({k for k, val in sectors.items() if val > 0.0001})
+
+    st.markdown("#### Your plan, in plain English")
+
+    # --- Case 1: too short to validate honestly ---
+    if v.get("insufficient_history"):
+        st.warning(
+            f"**Let me be straight with you.** You want to invest **{amt}/month** for "
+            f"just **{h} year{'s' if h > 1 else ''}**. That is too short a window for me to "
+            f"*honestly* validate a stock portfolio - one bad quarter can wreck a one- or "
+            f"two-year plan, and I refuse to dress up a guess as evidence. "
+            f"Equities reward **patience**: my validated, trustworthy portfolios start at a "
+            f"**3-year** horizon. Please lengthen the horizon in the sidebar and I'll show you "
+            f"a plan I can actually stand behind."
+        )
+        return
+
+    # --- Case 2: validated but failed one or more gates ---
+    if not v["recommended"]:
+        reasons = "; ".join(v.get("failing_gates", [])) or "one or more credibility checks"
+        st.warning(
+            f"**My honest advice: don't put new money into a {h}-year version of this today.** "
+            f"I ran the full battery of tests and it stumbled on **{reasons}**. "
+            f"A portfolio that can't clear these bars is one I won't ask you to trust with your "
+            f"hard-earned **{amt}/month**. The good news: a longer horizon often clears them - "
+            f"try switching the horizon in the sidebar. (Full numbers are below for the curious.)"
+        )
+        return
+
+    # --- Case 3: recommended ---
+    st.success(
+        f"**Here's the deal, in everyday terms.**\n\n"
+        f"You're planning to invest **{amt} every month for {h} years**. "
+        f"Your job is simple: **build the {n}-stock basket shown below and top it up in the "
+        f"same proportions every month**, with a quick monthly rebalance. No market timing, "
+        f"no daily tinkering - just steady, disciplined buying.\n\n"
+        f"**What you can realistically expect:** in out-of-sample testing (on periods the model "
+        f"had *not* seen), this basket compounded at about **{pct(base)} a year** - versus only "
+        f"**{pct(nifty)}** for the Nifty 50 over the same stretch. It's not a fluke either: it "
+        f"cleared every credibility check - it **beat the index by ~{pct(beat)}** after costs, "
+        f"scored a healthy risk-adjusted (Sharpe) **{sharpe:.2f}**, and kept its worst "
+        f"peak-to-trough fall to about **{pct(dd)}**, spread across **{n_sectors} sectors**. "
+        f"So yes - there is **high confidence** in a roughly **{pct(base)} CAGR** *if* you stay the course.\n\n"
+        f"**Now the honest risks - because a good doctor doesn't only give good news:** this is "
+        f"100% equity, so it *will* have ugly years; expect a 20%+ drop at some point and don't "
+        f"panic-sell when it happens. It leans on its biggest 3 names (~{top3:.0f}% of the money). "
+        f"And **{pct(base)} is a backtested figure, not a promise** - the future can be worse. "
+        f"I deliberately ignore the model's rosier forecast and anchor to what actually held up.\n\n"
+        f"**Bottom line:** if you can stay invested through the rough patches for the full {h} "
+        f"years, this is a portfolio I'd be comfortable putting new monthly money into."
+    )
+
+
+def panel_summary(bundle, monthly_investment):
+    finance_doctor_note(bundle, monthly_investment)
     st.markdown("#### A. Portfolio Summary")
     s = bundle["scenarios"]
     pm = bundle["portfolio_metrics"]
@@ -124,7 +206,7 @@ def panel_backtest(bundle, benchmark_df):
     wf_all = bundle.get("walk_forward", {})
 
     rows = []
-    for yr in (3, 4, 5):
+    for yr in (1, 2, 3, 4, 5):
         wf = wf_all.get(str(yr), {})
         rows.append({
             "Window": f"{yr}-year",
@@ -347,7 +429,7 @@ def _passing_horizons(exclude=None):
 def render_panels(bundle, benchmark_df, monthly_investment):
     tabs = st.tabs(["Summary", "Backtest Evidence", "Final Portfolio", "Risk"])
     with tabs[0]:
-        panel_summary(bundle)
+        panel_summary(bundle, monthly_investment)
     with tabs[1]:
         panel_backtest(bundle, benchmark_df)
     with tabs[2]:
@@ -413,20 +495,33 @@ st.markdown("---")
 # ---- Inputs ----
 st.sidebar.header("Your Plan")
 horizon_years = st.sidebar.selectbox(
-    "Investment horizon (years)", options=[3, 4, 5], index=2,
-    help="The walk-forward gate is matched to your chosen horizon.",
+    "Investment horizon (years)", options=[1, 2, 3, 4, 5], index=4,
+    help="Matches the 12/24/36/48/60-month forecasts in our database. The "
+         "walk-forward validation is matched to your chosen horizon.",
 )
 monthly_investment = st.sidebar.slider(
     "Monthly contribution (INR)", min_value=50000, max_value=100000,
-    step=5000, value=50000,
+    step=5000, value=100000,
 )
 st.sidebar.markdown("---")
+generate = st.sidebar.button("Generate Investment Plan", type="primary",
+                             use_container_width=True)
 st.sidebar.caption(
-    "Gates: walk-forward CAGR >= 18% (3-4yr) / 20% (5yr), max drawdown < 25%, "
+    "Gates: walk-forward CAGR >= 18% (1-4yr) / 20% (5yr), max drawdown < 25%, "
     "walk-forward Sharpe > 1.0, and a benchmark beat after costs."
 )
 
-render_dashboard(horizon_years, monthly_investment)
+if generate:
+    st.session_state["plan_generated"] = True
+
+if st.session_state.get("plan_generated"):
+    render_dashboard(horizon_years, monthly_investment)
+else:
+    st.info(
+        "Set your **investment horizon** and **monthly contribution** in the sidebar, "
+        "then click **Generate Investment Plan** to see whether a credible portfolio "
+        "is available - and exactly what to buy and monitor each month."
+    )
 
 st.markdown("---")
 st.caption(

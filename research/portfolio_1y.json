@@ -1,37 +1,24 @@
 {
-  "horizon_years": 5,
+  "horizon_years": 1,
   "generated_at": "2026-05-31 19:37",
   "data_through": "2026-05-29",
   "universe_size": 50,
   "screened_count": 18,
   "num_stocks": 12,
   "verdict": {
-    "recommended": true,
-    "insufficient_history": false,
+    "recommended": false,
+    "insufficient_history": true,
     "gate_results": [
       {
-        "gate": "5yr walk-forward CAGR >= 20%",
-        "passed": true,
-        "detail": "32.8%"
-      },
-      {
-        "gate": "Max drawdown < 25%",
-        "passed": true,
-        "detail": "17.8%"
-      },
-      {
-        "gate": "Walk-forward Sharpe > 1.0",
-        "passed": true,
-        "detail": "1.52"
-      },
-      {
-        "gate": "Beats Nifty 50 after costs",
-        "passed": true,
-        "detail": "+21.2%"
+        "gate": "1yr out-of-sample validation",
+        "passed": false,
+        "detail": "insufficient history to validate"
       }
     ],
-    "failing_gates": [],
-    "sharpe_strong": true
+    "failing_gates": [
+      "insufficient history to validate a 1-year horizon"
+    ],
+    "sharpe_strong": false
   },
   "portfolio_metrics": {
     "cagr_1y": 12.36282826577984,
@@ -42,13 +29,13 @@
     "volatility": 15.799829962113716,
     "max_drawdown": 17.78439110496664,
     "sharpe": 1.3779764850368972,
-    "expected_cagr": 42.526666666666664
+    "expected_cagr": 34.09333333333334
   },
   "scenarios": {
-    "base": 32.81787964198677,
-    "best": 40.71779462304363,
-    "worst": 24.91796466092991,
-    "forecast_signal": 42.526666666666664
+    "base": 12.36282826577984,
+    "best": 20.2627432468367,
+    "worst": 4.4629132847229815,
+    "forecast_signal": 34.09333333333334
   },
   "benchmark": {
     "name": "Nifty 50",
@@ -62,7 +49,7 @@
       "max_drawdown": 17.22975608467007,
       "sharpe": 0.20799158385799238
     },
-    "beat_after_costs": 21.17570615999254
+    "beat_after_costs": 17.040690636120928
   },
   "walk_forward": {
     "2": {
@@ -5230,7 +5217,7 @@
       "sector": "Telecom",
       "weight": 0.14999999999999983,
       "current_price": 1933.3,
-      "forecast": 37.06,
+      "forecast": 33.06,
       "pe_ratio": 38.1,
       "pb_ratio": 9.7,
       "backtest": {
@@ -5245,9 +5232,9 @@
       },
       "explanation": {
         "fundamental": "PEG 1.07 (PE 38.1, PB 9.7) - fairly priced for its growth. Note: rich price-to-book.",
-        "forecast": "Model signal (forward, not relied upon): ~37% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~33% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 22.1%, historical max drawdown 18.8%.",
-        "contribution": "Added ~4.3% to the portfolio's historical 5-yr CAGR (weight 15.0%)."
+        "contribution": "Held mainly as a diversifier (weight 15.0%): small or negative standalone historical contribution, but lowers overall risk."
       },
       "has_price_data": true
     },
@@ -5256,7 +5243,7 @@
       "sector": "Energy",
       "weight": 0.14999999999999983,
       "current_price": 374.45,
-      "forecast": 21.58,
+      "forecast": 11.42,
       "pe_ratio": 7.08,
       "pb_ratio": 2.33,
       "backtest": {
@@ -5271,9 +5258,9 @@
       },
       "explanation": {
         "fundamental": "PEG 0.40 (PE 7.1, PB 2.3) - attractively priced for its historical growth.",
-        "forecast": "Model signal (forward, not relied upon): ~22% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~11% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 28.7%, historical max drawdown 30.8%.",
-        "contribution": "Added ~5.4% to the portfolio's historical 5-yr CAGR (weight 15.0%)."
+        "contribution": "Added ~3.5% to the portfolio's historical 1-yr CAGR (weight 15.0%)."
       },
       "has_price_data": true
     },
@@ -5282,7 +5269,7 @@
       "sector": "Infrastructure",
       "weight": 0.14999999999999983,
       "current_price": 374.85,
-      "forecast": 36.09,
+      "forecast": 35.98,
       "pe_ratio": 50.12,
       "pb_ratio": 13.68,
       "backtest": {
@@ -5299,7 +5286,7 @@
         "fundamental": "PEG n/a (PE 50.1, PB 13.7) - priced at a premium - held for quality/diversification, not cheapness. Note: rich price-to-book, high P/E.",
         "forecast": "Model signal (forward, not relied upon): ~36% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 32.0%, historical max drawdown 26.9%.",
-        "contribution": "Added ~8.3% to the portfolio's historical 5-yr CAGR (weight 15.0%)."
+        "contribution": "Added ~1.0% to the portfolio's historical 1-yr CAGR (weight 15.0%)."
       },
       "has_price_data": true
     },
@@ -5308,7 +5295,7 @@
       "sector": "Automobile",
       "weight": 0.12114081890435871,
       "current_price": 3403.0,
-      "forecast": 22.59,
+      "forecast": 31.15,
       "pe_ratio": 29.6,
       "pb_ratio": 3.8,
       "backtest": {
@@ -5323,9 +5310,9 @@
       },
       "explanation": {
         "fundamental": "PEG n/a (PE 29.6, PB 3.8) - priced at a premium - held for quality/diversification, not cheapness.",
-        "forecast": "Model signal (forward, not relied upon): ~23% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~31% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 27.8%, historical max drawdown 28.1%.",
-        "contribution": "Added ~3.8% to the portfolio's historical 5-yr CAGR (weight 12.1%)."
+        "contribution": "Held mainly as a diversifier (weight 12.1%): small or negative standalone historical contribution, but lowers overall risk."
       },
       "has_price_data": true
     },
@@ -5334,7 +5321,7 @@
       "sector": "Automobile",
       "weight": 0.07449821307204486,
       "current_price": 8679.5,
-      "forecast": 39.15,
+      "forecast": 35.7,
       "pe_ratio": 28.48,
       "pb_ratio": 6.91,
       "backtest": {
@@ -5349,9 +5336,9 @@
       },
       "explanation": {
         "fundamental": "PEG 0.75 (PE 28.5, PB 6.9) - attractively priced for its historical growth.",
-        "forecast": "Model signal (forward, not relied upon): ~39% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~36% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 24.0%, historical max drawdown 42.3%.",
-        "contribution": "Added ~1.8% to the portfolio's historical 5-yr CAGR (weight 7.4%)."
+        "contribution": "Added ~1.7% to the portfolio's historical 1-yr CAGR (weight 7.4%)."
       },
       "has_price_data": true
     },
@@ -5360,7 +5347,7 @@
       "sector": "Healthcare",
       "weight": 0.0543609680235969,
       "current_price": 7922.5,
-      "forecast": 56.7,
+      "forecast": 51.82,
       "pe_ratio": 58.0,
       "pb_ratio": 6.2,
       "backtest": {
@@ -5375,9 +5362,9 @@
       },
       "explanation": {
         "fundamental": "PEG 1.06 (PE 58.0, PB 6.2) - fairly priced for its growth. Note: high P/E.",
-        "forecast": "Model signal (forward, not relied upon): ~57% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~52% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 27.0%, historical max drawdown 38.5%.",
-        "contribution": "Added ~1.2% to the portfolio's historical 5-yr CAGR (weight 5.4%)."
+        "contribution": "Added ~1.0% to the portfolio's historical 1-yr CAGR (weight 5.4%)."
       },
       "has_price_data": true
     },
@@ -5386,7 +5373,7 @@
       "sector": "Energy",
       "weight": 0.05000000000000011,
       "current_price": 704.2,
-      "forecast": 39.71,
+      "forecast": 37.59,
       "pe_ratio": 15.0,
       "pb_ratio": 2.2,
       "backtest": {
@@ -5401,9 +5388,9 @@
       },
       "explanation": {
         "fundamental": "PEG 0.39 (PE 15.0, PB 2.2) - attractively priced for its historical growth.",
-        "forecast": "Model signal (forward, not relied upon): ~40% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~38% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 33.0%, historical max drawdown 49.9%.",
-        "contribution": "Added ~1.2% to the portfolio's historical 5-yr CAGR (weight 5.0%)."
+        "contribution": "Added ~3.7% to the portfolio's historical 1-yr CAGR (weight 5.0%)."
       },
       "has_price_data": true
     },
@@ -5412,7 +5399,7 @@
       "sector": "Automobile",
       "weight": 0.05000000000000003,
       "current_price": 5924.5,
-      "forecast": 29.3,
+      "forecast": 32.24,
       "pe_ratio": 32.0,
       "pb_ratio": 5.2,
       "backtest": {
@@ -5427,9 +5414,9 @@
       },
       "explanation": {
         "fundamental": "PEG n/a (PE 32.0, PB 5.2) - priced at a premium - held for quality/diversification, not cheapness.",
-        "forecast": "Model signal (forward, not relied upon): ~29% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~32% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 26.4%, historical max drawdown 25.9%.",
-        "contribution": "Added ~1.1% to the portfolio's historical 5-yr CAGR (weight 5.0%)."
+        "contribution": "Added ~1.8% to the portfolio's historical 1-yr CAGR (weight 5.0%)."
       },
       "has_price_data": true
     },
@@ -5438,7 +5425,7 @@
       "sector": "Consumer",
       "weight": 0.04999999999999995,
       "current_price": 1084.1,
-      "forecast": 47.61,
+      "forecast": 37.41,
       "pe_ratio": 48.0,
       "pb_ratio": 18.0,
       "backtest": {
@@ -5453,9 +5440,9 @@
       },
       "explanation": {
         "fundamental": "PEG 1.09 (PE 48.0, PB 18.0) - fairly priced for its growth. Note: rich price-to-book, high P/E.",
-        "forecast": "Model signal (forward, not relied upon): ~48% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~37% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 23.2%, historical max drawdown 29.0%.",
-        "contribution": "Added ~0.7% to the portfolio's historical 5-yr CAGR (weight 5.0%)."
+        "contribution": "Added ~0.4% to the portfolio's historical 1-yr CAGR (weight 5.0%)."
       },
       "has_price_data": true
     },
@@ -5464,7 +5451,7 @@
       "sector": "Financials",
       "weight": 0.04999999999999995,
       "current_price": 788.75,
-      "forecast": 83.33,
+      "forecast": 53.41,
       "pe_ratio": 14.5,
       "pb_ratio": 4.2,
       "backtest": {
@@ -5479,7 +5466,7 @@
       },
       "explanation": {
         "fundamental": "PEG 0.21 (PE 14.5, PB 4.2) - attractively priced for its historical growth.",
-        "forecast": "Model signal (forward, not relied upon): ~83% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~53% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 24.6%, historical max drawdown 39.0%.",
         "contribution": "Held mainly as a diversifier (weight 5.0%): small or negative standalone historical contribution, but lowers overall risk."
       },
@@ -5490,7 +5477,7 @@
       "sector": "Energy",
       "weight": 0.04999999999999995,
       "current_price": 1409.2,
-      "forecast": 14.02,
+      "forecast": 6.95,
       "pe_ratio": 20.28,
       "pb_ratio": 2.26,
       "backtest": {
@@ -5505,9 +5492,9 @@
       },
       "explanation": {
         "fundamental": "PEG n/a (PE 20.3, PB 2.3) - priced at a premium - held for quality/diversification, not cheapness.",
-        "forecast": "Model signal (forward, not relied upon): ~14% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~7% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 22.3%, historical max drawdown 27.2%.",
-        "contribution": "Added ~0.3% to the portfolio's historical 5-yr CAGR (weight 5.0%)."
+        "contribution": "Held mainly as a diversifier (weight 5.0%): small or negative standalone historical contribution, but lowers overall risk."
       },
       "has_price_data": true
     },
@@ -5516,7 +5503,7 @@
       "sector": "Healthcare",
       "weight": 0.04999999999999995,
       "current_price": 1277.6,
-      "forecast": 17.53,
+      "forecast": 15.94,
       "pe_ratio": 18.76,
       "pb_ratio": 3.18,
       "backtest": {
@@ -5531,7 +5518,7 @@
       },
       "explanation": {
         "fundamental": "PEG n/a (PE 18.8, PB 3.2) - priced at a premium - held for quality/diversification, not cheapness.",
-        "forecast": "Model signal (forward, not relied upon): ~18% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
+        "forecast": "Model signal (forward, not relied upon): ~16% annualized. The recommendation is anchored to validated walk-forward returns, not this.",
         "risk": "Annualized volatility 21.9%, historical max drawdown 33.0%.",
         "contribution": "Held mainly as a diversifier (weight 5.0%): small or negative standalone historical contribution, but lowers overall risk."
       },

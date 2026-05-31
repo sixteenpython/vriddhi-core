@@ -52,13 +52,16 @@ TARGET_SCREEN_CANDIDATES = 18   # spec: screen ~15-20 before optimizing down
 SINGLE_STOCK_CAP = 0.15         # 15% single-stock cap (avoid a top-heavy barbell)
 MIN_STOCK_WEIGHT = 0.05         # 5% floor so every held name is genuinely meaningful
 
-HORIZONS = [3, 4, 5]
+HORIZONS = [1, 2, 3, 4, 5]       # matches the 12/24/36/48/60M data in the CSV
 
-# Pass/fail gates (from the investor MVP spec)
+# A walk-forward needs enough history to leave a credible out-of-sample record.
+# With ~5yr of data, a 1yr lookback collapses to a noisy ~4-month test, so we
+# require at least this many return-days before we will validate a horizon.
+MIN_WF_RETURN_DAYS = int(TRADING_DAYS * 1.5)   # ~378 days -> 2yr+ validates, 1yr does not
+
+# Pass/fail gates (from the investor MVP spec). Per-horizon min walk-forward CAGR.
 GATES = {
-    "wf_cagr_3y_min": 18.0,
-    "wf_cagr_4y_min": 18.0,
-    "wf_cagr_5y_min": 20.0,
+    "wf_cagr_min": {1: 18.0, 2: 18.0, 3: 18.0, 4: 18.0, 5: 20.0},
     "max_drawdown_max": 25.0,
     "sharpe_min": 1.0,
     "sharpe_strong": 1.2,
@@ -163,6 +166,8 @@ def per_stock_metrics(prices_df):
             continue
         rets = p.pct_change().dropna()
         metrics[ticker] = {
+            "cagr_1y": cagr_from_prices(p, 1),
+            "cagr_2y": cagr_from_prices(p, 2),
             "cagr_3y": cagr_from_prices(p, 3),
             "cagr_4y": cagr_from_prices(p, 4),
             "cagr_5y": cagr_from_prices(p, 5),
@@ -225,7 +230,7 @@ def walk_forward(prices_df, tickers, lookback_years):
     avail = [t for t in tickers if t in prices_df.columns]
     window_prices = slice_last_years(prices_df[avail], lookback_years).dropna(how="all")
     rets = window_prices.pct_change().dropna()
-    if len(rets) < TRADING_DAYS * 2:
+    if len(rets) < MIN_WF_RETURN_DAYS:
         return None
 
     n_folds = lookback_years - 1  # e.g. 5yr -> 4 folds (train>=1yr, step 1yr)
@@ -370,7 +375,22 @@ def evaluate_gates(horizon_years, wf_by_lookback, port_metrics, benchmark_beat):
     wf_cagr = binding.get("oos_cagr")
     wf_sharpe = binding.get("oos_sharpe")
     max_dd = port_metrics.get("max_drawdown")
-    cagr_threshold = GATES["wf_cagr_5y_min"] if horizon_years == 5 else GATES["wf_cagr_3y_min"]
+    cagr_threshold = GATES["wf_cagr_min"].get(horizon_years, 18.0)
+
+    # Short horizons can lack a credible out-of-sample record entirely. Be
+    # explicit about that (vs. "validated but failed thresholds").
+    if not binding or wf_cagr is None:
+        return {
+            "recommended": False,
+            "insufficient_history": True,
+            "gate_results": [{
+                "gate": f"{horizon_years}yr out-of-sample validation",
+                "passed": False,
+                "detail": "insufficient history to validate",
+            }],
+            "failing_gates": [f"insufficient history to validate a {horizon_years}-year horizon"],
+            "sharpe_strong": False,
+        }
 
     results = []
 
@@ -391,6 +411,7 @@ def evaluate_gates(horizon_years, wf_by_lookback, port_metrics, benchmark_beat):
     failing = [r["gate"] for r in results if not r["passed"]]
     return {
         "recommended": recommended,
+        "insufficient_history": False,
         "gate_results": results,
         "failing_gates": failing,
         "sharpe_strong": bool(wf_sharpe is not None and wf_sharpe >= GATES["sharpe_strong"]),
@@ -402,7 +423,10 @@ def evaluate_gates(horizon_years, wf_by_lookback, port_metrics, benchmark_beat):
 # ===============================
 def build_horizon_bundle(horizon_years, df, prices_df, stock_metrics, benchmark):
     horizon_months = horizon_years * 12
-    forecast_col = vriddhi_core.get_forecast_column(horizon_months)
+    # Use the forecast column that matches THIS horizon (12M/24M/.../60M).
+    # (Previously this always fell back to Forecast_60M because the helper
+    # returns short codes like "60M" that never match the "Forecast_60M" cols.)
+    forecast_col = f"Forecast_{horizon_months}M"
     if forecast_col not in df.columns:
         forecast_col = "Forecast_60M"
 
@@ -458,6 +482,8 @@ def build_horizon_bundle(horizon_years, df, prices_df, stock_metrics, benchmark)
         return (sub.iloc[-1] / sub.iloc[0]) ** (1.0 / years) * 100 - 100
 
     port_metrics = {
+        "cagr_1y": port_cagr(1),
+        "cagr_2y": port_cagr(2),
         "cagr_3y": port_cagr(3),
         "cagr_4y": port_cagr(4),
         "cagr_5y": port_cagr(5),
@@ -472,6 +498,8 @@ def build_horizon_bundle(horizon_years, df, prices_df, stock_metrics, benchmark)
     if benchmark is not None and len(benchmark) > TRADING_DAYS:
         bench_rets = benchmark.pct_change().dropna()
         bench_metrics = {
+            "cagr_1y": cagr_from_prices(benchmark, 1),
+            "cagr_2y": cagr_from_prices(benchmark, 2),
             "cagr_3y": cagr_from_prices(benchmark, 3),
             "cagr_4y": cagr_from_prices(benchmark, 4),
             "cagr_5y": cagr_from_prices(benchmark, 5),
