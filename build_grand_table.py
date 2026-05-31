@@ -38,6 +38,11 @@ import pandas as pd
 import yfinance as yf
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
+from ticker_resolver import (
+    load_aliases, save_aliases, symbol_for, harvest_name,
+    resolve_broken, write_health_report,
+)
+
 warnings.filterwarnings("ignore")
 
 SOURCE_CSV = "grand_table_expanded.csv"   # Ticker + Sector (+ fallback PE/PB)
@@ -118,17 +123,20 @@ def damped_holt_forecast(series, current_price):
 
 
 def get_fundamentals(symbol, fallback_pe, fallback_pb):
-    """PE and PB from yfinance fundamentals, falling back to the existing CSV."""
-    pe, pb = fallback_pe, fallback_pb
+    """PE, PB and company longName from yfinance fundamentals, falling back to the
+    existing CSV. The name is harvested so the resolver can find this stock's
+    successor if its symbol ever changes."""
+    pe, pb, name = fallback_pe, fallback_pb, None
     try:
         info = yf.Ticker(symbol).info
         if info.get("trailingPE") and info["trailingPE"] > 0:
             pe = round(float(info["trailingPE"]), 2)
         if info.get("priceToBook") and info["priceToBook"] > 0:
             pb = round(float(info["priceToBook"]), 2)
+        name = info.get("longName") or info.get("shortName")
     except Exception:
         pass
-    return pe, pb
+    return pe, pb, name
 
 
 def main():
@@ -142,19 +150,40 @@ def main():
     tickers = src["Ticker"].tolist()
     print(f"Refreshing {len(tickers)} stocks from {SOURCE_CSV} -> {args.out}")
 
-    symbols = [to_yahoo(t) for t in tickers]
+    # Resolve each ticker to a Yahoo symbol (honors prior auto-healed overrides).
+    aliases = load_aliases()
+    resolved = {t: symbol_for(t, aliases) for t in tickers}
+    symbols = list(dict.fromkeys(resolved.values()))
     print(f"Downloading {len(symbols)} symbols ({PERIOD}, adjusted)...")
     raw = yf.download(symbols, period=PERIOD, auto_adjust=True, progress=False)
-    close = raw["Close"].rename(columns={to_yahoo(t): t for t in tickers})
+    close = raw["Close"].rename(columns={sym: t for t, sym in resolved.items()})
+
+    # Self-heal any ticker whose symbol no longer returns data (rename/demerger).
+    for t in tickers:
+        if t in close.columns and close[t].dropna().shape[0] >= TRADING_DAYS:
+            continue
+        new_sym, status = resolve_broken(t, aliases, min_days=TRADING_DAYS, period=PERIOD)
+        if new_sym:
+            h = yf.download(new_sym, period=PERIOD, auto_adjust=True, progress=False)
+            series = h["Close"].dropna() if h is not None and not h.empty else None
+            if series is not None and hasattr(series, "columns"):
+                series = series.iloc[:, 0].dropna()
+            if series is not None and len(series) >= TRADING_DAYS:
+                close[t] = series
+                resolved[t] = new_sym
+                print(f"  AUTO-HEALED {t}: {symbol_for(t, {}):>14s} -> {new_sym} "
+                      f"({len(series)} days)")
 
     rows = []
     skipped = []
+    health = []
     for t in tickers:
         prev = src_by_ticker.loc[t]
         if t not in close.columns or close[t].dropna().shape[0] < TRADING_DAYS:
-            # No usable price data -> keep the previous row unchanged.
+            # No usable price data even after resolution -> keep prior row (stale).
             skipped.append(t)
             rows.append(prev.to_dict() | {"Ticker": t})
+            health.append({"ticker": t, "symbol": resolved.get(t), "status": "stale", "days": 0})
             continue
 
         prices = close[t].dropna()
@@ -168,7 +197,12 @@ def main():
         fc = damped_holt_forecast(prices, current)
         exp_ret = {h: ((1.0 + fc[h] / 100.0) ** (h / 12.0) - 1.0) * 100.0 for h in HORIZON_MONTHS}
 
-        pe, pb = get_fundamentals(to_yahoo(t), prev.get("PE_Ratio"), prev.get("PB_Ratio"))
+        pe, pb, name = get_fundamentals(resolved[t], prev.get("PE_Ratio"), prev.get("PB_Ratio"))
+        harvest_name(t, name, aliases)
+        health.append({
+            "ticker": t, "symbol": resolved[t], "days": int(len(prices)),
+            "status": "renamed" if resolved[t] != f"{t}.NS" else "ok",
+        })
 
         rows.append({
             "Ticker": t,
@@ -188,8 +222,16 @@ def main():
     out_df = out_df[COLUMNS]
     out_df.to_csv(args.out, index=False)
 
+    # Persist self-healed symbol overrides + harvested names, and a health report.
+    save_aliases(aliases)
+    report = write_health_report(health)
+    renamed = [r for r in health if r["status"] == "renamed"]
+    if renamed:
+        print("  AUTO-HEALED (symbol changed): "
+              + ", ".join(f"{r['ticker']}->{r['symbol']}" for r in renamed))
     if skipped:
-        print(f"  Kept previous values (no price data) for: {skipped}")
+        print(f"  STALE (no data even after resolution, kept previous values): {skipped}")
+    print(f"  Universe health: {report['summary']} (see research/universe_health.json)")
     print(f"  Forecast_60M range: {out_df['Forecast_60M'].min():.1f}% .. "
           f"{out_df['Forecast_60M'].max():.1f}%  (mean {out_df['Forecast_60M'].mean():.1f}%)")
     print(f"  PE coverage: {(out_df['PE_Ratio'] > 0).sum()}/{len(out_df)} | "

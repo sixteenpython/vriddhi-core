@@ -134,6 +134,27 @@ def validate_and_report():
     if not os.path.exists(benchmark):
         die("research/benchmark.csv was not produced - research build likely failed.")
 
+    # Universe health: self-healed renames + any tickers that need a human look.
+    health_path = os.path.join(RESEARCH_DIR, "universe_health.json")
+    if os.path.exists(health_path):
+        with open(health_path, "r", encoding="utf-8") as f:
+            health = json.load(f)
+        log(f"Universe health: {health.get('summary', {})}")
+        review = health.get("needs_review", [])
+        for r in review:
+            if r["status"] == "renamed":
+                log(f"  AUTO-HEALED: {r['ticker']} now tracks {r['symbol']} "
+                    f"({r.get('days', '?')} days) - confirm this is the right successor.")
+            elif r["status"] in ("stale", "unresolved"):
+                log(f"  NEEDS ATTENTION: {r['ticker']} could not be resolved - "
+                    f"excluded from recommendations this month.")
+        unresolved = sum(1 for r in review if r["status"] in ("stale", "unresolved"))
+        if unresolved > 5:
+            die(f"{unresolved} tickers unresolved - likely a network/data outage. "
+                "Re-run when data is available before publishing.")
+    else:
+        log("No universe_health.json (grand-table step skipped?) - skipping health check.")
+
     recommended = []
     for hy in HORIZONS:
         cur_path = os.path.join(RESEARCH_DIR, f"portfolio_{hy}y.json")

@@ -1,0 +1,72 @@
+{
+  "log": {
+    "TATAMOTORS": {
+      "history_days": 1238,
+      "resolved_on": "2026-05-31",
+      "resolved_to": "TMPV.NS",
+      "status": "renamed",
+      "tried": [
+        "TATAMOTORS.BO",
+        "TMPV.NS",
+        "TMCV.NS",
+        "TMCV.BO",
+        "TMPV.BO"
+      ]
+    }
+  },
+  "names": {
+    "ADANIENT": "Adani Enterprises Limited",
+    "ADANIPORTS": "Adani Ports and Special Economic Zone Limited",
+    "APOLLOHOSP": "Apollo Hospitals Enterprise Limited",
+    "ASIANPAINT": "Asian Paints Limited",
+    "AXISBANK": "Axis Bank Limited",
+    "BAJAJ-AUTO": "Bajaj Auto Limited",
+    "BAJAJFINSV": "Bajaj Finserv Ltd.",
+    "BAJFINANCE": "Bajaj Finance Limited",
+    "BEL": "Bharat Electronics Limited",
+    "BHARTIARTL": "Bharti Airtel Limited",
+    "BPCL": "Bharat Petroleum Corporation Limited",
+    "BRITANNIA": "Britannia Industries Limited",
+    "CIPLA": "Cipla Limited",
+    "COALINDIA": "Coal India Limited",
+    "DRREDDY": "Dr. Reddy's Laboratories Limited",
+    "EICHERMOT": "Eicher Motors Limited",
+    "GRASIM": "Grasim Industries Limited",
+    "HCLTECH": "HCL Technologies Limited",
+    "HDFCBANK": "HDFC Bank Limited",
+    "HDFCLIFE": "HDFC Life Insurance Company Limited",
+    "HEROMOTOCO": "Hero MotoCorp Limited",
+    "HINDALCO": "Hindalco Industries Limited",
+    "HINDUNILVR": "Hindustan Unilever Limited",
+    "ICICIBANK": "ICICI Bank Limited",
+    "INDUSINDBK": "IndusInd Bank Limited",
+    "INFY": "Infosys Limited",
+    "ITC": "ITC Limited",
+    "JSWSTEEL": "JSW Steel Limited",
+    "KOTAKBANK": "Kotak Mahindra Bank Limited",
+    "LT": "Larsen & Toubro Limited",
+    "M&M": "Mahindra & Mahindra Limited",
+    "MARUTI": "Maruti Suzuki India Limited",
+    "NESTLEIND": "Nestl\u00e9 India Limited",
+    "NTPC": "NTPC Limited",
+    "ONGC": "Oil and Natural Gas Corporation Limited",
+    "POWERGRID": "Power Grid Corporation of India Limited",
+    "RELIANCE": "Reliance Industries Limited",
+    "SBILIFE": "SBI Life Insurance Company Limited",
+    "SBIN": "State Bank of India",
+    "SHRIRAMFIN": "Shriram Finance Limited",
+    "SUNPHARMA": "Sun Pharmaceutical Industries Limited",
+    "TATACONSUM": "Tata Consumer Products Limited",
+    "TATAMOTORS": "Tata Motors Passenger Vehicles Limited",
+    "TATASTEEL": "Tata Steel Limited",
+    "TCS": "Tata Consultancy Services Limited",
+    "TECHM": "Tech Mahindra Limited",
+    "TITAN": "Titan Company Limited",
+    "TRENT": "Trent Limited",
+    "ULTRACEMCO": "UltraTech Cement Limited",
+    "WIPRO": "Wipro Limited"
+  },
+  "symbols": {
+    "TATAMOTORS": "TMPV.NS"
+  }
+}

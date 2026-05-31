@@ -71,9 +71,15 @@ GATES = {
 # ===============================
 # TICKER MAPPING
 # ===============================
+from ticker_resolver import load_aliases, symbol_for
+
+_ALIASES = load_aliases()
+
+
 def to_yahoo_symbol(ticker: str) -> str:
-    """Map an NSE ticker from our CSV to a yfinance symbol."""
-    return f"{ticker.strip()}.NS"
+    """Map an NSE ticker from our CSV to a yfinance symbol, honoring any
+    auto-healed overrides (renames/demergers) recorded by build_grand_table."""
+    return symbol_for(ticker, _ALIASES)
 
 
 # ===============================
