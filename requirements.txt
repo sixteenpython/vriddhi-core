@@ -1,10 +1,17 @@
-# Pinned to a mutually-compatible set for the Streamlit Cloud host (python-3.9).
-# numpy is capped below 2.0: a fresh redeploy was resolving numpy>=1.21 to 2.x,
-# whose ABI change breaks scipy/seaborn wheels built against numpy 1.x and
-# surfaced as an ImportError on `from vriddhi_core import ...`.
-streamlit>=1.28.0,<2.0
-pandas>=1.5.0,<2.3
-numpy>=1.24,<2.0
-scipy>=1.10,<1.14
-matplotlib>=3.7,<3.10
-seaborn>=0.12,<0.14
+# Runtime dependencies for the Streamlit dashboard ONLY.
+#
+# The live app just reads precomputed JSON bundles (research/) and renders
+# charts - it does NOT need scipy or seaborn at runtime:
+#   * seaborn is imported behind a try/except in vriddhi_core (cosmetic only)
+#   * scipy is imported lazily inside an optimizer the dashboard never calls
+# So they are intentionally NOT listed here. The heavy/compiled build-time deps
+# (yfinance, scipy) live in requirements-dev.txt and run offline.
+#
+# Versions are left open (no upper caps) so the Streamlit Cloud host - currently
+# Python 3.13 - installs prebuilt wheels instead of compiling from source.
+# (A previous numpy<2 / scipy<1.14 pin forced a source build of scipy that
+# failed on 3.13 for lack of a Fortran compiler.)
+streamlit>=1.28.0
+pandas>=2.0
+numpy>=1.26
+matplotlib>=3.7
