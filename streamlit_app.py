@@ -657,7 +657,13 @@ def panel_optimal(bundle):
         "**Vriddhi actually recommends**. They sit almost on top of each other - we give up a "
         "whisker of theoretical return for a lot more safety.\n"
         "- The **red square is the Nifty 50** (the market). Notice both our portfolios sit **well "
-        "above and to the left of it** - *more return, similar-or-less risk.* That gap is the edge."
+        "above and to the left of it** - *more return, similar-or-less risk.* That gap is the edge.\n\n"
+        "**The quick intuition:** an individual stock (orange dot) is *healthier* the closer it sits "
+        "to the bright cloud and the red star - up and to the left means **more reward for less "
+        "risk**. Stocks drifting far to the lower-right are the opposite: more risk for less return. "
+        "And here's the reassuring part - **Vriddhi's recommended names are exactly the ones "
+        "clustered toward that top-left 'North Star.'** The recommendation isn't a hunch; it mirrors "
+        "precisely what this map says is healthy."
     )
     st.caption(
         "Note: this chart's return axis is the MPT mean-return basis the optimizer works in. The "
