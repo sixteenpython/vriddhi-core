@@ -642,13 +642,82 @@ def panel_optimal(bundle):
     ax.legend(loc="upper left", fontsize=8, framealpha=0.9)
     ax.grid(True, alpha=0.3)
     st.pyplot(fig)
+
+    st.success(
+        "**How to read this chart (the simple version):** think of it as a map of every way you "
+        "could invest. **Left-to-right is risk** (how bumpy the ride); **bottom-to-top is return** "
+        "(how much you make). Every **small dot is one possible mix** of these stocks, and its "
+        "**colour is the Sharpe ratio** - how much return you earn *per unit of risk* (brighter = "
+        "better quality). The **orange dots are the individual stocks** on their own. \n\n"
+        "- The **curved line** is the *efficient frontier* - the best return you can get for each "
+        "level of risk. Nothing exists above it; that's the limit of what's possible.\n"
+        "- The **red dashed line** is the best risk-vs-reward trade-off line; where it just touches "
+        "the frontier is the mathematically 'perfect' mix.\n"
+        "- The **red star** is that textbook-perfect portfolio. The **purple diamond** is what "
+        "**Vriddhi actually recommends**. They sit almost on top of each other - we give up a "
+        "whisker of theoretical return for a lot more safety.\n"
+        "- The **red square is the Nifty 50** (the market). Notice both our portfolios sit **well "
+        "above and to the left of it** - *more return, similar-or-less risk.* That gap is the edge."
+    )
     st.caption(
-        "Each dot is a portfolio: x = how bumpy the ride (risk), y = annualized return, "
-        "colour = Sharpe (risk-adjusted quality). Orange dots are the individual candidate "
-        "stocks. This chart uses the MPT mean-return basis the optimizer works in; the "
-        "headline recommendation is still anchored to the validated walk-forward CAGR on the "
+        "Note: this chart's return axis is the MPT mean-return basis the optimizer works in. The "
+        "headline recommendation is still anchored to the validated walk-forward CAGR shown on the "
         "other tabs."
     )
+
+    # ---- Which stocks? The pure-math 7 vs the Vriddhi 12 (the USP) ----
+    st.markdown("#### Which stocks does each one actually hold?")
+    opt_w = {k: float(v) for k, v in (opt.get("weights") or {}).items()}
+    rec_w = {s["ticker"]: float(s["weight"]) for s in bundle.get("stocks", [])}
+
+    # Union, ordered by the recommended weight (then any optimum-only names).
+    ordered = sorted(rec_w, key=lambda t: rec_w[t], reverse=True)
+    ordered += [t for t in opt_w if t not in rec_w]
+
+    hold_rows = []
+    for t in ordered:
+        in_opt, in_rec = t in opt_w, t in rec_w
+        if in_opt and in_rec:
+            role = "Core idea - kept by both"
+        elif in_rec:
+            role = "Added by Vriddhi for diversification"
+        else:
+            role = "Optimum-only (Vriddhi dropped it)"
+        hold_rows.append({
+            "Stock": t,
+            "Pure-math optimum (7)": f"{opt_w[t]*100:.1f}%" if in_opt else "\u2014",
+            "Vriddhi recommended (12)": f"{rec_w[t]*100:.1f}%" if in_rec else "\u2014",
+            "Role": role,
+        })
+    st.dataframe(pd.DataFrame(hold_rows), use_container_width=True, hide_index=True)
+
+    # Dynamic plain-English story of the difference.
+    opt_names = sorted(opt_w, key=lambda t: opt_w[t], reverse=True)
+    shared = [t for t in opt_names if t in rec_w]
+    added = [t for t in ordered if t in rec_w and t not in opt_w]
+    capped = [t for t in shared if opt_w[t] > rec_w[t] + 0.005]
+    top_nm = opt_names[0] if opt_names else "the top name"
+    top_wt = opt_w[top_nm] * 100 if opt_names else 0
+    bits = [
+        f"**Same winning ideas, spread more safely.** The pure-math optimum crams everything into "
+        f"**{len(opt_w)} names** and bets big - **{top_nm} alone at {top_wt:.0f}%**.",
+    ]
+    if shared:
+        bits.append(
+            f"Vriddhi keeps **{len(shared)} of those exact same names** "
+            f"({', '.join(shared)}) - so we're not throwing away the optimizer's best ideas.")
+    if capped:
+        bits.append(
+            f"But we **trim the over-sized bets** (e.g. {', '.join(capped[:3])}) down to the 15% cap, "
+            f"so no single stock can sink the plan.")
+    if added:
+        bits.append(
+            f"Then we **add {len(added)} more solid names** ({', '.join(added)}) that the raw "
+            f"optimizer ignored, to spread the risk across more of the market.")
+    bits.append(
+        "The result: the **same engine of returns, with the single-stock risk defused** - which is "
+        "exactly why the 12-stock book holds up better on money the model had never seen.")
+    st.info(" ".join(bits))
 
     # Honest optimum-vs-recommended comparison table.
     oc = ov.get("oos_compare", {})
