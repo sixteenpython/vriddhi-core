@@ -56,6 +56,27 @@ SHRINK = 0.6           # weight on the model signal vs. the market anchor
 FORECAST_CAP = 30.0    # never emit more than this annualized
 FORECAST_FLOOR = -10.0
 
+# yfinance GICS-style sector -> Vriddhi bucket. Keeps the app's existing
+# vocabulary while correcting the curated CSV, where several names were
+# mislabeled (e.g. steel/aluminium sat under "Energy"). Names yfinance can't
+# classify fall back to the prior curated label.
+YF_SECTOR_MAP = {
+    "Technology": "IT",
+    "Communication Services": "Telecom",
+    "Financial Services": "Financials",
+    "Healthcare": "Healthcare",
+    "Energy": "Energy",
+    "Utilities": "Utilities",
+    "Basic Materials": "Materials",
+    "Industrials": "Infrastructure",
+    "Real Estate": "Infrastructure",
+    "Consumer Defensive": "Consumer",
+    "Consumer Cyclical": "Consumer",
+}
+# Autos sit under "Consumer Cyclical" in GICS; promote them to the app's
+# dedicated Automobile bucket using the finer industry label.
+AUTO_INDUSTRY_KEYWORDS = ("auto",)
+
 COLUMNS = [
     "Overall_Rank", "Ticker", "Sector", "Current_Price",
     "Expected_Returns_12M", "Expected_Returns_24M", "Expected_Returns_36M",
@@ -123,10 +144,11 @@ def damped_holt_forecast(series, current_price):
 
 
 def get_fundamentals(symbol, fallback_pe, fallback_pb):
-    """PE, PB and company longName from yfinance fundamentals, falling back to the
-    existing CSV. The name is harvested so the resolver can find this stock's
-    successor if its symbol ever changes."""
+    """PE, PB, company longName, and sector/industry from yfinance fundamentals,
+    falling back to the existing CSV. The name is harvested so the resolver can
+    find this stock's successor if its symbol ever changes."""
     pe, pb, name = fallback_pe, fallback_pb, None
+    sector_raw, industry_raw = None, None
     try:
         info = yf.Ticker(symbol).info
         if info.get("trailingPE") and info["trailingPE"] > 0:
@@ -134,9 +156,26 @@ def get_fundamentals(symbol, fallback_pe, fallback_pb):
         if info.get("priceToBook") and info["priceToBook"] > 0:
             pb = round(float(info["priceToBook"]), 2)
         name = info.get("longName") or info.get("shortName")
+        sector_raw = info.get("sector")
+        industry_raw = info.get("industry")
     except Exception:
         pass
-    return pe, pb, name
+    return pe, pb, name, sector_raw, industry_raw
+
+
+def map_sector(yf_sector, yf_industry, fallback):
+    """Map yfinance's sector/industry onto a Vriddhi bucket. Falls back to the
+    curated label when yfinance returns nothing usable, so coverage never
+    regresses. Autos are promoted out of Consumer Cyclical via the industry."""
+    if not yf_sector:
+        return fallback
+    bucket = YF_SECTOR_MAP.get(yf_sector)
+    if bucket is None:
+        return fallback
+    industry = (yf_industry or "").lower()
+    if any(k in industry for k in AUTO_INDUSTRY_KEYWORDS):
+        return "Automobile"
+    return bucket
 
 
 def main():
@@ -176,6 +215,7 @@ def main():
 
     rows = []
     skipped = []
+    relabeled = []
     health = []
     for t in tickers:
         prev = src_by_ticker.loc[t]
@@ -197,7 +237,11 @@ def main():
         fc = damped_holt_forecast(prices, current)
         exp_ret = {h: ((1.0 + fc[h] / 100.0) ** (h / 12.0) - 1.0) * 100.0 for h in HORIZON_MONTHS}
 
-        pe, pb, name = get_fundamentals(resolved[t], prev.get("PE_Ratio"), prev.get("PB_Ratio"))
+        pe, pb, name, yf_sector, yf_industry = get_fundamentals(
+            resolved[t], prev.get("PE_Ratio"), prev.get("PB_Ratio"))
+        sector = map_sector(yf_sector, yf_industry, prev["Sector"])
+        if sector != prev["Sector"]:
+            relabeled.append((t, prev["Sector"], sector))
         harvest_name(t, name, aliases)
         health.append({
             "ticker": t, "symbol": resolved[t], "days": int(len(prices)),
@@ -206,7 +250,7 @@ def main():
 
         rows.append({
             "Ticker": t,
-            "Sector": prev["Sector"],
+            "Sector": sector,
             "Current_Price": round(current, 2),
             **{f"Expected_Returns_{h}M": round(exp_ret[h], 2) for h in HORIZON_MONTHS},
             **{f"Forecast_{h}M": round(fc[h], 2) for h in HORIZON_MONTHS},
@@ -242,6 +286,10 @@ def main():
     if renamed:
         print("  AUTO-HEALED (symbol changed): "
               + ", ".join(f"{r['ticker']}->{r['symbol']}" for r in renamed))
+    if relabeled:
+        print(f"  SECTOR RELABELED ({len(relabeled)}, from yfinance):")
+        for tkr, old, new in relabeled:
+            print(f"    {tkr:>12s}: {old} -> {new}")
     if skipped:
         print(f"  STALE (no data even after resolution, kept previous values): {skipped}")
     print(f"  Universe health: {report['summary']} (see research/universe_health.json)")
