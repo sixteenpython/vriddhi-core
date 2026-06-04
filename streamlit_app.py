@@ -199,6 +199,54 @@ def panel_summary(bundle, monthly_investment):
         f"above is deliberately anchored to validated out-of-sample walk-forward returns."
     )
 
+    # ---- TL;DR: the whole story in one headline + two pictures ----
+    st.markdown("---")
+    n = bundle.get("num_stocks", "a handful of")
+    beat = bench.get("beat_after_costs")
+    ov = bundle.get("optimal_view") or {}
+    opt_n = (ov.get("optimum") or {}).get("n_stocks")
+
+    st.markdown(
+        "### \U0001F31F The 30-second story: your money, aimed straight at the *North Star*"
+    )
+
+    narrative = (
+        f"Two pictures below tell you almost everything.\n\n"
+        f"**1. Where your money actually goes.** Your **\u20b9{monthly_investment:,}/month** is "
+        f"never dumped into one hot tip. It's split across **{n} hand-picked Nifty 50 companies**, "
+        f"with a hard **15% cap** on any single name, so no one stock can sink your plan. The first "
+        f"chart is the exact rupee-by-rupee split - small, deliberate, diversified bets.\n\n"
+        f"**2. Why *this* exact mix.** The second chart is a map of *every* way you could invest. "
+        f"Out of thousands of possible combinations (the coloured cloud), Vriddhi's blend lands "
+        f"right on the **efficient frontier** - the *North Star* line of **maximum reward for the "
+        f"least risk** - and sits **well above and to the left of the Nifty 50** (more return, "
+        f"similar-or-less risk). Healthier portfolios sit up-and-to-the-left, and that's exactly "
+        f"where ours lands."
+    )
+    if opt_n:
+        narrative += (
+            f" The pure-maths 'optimum' would gamble everything on just **~{opt_n} names**; we run "
+            f"the *same return engine* but spread it across **{n}** so the ride is survivable."
+        )
+    if beat is not None:
+        narrative += (
+            f"\n\nThe payoff: a portfolio that has **beaten the index by ~{pct(beat)} after costs** "
+            f"and earns a **validated ~{pct(s['base'])} CAGR** on money the model had **never seen** "
+            f"- not a forecast, a track record."
+        )
+    st.success(narrative)
+
+    alloc = scale_allocations(bundle, monthly_investment)
+    st.markdown("**1. Where every \u20b9 of your SIP goes each month**")
+    st.pyplot(build_monthly_allocation_figure(alloc))
+
+    st.markdown("**2. Why this exact mix - the North Star view**")
+    fig_ov = build_optimal_view_figure(bundle)
+    if fig_ov is not None:
+        st.pyplot(fig_ov)
+    else:
+        st.caption("Optimization chart unavailable in this bundle.")
+
 
 def panel_backtest(bundle, benchmark_df):
     st.markdown("#### B. Backtest Evidence")
@@ -278,6 +326,27 @@ def _inr(x):
     return f"\u20b9{x:.0f}"
 
 
+def _draw_monthly_allocation(ax, alloc):
+    """Horizontal bar of each holding's monthly rupee allocation. Shared by the
+    Final Portfolio projection figure and the standalone Summary re-display."""
+    a = alloc.sort_values("Monthly Allocation (INR)", ascending=True)
+    colors = plt.cm.viridis(np.linspace(0.15, 0.9, len(a)))
+    ax.barh(a["Ticker"], a["Monthly Allocation (INR)"], color=colors)
+    for i, v in enumerate(a["Monthly Allocation (INR)"]):
+        ax.text(v, i, f" {_inr(v)}", va="center", fontsize=8)
+    ax.set_xlabel("Monthly \u20b9")
+    ax.set_title("Monthly Stock Allocation", fontweight="bold")
+    ax.margins(x=0.18)
+
+
+def build_monthly_allocation_figure(alloc):
+    """Standalone version of the monthly-allocation bar chart for re-display."""
+    fig, ax = plt.subplots(figsize=(8, 5))
+    _draw_monthly_allocation(ax, alloc)
+    fig.tight_layout()
+    return fig
+
+
 def build_projection_figure(bundle, monthly_investment, alloc):
     """projection.png-style visual: SIP growth journey + year-wise breakdown +
     monthly stock allocation. Uses the VALIDATED walk-forward base CAGR (not the
@@ -332,13 +401,7 @@ def build_projection_figure(bundle, monthly_investment, alloc):
 
     # ---- Monthly stock allocation (bottom-right) ----
     ax3 = fig.add_subplot(gs[1, 1])
-    a = alloc.sort_values("Monthly Allocation (INR)", ascending=True)
-    colors = plt.cm.viridis(np.linspace(0.15, 0.9, len(a)))
-    ax3.barh(a["Ticker"], a["Monthly Allocation (INR)"], color=colors)
-    for i, v in enumerate(a["Monthly Allocation (INR)"]):
-        ax3.text(v, i, f" {_inr(v)}", va="center", fontsize=8)
-    ax3.set_xlabel("Monthly \u20b9"); ax3.set_title("Monthly Stock Allocation", fontweight="bold")
-    ax3.margins(x=0.18)
+    _draw_monthly_allocation(ax3, alloc)
     return fig, invested[-1], projected[-1], gains[-1]
 
 
@@ -570,19 +633,13 @@ def _passing_horizons(exclude=None):
     return passing
 
 
-def panel_optimal(bundle):
-    """Optimal View: the efficient frontier with the pure-math optimum shown
-    next to our deliberately-regularized recommended book - the honest answer to
-    'is it always 12 stocks, and is this really optimal?'"""
+def build_optimal_view_figure(bundle):
+    """Efficient-frontier chart (cloud + frontier + candidates + CAL + optimum vs
+    recommended vs benchmark). Returns a matplotlib fig, or None if the bundle has
+    no optimal_view. Shared by the Optimal View tab and the Summary re-display."""
     ov = bundle.get("optimal_view")
     if not ov:
-        st.info(
-            "Optimal View is not available in this bundle yet. "
-            "Re-run `py build_research_db.py` to generate it."
-        )
-        return
-
-    st.subheader("Where this portfolio sits on the efficient frontier")
+        return None
 
     cloud = np.array(ov.get("cloud", []), dtype=float)   # columns: [vol, ret, sharpe]
     frontier = ov.get("frontier", [])
@@ -654,7 +711,29 @@ def panel_optimal(bundle):
     ax.set_title("Portfolio Optimization (Modern Portfolio Theory)", fontweight="bold")
     ax.legend(loc="upper left", fontsize=8, framealpha=0.9)
     ax.grid(True, alpha=0.3)
-    st.pyplot(fig)
+    return fig
+
+
+def panel_optimal(bundle):
+    """Optimal View: the efficient frontier with the pure-math optimum shown
+    next to our deliberately-regularized recommended book - the honest answer to
+    'is it always 12 stocks, and is this really optimal?'"""
+    ov = bundle.get("optimal_view")
+    if not ov:
+        st.info(
+            "Optimal View is not available in this bundle yet. "
+            "Re-run `py build_research_db.py` to generate it."
+        )
+        return
+
+    st.subheader("Where this portfolio sits on the efficient frontier")
+
+    fig = build_optimal_view_figure(bundle)
+    if fig is not None:
+        st.pyplot(fig)
+
+    opt = ov.get("optimum", {})
+    rec = ov.get("recommended", {})
 
     st.success(
         "**How to read this chart (the simple version):** think of it as a map of every way you "
