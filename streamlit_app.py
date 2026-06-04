@@ -604,11 +604,24 @@ def panel_optimal(bundle):
         ax.plot([p["vol"] * 100 for p in frontier], [p["ret"] * 100 for p in frontier],
                 color="#333333", linewidth=1.6, label="Efficient frontier")
 
+    # Split candidates into held (in the portfolio) vs screened-out, coloured
+    # differently so the 18 -> 12 funnel is visible at a glance.
+    held_set = {s["ticker"] for s in bundle.get("stocks", [])}
+    held_pts = [s for s in cands if s["ticker"] in held_set]
+    out_pts = [s for s in cands if s["ticker"] not in held_set]
+    if held_pts:
+        ax.scatter([s["vol"] * 100 for s in held_pts], [s["ret"] * 100 for s in held_pts],
+                   color="orange", edgecolor="black", s=48, zorder=5,
+                   label="Stocks Vriddhi holds")
+    if out_pts:
+        ax.scatter([s["vol"] * 100 for s in out_pts], [s["ret"] * 100 for s in out_pts],
+                   color="#9aa0a6", edgecolor="#555555", s=40, zorder=4,
+                   label="Screened out (not held)")
     for s in cands:
-        ax.scatter(s["vol"] * 100, s["ret"] * 100, color="orange",
-                   edgecolor="black", s=45, zorder=4)
+        is_held = s["ticker"] in held_set
         ax.annotate(s["ticker"], (s["vol"] * 100, s["ret"] * 100),
-                    textcoords="offset points", xytext=(4, 3), fontsize=7, color="#333333")
+                    textcoords="offset points", xytext=(3, 3), fontsize=5.5,
+                    color="#333333" if is_held else "#9aa0a6")
 
     # X extent for the Capital Allocation Line.
     xs = list(cloud[:, 0] * 100) if cloud.size else []
@@ -648,7 +661,8 @@ def panel_optimal(bundle):
         "could invest. **Left-to-right is risk** (how bumpy the ride); **bottom-to-top is return** "
         "(how much you make). Every **small dot is one possible mix** of these stocks, and its "
         "**colour is the Sharpe ratio** - how much return you earn *per unit of risk* (brighter = "
-        "better quality). The **orange dots are the individual stocks** on their own. \n\n"
+        "better quality). The bigger dots are the individual stocks on their own: **orange = names "
+        "Vriddhi holds**, **grey = names it screened out**. \n\n"
         "- The **curved line** is the *efficient frontier* - the best return you can get for each "
         "level of risk. Nothing exists above it; that's the limit of what's possible.\n"
         "- The **red dashed line** is the best risk-vs-reward trade-off line; where it just touches "
@@ -658,12 +672,16 @@ def panel_optimal(bundle):
         "whisker of theoretical return for a lot more safety.\n"
         "- The **red square is the Nifty 50** (the market). Notice both our portfolios sit **well "
         "above and to the left of it** - *more return, similar-or-less risk.* That gap is the edge.\n\n"
-        "**The quick intuition:** an individual stock (orange dot) is *healthier* the closer it sits "
-        "to the bright cloud and the red star - up and to the left means **more reward for less "
-        "risk**. Stocks drifting far to the lower-right are the opposite: more risk for less return. "
-        "And here's the reassuring part - **Vriddhi's recommended names are exactly the ones "
-        "clustered toward that top-left 'North Star.'** The recommendation isn't a hunch; it mirrors "
-        "precisely what this map says is healthy."
+        "**The quick intuition:** up-and-to-the-left is *healthier* - more reward for less risk. "
+        "Notice the big dots (individual stocks) almost all sit to the **right** of our portfolio "
+        "markers: that's because **any single stock on its own is bumpier than a sensible blend**. "
+        "**Orange = names Vriddhi holds, grey = names it screened out.** The orange names generally "
+        "sit in the healthier upper zone, and where a higher-risk name *is* kept, it earns its place "
+        "by *combining* well with the others (low correlation quietly lowers the whole portfolio's "
+        "risk). The real magic: by blending the orange names, **Vriddhi's portfolio (the purple "
+        "diamond) leaps far up-and-left to sit right beside the mathematical optimum (red star)** - "
+        "a healthier spot than *any* individual stock can reach alone. That 'North Star' position is "
+        "what you're actually buying - not a bet on one name."
     )
     st.caption(
         "Note: this chart's return axis is the MPT mean-return basis the optimizer works in. The "
