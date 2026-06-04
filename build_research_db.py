@@ -548,7 +548,19 @@ def build_horizon_bundle(horizon_years, df, prices_df, stock_metrics, benchmark)
     stocks = []
     for t in sorted(tickers, key=lambda x: weight_map[x], reverse=True):
         meta = df_indexed.loc[t].to_dict() if t in df_indexed.index else {}
-        meta["PEG_Ratio"] = peg_lookup.get(t, float("nan"))
+        # PEG comes from the Stage-1 screen, but names pulled in via the
+        # optimizer/top-up path are not in that lookup. Backfill from the same
+        # definition (PE / historical CAGR) so every holding shows a real PEG
+        # instead of a spurious "n/a".
+        peg_val = peg_lookup.get(t, float("nan"))
+        if np.isnan(peg_val):
+            pe_val = meta.get("PE_Ratio", float("nan"))
+            cagr_val = meta.get("Avg_Historical_CAGR", float("nan"))
+            if (pe_val is not None and cagr_val is not None
+                    and not np.isnan(pe_val) and not np.isnan(cagr_val)
+                    and cagr_val > 0):
+                peg_val = pe_val / cagr_val
+        meta["PEG_Ratio"] = peg_val
         sm = stock_metrics.get(t, {})
         w = float(weight_map[t])
         stocks.append({
