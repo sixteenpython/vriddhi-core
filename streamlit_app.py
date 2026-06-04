@@ -570,8 +570,123 @@ def _passing_horizons(exclude=None):
     return passing
 
 
+def panel_optimal(bundle):
+    """Optimal View: the efficient frontier with the pure-math optimum shown
+    next to our deliberately-regularized recommended book - the honest answer to
+    'is it always 12 stocks, and is this really optimal?'"""
+    ov = bundle.get("optimal_view")
+    if not ov:
+        st.info(
+            "Optimal View is not available in this bundle yet. "
+            "Re-run `py build_research_db.py` to generate it."
+        )
+        return
+
+    st.subheader("Where this portfolio sits on the efficient frontier")
+
+    cloud = np.array(ov.get("cloud", []), dtype=float)   # columns: [vol, ret, sharpe]
+    frontier = ov.get("frontier", [])
+    cands = ov.get("candidates", [])
+    opt = ov.get("optimum", {})
+    rec = ov.get("recommended", {})
+    bench = ov.get("benchmark")
+    rf = float(ov.get("risk_free", 0.065))
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    if cloud.size:
+        sc = ax.scatter(cloud[:, 0] * 100, cloud[:, 1] * 100, c=cloud[:, 2],
+                        cmap="viridis", s=8, alpha=0.45)
+        cbar = fig.colorbar(sc, ax=ax)
+        cbar.set_label("Sharpe ratio (higher = better risk-adjusted)")
+
+    if frontier:
+        ax.plot([p["vol"] * 100 for p in frontier], [p["ret"] * 100 for p in frontier],
+                color="#333333", linewidth=1.6, label="Efficient frontier")
+
+    for s in cands:
+        ax.scatter(s["vol"] * 100, s["ret"] * 100, color="orange",
+                   edgecolor="black", s=45, zorder=4)
+        ax.annotate(s["ticker"], (s["vol"] * 100, s["ret"] * 100),
+                    textcoords="offset points", xytext=(4, 3), fontsize=7, color="#333333")
+
+    # X extent for the Capital Allocation Line.
+    xs = list(cloud[:, 0] * 100) if cloud.size else []
+    xs += [s["vol"] * 100 for s in cands] + [opt.get("vol", 0) * 100]
+    xmax = (max(xs) if xs else 40) * 1.05
+
+    if opt:
+        ox, oy = opt["vol"] * 100, opt["ret"] * 100
+        if ox > 0:
+            slope = (oy - rf * 100) / ox
+            ax.plot([0, xmax], [rf * 100, rf * 100 + slope * xmax], "r--",
+                    linewidth=1.4, label="Capital Allocation Line")
+        ax.scatter([ox], [oy], marker="*", s=340, color="red", edgecolor="black",
+                   zorder=6, label=f"Pure-math optimum ({opt.get('n_stocks', '?')} stocks)")
+
+    if rec:
+        ax.scatter([rec["vol"] * 100], [rec["ret"] * 100], marker="D", s=130,
+                   color="#A23B72", edgecolor="black", zorder=6,
+                   label=f"Vriddhi recommended ({rec.get('n_stocks', '?')} stocks)")
+
+    if bench:
+        ax.scatter([bench["vol"] * 100], [bench["ret"] * 100], marker="s", s=120,
+                   facecolor="none", edgecolor="red", linewidth=2, zorder=6)
+        ax.annotate(bench.get("label", "Benchmark"),
+                    (bench["vol"] * 100, bench["ret"] * 100),
+                    textcoords="offset points", xytext=(6, -11), fontsize=9, color="red")
+
+    ax.set_xlabel("Risk - annualized volatility (%)")
+    ax.set_ylabel("Annualized return (%)")
+    ax.set_title("Portfolio Optimization (Modern Portfolio Theory)", fontweight="bold")
+    ax.legend(loc="upper left", fontsize=8, framealpha=0.9)
+    ax.grid(True, alpha=0.3)
+    st.pyplot(fig)
+    st.caption(
+        "Each dot is a portfolio: x = how bumpy the ride (risk), y = annualized return, "
+        "colour = Sharpe (risk-adjusted quality). Orange dots are the individual candidate "
+        "stocks. This chart uses the MPT mean-return basis the optimizer works in; the "
+        "headline recommendation is still anchored to the validated walk-forward CAGR on the "
+        "other tabs."
+    )
+
+    # Honest optimum-vs-recommended comparison table.
+    oc = ov.get("oos_compare", {})
+    reg, unc = oc.get("regularized", {}), oc.get("unconstrained", {})
+    lb = oc.get("lookback_years", bundle.get("horizon_years"))
+    rec_top2 = sum(sorted((s["weight"] for s in bundle.get("stocks", [])),
+                          reverse=True)[:2]) * 100
+
+    def _p(x):
+        return "n/a" if x is None else f"{x:.1f}%"
+
+    cmp_rows = [
+        {"Metric": "Number of stocks",
+         "Pure-math optimum": str(opt.get("n_stocks", "n/a")),
+         "Vriddhi recommended": str(rec.get("n_stocks", "n/a"))},
+        {"Metric": "Top-2 concentration",
+         "Pure-math optimum": f"{opt.get('top2_concentration', 0)*100:.0f}%",
+         "Vriddhi recommended": f"{rec_top2:.0f}%"},
+        {"Metric": "In-sample Sharpe",
+         "Pure-math optimum": f"{opt.get('sharpe', 0):.2f}",
+         "Vriddhi recommended": f"{rec.get('sharpe', 0):.2f}"},
+        {"Metric": f"Out-of-sample CAGR ({lb}-yr walk-forward)",
+         "Pure-math optimum": _p(unc.get("oos_cagr")),
+         "Vriddhi recommended": _p(reg.get("oos_cagr"))},
+        {"Metric": "Out-of-sample max drawdown",
+         "Pure-math optimum": _p(unc.get("oos_max_drawdown")),
+         "Vriddhi recommended": _p(reg.get("oos_max_drawdown"))},
+    ]
+    st.markdown("#### Pure-math optimum vs. the Vriddhi book")
+    st.dataframe(pd.DataFrame(cmp_rows), use_container_width=True, hide_index=True)
+
+    st.markdown("#### Is it always 12 stocks? (the honest answer)")
+    st.info(ov.get("narrative", ""))
+
+
 def render_panels(bundle, benchmark_df, monthly_investment):
-    tabs = st.tabs(["Summary", "Backtest Evidence", "Final Portfolio", "Risk", "Monthly Rebalance"])
+    tabs = st.tabs(["Summary", "Backtest Evidence", "Final Portfolio",
+                    "Optimal View", "Risk", "Monthly Rebalance"])
     with tabs[0]:
         panel_summary(bundle, monthly_investment)
     with tabs[1]:
@@ -579,8 +694,10 @@ def render_panels(bundle, benchmark_df, monthly_investment):
     with tabs[2]:
         panel_portfolio(bundle, monthly_investment)
     with tabs[3]:
-        panel_risk(bundle)
+        panel_optimal(bundle)
     with tabs[4]:
+        panel_risk(bundle)
+    with tabs[5]:
         panel_rebalance(bundle, monthly_investment)
 
 

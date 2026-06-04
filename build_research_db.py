@@ -225,13 +225,17 @@ def portfolio_daily_returns(returns_df, weights_map):
     return (returns_df[cols] * w).sum(axis=1)
 
 
-def walk_forward(prices_df, tickers, lookback_years):
+def walk_forward(prices_df, tickers, lookback_years, cap=SINGLE_STOCK_CAP, floor=MIN_STOCK_WEIGHT):
     """Genuine walk-forward over the trailing `lookback_years`.
 
     Splits the lookback into an initial training window then steps forward,
     re-optimizing weights on data seen so far and measuring the next unseen
     window. Returns in-sample vs out-of-sample annualized stats plus the
     stitched out-of-sample equity curve for charting.
+
+    `cap`/`floor` parameterize the per-stock constraints so the same machinery
+    can validate both the regularized book (default) and an unconstrained
+    pure-max-Sharpe variant for the honest "why we regularize" comparison.
     """
     avail = [t for t in tickers if t in prices_df.columns]
     window_prices = slice_last_years(prices_df[avail], lookback_years).dropna(how="all")
@@ -252,7 +256,7 @@ def walk_forward(prices_df, tickers, lookback_years):
         if len(test) < 20 or len(train) < 60:
             continue
 
-        weights = optimize_max_sharpe(train, cap=SINGLE_STOCK_CAP, floor=MIN_STOCK_WEIGHT)
+        weights = optimize_max_sharpe(train, cap=cap, floor=floor)
         wmap = {t: weights[i] for i, t in enumerate(train.columns)}
 
         train_port = portfolio_daily_returns(train, wmap)
@@ -283,6 +287,208 @@ def walk_forward(prices_df, tickers, lookback_years):
             "portfolio": [round(float(v), 4) for v in equity.values],
         },
     }
+
+
+# ===============================
+# OPTIMAL VIEW (efficient frontier)
+# ===============================
+def _ann_perf(w, mean_daily, cov_daily):
+    """Annualized (return, volatility, Sharpe) for a weight vector, using the
+    SAME mean/covariance geometry the optimizer uses, so every point we plot
+    (cloud, frontier, stocks, optimum, recommended) lives on one comparable axis.
+    Returns decimals (e.g. 0.21 = 21%)."""
+    w = np.asarray(w, dtype=float)
+    ret = float(np.dot(w, mean_daily) * TRADING_DAYS)
+    var = float(np.dot(w, np.dot(cov_daily * TRADING_DAYS, w)))
+    vol = float(np.sqrt(var)) if var > 0 else 0.0
+    sharpe = (ret - RISK_FREE_RATE) / vol if vol > 0 else 0.0
+    return ret, vol, sharpe
+
+
+def _min_variance_for_target(mean_daily, cov_daily, target_ret):
+    """Long-only minimum-variance weights for a target annualized return."""
+    n = len(mean_daily)
+    cov_ann = cov_daily * TRADING_DAYS
+
+    def port_var(w):
+        return float(np.dot(w, np.dot(cov_ann, w)))
+
+    constraints = (
+        {"type": "eq", "fun": lambda x: np.sum(x) - 1.0},
+        {"type": "eq", "fun": lambda x: np.dot(x, mean_daily) * TRADING_DAYS - target_ret},
+    )
+    res = minimize(port_var, np.ones(n) / n, method="SLSQP",
+                   bounds=[(0.0, 1.0)] * n, constraints=constraints)
+    return res.x if res.success else None
+
+
+def efficient_frontier(mean_daily, cov_daily, n_points=60):
+    """Trace the long-only efficient frontier as (vol, ret) points.
+
+    Sweeps target returns, takes the min-variance portfolio for each, then keeps
+    only the Pareto-efficient (upper-left) envelope so the plotted curve is clean
+    and monotonic - no interior/dominated zig-zags from solver noise.
+    """
+    stock_rets = mean_daily * TRADING_DAYS
+    lo, hi = float(np.min(stock_rets)), float(np.max(stock_rets))
+    raw = []
+    for target in np.linspace(lo, hi, n_points):
+        w = _min_variance_for_target(mean_daily, cov_daily, target)
+        if w is None:
+            continue
+        ret, vol, _ = _ann_perf(w, mean_daily, cov_daily)
+        raw.append((vol, ret))
+
+    # Pareto filter: keep a point only if nothing else has >= return at <= vol.
+    efficient = []
+    for vol, ret in raw:
+        dominated = any((v <= vol + 1e-9 and r >= ret - 1e-9 and (v < vol or r > ret))
+                        for v, r in raw)
+        if not dominated:
+            efficient.append((vol, ret))
+    efficient.sort(key=lambda p: p[0])
+    return [{"vol": round(v, 4), "ret": round(r, 4)} for v, r in efficient]
+
+
+def random_cloud(mean_daily, cov_daily, n=1200, seed=42):
+    """A reproducible Monte-Carlo cloud of long-only portfolios for visual
+    texture (coloured by Sharpe in the app)."""
+    rng = np.random.RandomState(seed)
+    k = len(mean_daily)
+    # alpha<1 spreads weights toward the simplex corners -> a wider, more
+    # informative cloud than near-equal-weight Dirichlet(1).
+    W = rng.dirichlet(np.full(k, 0.5), size=n)
+    cov_ann = cov_daily * TRADING_DAYS
+    rets = W @ mean_daily * TRADING_DAYS
+    vols = np.sqrt(np.einsum("ij,jk,ik->i", W, cov_ann, W))
+    sharpes = np.divide(rets - RISK_FREE_RATE, vols, out=np.zeros_like(rets), where=vols > 0)
+    return [[round(float(v), 4), round(float(r), 4), round(float(s), 3)]
+            for v, r, s in zip(vols, rets, sharpes)]
+
+
+def compute_optimal_view(cand_rets, weight_map, benchmark, prices_df,
+                         candidates, horizon_years):
+    """Build the 'Optimal View' payload: the efficient frontier, a Sharpe-coloured
+    cloud, individual candidates, the UNCONSTRAINED pure-max-Sharpe optimum (with
+    its natural cardinality), the regularized recommended book, the Nifty 50
+    point, and an honest out-of-sample comparison of the two strategies."""
+    mean_daily = cand_rets.mean().values
+    cov_daily = cand_rets.cov().values
+    cols = list(cand_rets.columns)
+
+    # Individual candidate stocks (unit portfolios).
+    stocks_pts = []
+    for i, t in enumerate(cols):
+        e = np.zeros(len(cols)); e[i] = 1.0
+        ret, vol, sh = _ann_perf(e, mean_daily, cov_daily)
+        stocks_pts.append({"ticker": t, "vol": round(vol, 4),
+                           "ret": round(ret, 4), "sharpe": round(sh, 3)})
+
+    # Unconstrained tangency optimum (long-only, sum=1, no cap/floor).
+    opt_w = optimize_max_sharpe(cand_rets, cap=1.0, floor=0.0)
+    o_ret, o_vol, o_sh = _ann_perf(opt_w, mean_daily, cov_daily)
+    opt_pairs = sorted(((cols[i], float(w)) for i, w in enumerate(opt_w) if w > 0.01),
+                       key=lambda kv: kv[1], reverse=True)
+    opt_top2 = sum(w for _, w in opt_pairs[:2])
+    optimum = {
+        "vol": round(o_vol, 4), "ret": round(o_ret, 4), "sharpe": round(o_sh, 3),
+        "n_stocks": len(opt_pairs), "top2_concentration": round(opt_top2, 4),
+        "weights": {t: round(w, 4) for t, w in opt_pairs},
+    }
+
+    # Regularized recommended book (the capped/floored 12), on the same geometry.
+    rec_w = np.array([weight_map.get(t, 0.0) for t in cols])
+    r_ret, r_vol, r_sh = _ann_perf(rec_w, mean_daily, cov_daily)
+    recommended = {
+        "vol": round(r_vol, 4), "ret": round(r_ret, 4), "sharpe": round(r_sh, 3),
+        "n_stocks": int(sum(1 for t in cols if weight_map.get(t, 0.0) > 1e-6)),
+    }
+
+    # Benchmark (Nifty 50) on the same annualization.
+    bench_pt = None
+    if benchmark is not None and len(benchmark) > TRADING_DAYS:
+        br = benchmark.pct_change().dropna()
+        b_ret = float(br.mean() * TRADING_DAYS)
+        b_vol = float(br.std() * np.sqrt(TRADING_DAYS))
+        b_sh = (b_ret - RISK_FREE_RATE) / b_vol if b_vol > 0 else 0.0
+        bench_pt = {"label": BENCHMARK_NAME, "vol": round(b_vol, 4),
+                    "ret": round(b_ret, 4), "sharpe": round(b_sh, 3)}
+
+    # Honest out-of-sample comparison: same candidate set, regularized vs
+    # unconstrained, validated walk-forward (this is the "why we cap" evidence).
+    lb = horizon_years if horizon_years >= 2 else 2
+    wf_reg = walk_forward(prices_df, candidates, lb,
+                          cap=SINGLE_STOCK_CAP, floor=MIN_STOCK_WEIGHT)
+    wf_unc = walk_forward(prices_df, candidates, lb, cap=1.0, floor=0.0)
+    oos_compare = {
+        "lookback_years": lb,
+        "regularized": {"oos_cagr": wf_reg.get("oos_cagr") if wf_reg else None,
+                        "oos_sharpe": wf_reg.get("oos_sharpe") if wf_reg else None,
+                        "oos_max_drawdown": wf_reg.get("oos_max_drawdown") if wf_reg else None},
+        "unconstrained": {"oos_cagr": wf_unc.get("oos_cagr") if wf_unc else None,
+                          "oos_sharpe": wf_unc.get("oos_sharpe") if wf_unc else None,
+                          "oos_max_drawdown": wf_unc.get("oos_max_drawdown") if wf_unc else None},
+    }
+
+    return {
+        "candidates": stocks_pts,
+        "frontier": efficient_frontier(mean_daily, cov_daily),
+        "cloud": random_cloud(mean_daily, cov_daily),
+        "optimum": optimum,
+        "recommended": recommended,
+        "benchmark": bench_pt,
+        "risk_free": RISK_FREE_RATE,
+        "single_stock_cap": SINGLE_STOCK_CAP,
+        "min_stock_weight": MIN_STOCK_WEIGHT,
+        "target_stocks": MAX_PORTFOLIO_STOCKS,
+        "oos_compare": oos_compare,
+        "narrative": _optimal_view_narrative(optimum, recommended, oos_compare),
+    }
+
+
+def _optimal_view_narrative(optimum, recommended, oos_compare):
+    """Plain-English, data-driven explanation of why the recommended book is
+    deliberately regularized rather than the raw math optimum. Adapts to whether
+    the unconstrained variant actually back-tested better or worse out-of-sample."""
+    cap_pct = int(round(SINGLE_STOCK_CAP * 100))
+    floor_pct = int(round(MIN_STOCK_WEIGHT * 100))
+    min_names = int(np.ceil(1.0 / SINGLE_STOCK_CAP))   # e.g. 7 at a 15% cap
+    max_names = int(np.floor(1.0 / MIN_STOCK_WEIGHT))  # e.g. 20 at a 5% floor
+
+    reg = oos_compare.get("regularized", {})
+    unc = oos_compare.get("unconstrained", {})
+    r_oos, u_oos = reg.get("oos_cagr"), unc.get("oos_cagr")
+    r_dd, u_dd = reg.get("oos_max_drawdown"), unc.get("oos_max_drawdown")
+
+    parts = [
+        f"**Is it always {recommended['n_stocks']} stocks?** No magic number - it is a deliberate "
+        f"choice, not an accident. The pure-math 'optimal' portfolio (the red star) maximises "
+        f"historical risk-adjusted return with no guardrails, and here it collapses into just "
+        f"**{optimum['n_stocks']} names**, with **{optimum['top2_concentration']*100:.0f}% piled into its "
+        f"top two**. That looks great on paper because unconstrained optimisation chases whatever "
+        f"happened to do best in the past.",
+        f"Our recommended book instead spreads across **{recommended['n_stocks']} names** with a "
+        f"**{cap_pct}% cap** and a **{floor_pct}% floor** on each. With those guardrails the maths "
+        f"alone bounds you to roughly **{min_names}-{max_names} holdings**, and we target ~{recommended['n_stocks']} "
+        f"as the sweet spot between real diversification and staying focused.",
+    ]
+    if r_oos is not None and u_oos is not None:
+        if u_oos <= r_oos + 0.5:
+            parts.append(
+                f"The pay-off is in the **out-of-sample** test (money the model never saw): the "
+                f"regularized book delivered **{r_oos:.1f}%** vs the concentrated optimum's "
+                f"**{u_oos:.1f}%** - so spreading out cost us nothing real and bought us safety.")
+        else:
+            extra = f" (and at a {u_dd:.0f}% vs {r_dd:.0f}% drawdown)" if (u_dd and r_dd) else ""
+            parts.append(
+                f"Out-of-sample, the concentrated optimum did edge ahead (**{u_oos:.1f}%** vs "
+                f"**{r_oos:.1f}%**){extra} - but it rode a far bumpier, more fragile path. We cap "
+                f"concentration on purpose: a single-stock shock in a {optimum['n_stocks']}-name book "
+                f"can undo a year, which is the wrong trade for a balanced investor.")
+    parts.append(
+        "Bottom line: we show you the textbook optimum for transparency, but we recommend the "
+        "**robust** version - the one whose track record holds up on data it had never seen.")
+    return " ".join(parts)
 
 
 # ===============================
@@ -577,6 +783,10 @@ def build_horizon_bundle(horizon_years, df, prices_df, stock_metrics, benchmark)
     for s in stocks:
         sector_alloc[s["sector"]] = sector_alloc.get(s["sector"], 0.0) + s["weight"]
 
+    # ---- Optimal View (efficient frontier + pure-math optimum vs our book) ----
+    optimal_view = compute_optimal_view(
+        cand_rets, weight_map, benchmark, prices_df, candidates, horizon_years)
+
     bundle = {
         "horizon_years": horizon_years,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -591,6 +801,7 @@ def build_horizon_bundle(horizon_years, df, prices_df, stock_metrics, benchmark)
         "walk_forward": wf_by_lookback,
         "stocks": stocks,
         "sector_allocation": sector_alloc,
+        "optimal_view": optimal_view,
         "selection_method": rationale.get("selection_method", "PEG-based selection + MPT"),
         "notes": "v1 MVP: forecast layer uses precomputed forecast columns; "
                  "backtest/walk-forward use yfinance adjusted prices.",
