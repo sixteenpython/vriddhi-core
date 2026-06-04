@@ -66,8 +66,11 @@ def advanced_stock_selector(df, expected_cagr, horizon_months):
     else:
         forecast_col = 'Forecast_60M'
     
-    # Calculate PEG ratio for all stocks
-    df['PEG_Ratio'] = df['PE_Ratio'] / df['Avg_Historical_CAGR']
+    # PEG is precomputed in grand_table_expanded.csv (PEG_Ratio column). Use it
+    # as-is; only fall back to an on-the-fly calc if an older CSV lacks it, so
+    # behaviour is identical on legacy data.
+    if 'PEG_Ratio' not in df.columns:
+        df['PEG_Ratio'] = df['PE_Ratio'] / df['Avg_Historical_CAGR']
     
     # Filter out invalid PEG ratios and negative CAGR stocks
     df = df[(df['PE_Ratio'] > 0) & (df['Avg_Historical_CAGR'] > 0)].copy()

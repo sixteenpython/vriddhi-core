@@ -61,7 +61,7 @@ COLUMNS = [
     "Expected_Returns_12M", "Expected_Returns_24M", "Expected_Returns_36M",
     "Expected_Returns_48M", "Expected_Returns_60M",
     "Forecast_12M", "Forecast_24M", "Forecast_36M", "Forecast_48M", "Forecast_60M",
-    "Avg_Historical_CAGR", "Risk_Adjusted_Return", "PE_Ratio", "PB_Ratio",
+    "Avg_Historical_CAGR", "Risk_Adjusted_Return", "PE_Ratio", "PB_Ratio", "PEG_Ratio",
 ]
 
 
@@ -217,6 +217,19 @@ def main():
         })
 
     out_df = pd.DataFrame(rows)
+
+    # Precompute PEG once, as a first-class column in the knowledge asset, so the
+    # backend reads it instead of recomputing on the fly. Same definition the
+    # screen uses: PE divided by historical CAGR ("price you pay per unit of the
+    # company's past growth"). Undefined when PE<=0 or CAGR<=0 -> left blank
+    # (NaN), which the app renders as "n/a". Computed for active and stale rows
+    # alike since both carry PE_Ratio and Avg_Historical_CAGR.
+    pe_col = pd.to_numeric(out_df["PE_Ratio"], errors="coerce")
+    cagr_col = pd.to_numeric(out_df["Avg_Historical_CAGR"], errors="coerce")
+    peg_col = pe_col / cagr_col
+    peg_col[(pe_col <= 0) | (cagr_col <= 0)] = np.nan
+    out_df["PEG_Ratio"] = peg_col.round(2)
+
     out_df = out_df.sort_values("Forecast_60M", ascending=False).reset_index(drop=True)
     out_df["Overall_Rank"] = out_df.index + 1
     out_df = out_df[COLUMNS]
@@ -236,6 +249,8 @@ def main():
           f"{out_df['Forecast_60M'].max():.1f}%  (mean {out_df['Forecast_60M'].mean():.1f}%)")
     print(f"  PE coverage: {(out_df['PE_Ratio'] > 0).sum()}/{len(out_df)} | "
           f"Avg_Historical_CAGR mean {out_df['Avg_Historical_CAGR'].mean():.1f}%")
+    print(f"  PEG coverage: {out_df['PEG_Ratio'].notna().sum()}/{len(out_df)} "
+          f"(blank where PE<=0 or CAGR<=0)")
     print(f"Done. Wrote {args.out}")
 
 
