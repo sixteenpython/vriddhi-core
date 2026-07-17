@@ -7,11 +7,9 @@
 # So they are intentionally NOT listed here. The heavy/compiled build-time deps
 # (yfinance, scipy) live in requirements-dev.txt and run offline.
 #
-# Versions are left open (no upper caps) so the Streamlit Cloud host - currently
-# Python 3.13 - installs prebuilt wheels instead of compiling from source.
-# (A previous numpy<2 / scipy<1.14 pin forced a source build of scipy that
-# failed on 3.13 for lack of a Fortran compiler.)
-streamlit>=1.28.0
-pandas>=2.0
-numpy>=1.26
-matplotlib>=3.7
+# Direct runtime versions are pinned and the full cross-platform resolution is
+# recorded in uv.lock.  Python 3.12 is used locally, in CI, and for deployment.
+streamlit==1.59.2
+pandas==3.0.3
+numpy==2.5.1
+matplotlib==3.11.0

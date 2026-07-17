@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "validated_at": "2026-07-17T23:08:24+05:30",
+  "status": "passed",
+  "data_through": "2026-07-17",
+  "universe_size": 50,
+  "benchmark_rows": 1238,
+  "data_age_days": 0,
+  "unresolved_or_stale": 0,
+  "max_turnover_pct": 13.24,
+  "turnover_limit_pct": 30,
+  "warnings": [],
+  "horizons": [
+    {
+      "horizon_years": 1,
+      "recommended": false,
+      "data_through": "2026-07-17",
+      "num_stocks": 12,
+      "weight_total": 1.0,
+      "turnover_pct": 13.24,
+      "picks": [
+        "BPCL",
+        "EICHERMOT"
+      ],
+      "drops": [
+        "ADANIPORTS",
+        "HEROMOTOCO"
+      ]
+    },
+    {
+      "horizon_years": 2,
+      "recommended": false,
+      "data_through": "2026-07-17",
+      "num_stocks": 12,
+      "weight_total": 1.0,
+      "turnover_pct": 13.24,
+      "picks": [
+        "BPCL",
+        "EICHERMOT"
+      ],
+      "drops": [
+        "ADANIPORTS",
+        "HEROMOTOCO"
+      ]
+    },
+    {
+      "horizon_years": 3,
+      "recommended": false,
+      "data_through": "2026-07-17",
+      "num_stocks": 12,
+      "weight_total": 1.0,
+      "turnover_pct": 13.24,
+      "picks": [
+        "BPCL",
+        "EICHERMOT"
+      ],
+      "drops": [
+        "ADANIPORTS",
+        "HEROMOTOCO"
+      ]
+    },
+    {
+      "horizon_years": 4,
+      "recommended": true,
+      "data_through": "2026-07-17",
+      "num_stocks": 12,
+      "weight_total": 1.0,
+      "turnover_pct": 13.24,
+      "picks": [
+        "BPCL",
+        "EICHERMOT"
+      ],
+      "drops": [
+        "ADANIPORTS",
+        "HEROMOTOCO"
+      ]
+    },
+    {
+      "horizon_years": 5,
+      "recommended": true,
+      "data_through": "2026-07-17",
+      "num_stocks": 12,
+      "weight_total": 1.0,
+      "turnover_pct": 13.24,
+      "picks": [
+        "BPCL",
+        "EICHERMOT"
+      ],
+      "drops": [
+        "ADANIPORTS",
+        "HEROMOTOCO"
+      ]
+    }
+  ]
+}

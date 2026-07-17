@@ -3,6 +3,8 @@
 # knowledge asset. The live app reads only the committed static files.
 #   build_grand_table.py  -> grand_table_expanded.csv (fundamentals + forecasts)
 #   build_research_db.py  -> research/*.json (portfolios, walk-forward, gates)
-yfinance>=0.2.40
-scipy>=1.9.0
-statsmodels>=0.14
+yfinance==1.5.1
+scipy==1.18.0
+statsmodels==0.14.6
+pytest==9.0.2
+ruff==0.15.7

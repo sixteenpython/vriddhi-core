@@ -32,6 +32,7 @@ Then: py build_research_db.py
 
 import argparse
 import warnings
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
@@ -182,7 +183,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", default=SOURCE_CSV,
                         help="Output CSV path (use a staging name for a dry run).")
+    parser.add_argument("--as-of", default=None,
+                        help="Maximum price-history date (YYYY-MM-DD). Fundamentals are "
+                             "retrieved at build time and are not point-in-time values.")
     args = parser.parse_args()
+
+    cutoff = None
+    download_args = {"period": PERIOD}
+    if args.as_of:
+        cutoff = pd.Timestamp(args.as_of)
+        download_args = {
+            "start": (cutoff - pd.DateOffset(years=5, months=2)).date(),
+            "end": (cutoff + timedelta(days=1)).date(),
+        }
 
     src = pd.read_csv(SOURCE_CSV)
     src_by_ticker = src.set_index("Ticker")
@@ -194,8 +207,10 @@ def main():
     resolved = {t: symbol_for(t, aliases) for t in tickers}
     symbols = list(dict.fromkeys(resolved.values()))
     print(f"Downloading {len(symbols)} symbols ({PERIOD}, adjusted)...")
-    raw = yf.download(symbols, period=PERIOD, auto_adjust=True, progress=False)
+    raw = yf.download(symbols, auto_adjust=True, progress=False, **download_args)
     close = raw["Close"].rename(columns={sym: t for t, sym in resolved.items()})
+    if cutoff is not None:
+        close = close.loc[close.index <= cutoff]
 
     # Self-heal any ticker whose symbol no longer returns data (rename/demerger).
     for t in tickers:
@@ -208,6 +223,8 @@ def main():
             if series is not None and hasattr(series, "columns"):
                 series = series.iloc[:, 0].dropna()
             if series is not None and len(series) >= TRADING_DAYS:
+                if cutoff is not None:
+                    series = series.loc[series.index <= cutoff]
                 close[t] = series
                 resolved[t] = new_sym
                 print(f"  AUTO-HEALED {t}: {symbol_for(t, {}):>14s} -> {new_sym} "

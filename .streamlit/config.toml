@@ -1,6 +1,5 @@
 [server]
 headless = true
-enableCORS = false
 
 [theme]
 primaryColor = "#FF6B6B"

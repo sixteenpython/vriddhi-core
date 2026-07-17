@@ -54,3 +54,8 @@ Thumbs.db
 # Monthly refresh local artifacts
 backups/
 _demo_safe/
+.refresh_staging/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/

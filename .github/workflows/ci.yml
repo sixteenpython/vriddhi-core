@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master, "codex/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install locked environment
+        run: uv sync --frozen --all-extras
+      - name: Compile production modules
+        run: uv run python -m compileall -q *.py
+      - name: Lint hardened pipeline and tests
+        run: uv run ruff check vriddhi_validation.py vriddhi_monthly_refresh.py tests
+      - name: Run tests
+        run: uv run pytest -q

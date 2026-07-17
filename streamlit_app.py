@@ -11,6 +11,7 @@ from vriddhi_core import (
     load_portfolio_bundle,
     load_previous_bundle,
     load_benchmark_series,
+    load_release_manifest,
     scale_allocations,
 )
 
@@ -28,7 +29,7 @@ if os.path.exists(LOGO_PATH):
     try:
         st.logo(LOGO_PATH, size="large")
     except Exception:
-        st.sidebar.image(LOGO_PATH, use_container_width=True)
+        st.sidebar.image(LOGO_PATH, width="stretch")
 
 # ---- Optional simple password gate (set APP_PASSWORD in Streamlit secrets) ----
 try:
@@ -275,7 +276,7 @@ def panel_backtest(bundle, benchmark_df):
             "Out-of-sample CAGR": pct(wf.get("oos_cagr")),
             "OOS Sharpe": f"{wf.get('oos_sharpe'):.2f}" if wf.get("oos_sharpe") is not None else "n/a",
         })
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     st.caption(
         "In-sample = model fit on data it has seen. Out-of-sample = performance on "
         "unseen periods (walk-forward). We judge credibility on the out-of-sample column."
@@ -456,7 +457,7 @@ def panel_portfolio(bundle, monthly_investment):
         disp["Current_Price"] = disp["Current_Price"].apply(lambda x: f"\u20b9{x:,.0f}")
         disp = disp[["Ticker", "Sector", "Weight", "Monthly Allocation (INR)", "Current_Price", "Whole_Shares"]]
         disp.columns = ["Stock", "Sector", "Weight", "Monthly \u20b9", "Price", "Whole Shares"]
-        st.dataframe(disp, use_container_width=True, hide_index=True)
+        st.dataframe(disp, width="stretch", hide_index=True)
 
     with col2:
         sectors = bundle.get("sector_allocation", {})
@@ -613,7 +614,7 @@ def panel_rebalance(bundle, monthly_investment):
     else:
         st.success(summary + " A quiet month - mostly just keep buying as usual.")
 
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     st.caption(
         "How to act: **PICK** - start buying it with this month's money. **DROP** - stop buying and sell "
         "what you hold of it. **TOP-UP / TRIM** - buy a bit more / less than before. **HOLD** - no change, "
@@ -792,7 +793,7 @@ def panel_optimal(bundle):
             "Vriddhi recommended (12)": f"{rec_w[t]*100:.1f}%" if in_rec else "\u2014",
             "Role": role,
         })
-    st.dataframe(pd.DataFrame(hold_rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(hold_rows), width="stretch", hide_index=True)
 
     # Dynamic plain-English story of the difference.
     opt_names = sorted(opt_w, key=lambda t: opt_w[t], reverse=True)
@@ -850,7 +851,7 @@ def panel_optimal(bundle):
          "Vriddhi recommended": _p(reg.get("oos_max_drawdown"))},
     ]
     st.markdown("#### Pure-math optimum vs. the Vriddhi book")
-    st.dataframe(pd.DataFrame(cmp_rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(cmp_rows), width="stretch", hide_index=True)
 
     st.markdown("#### Is it always 12 stocks? (the honest answer)")
     st.info(ov.get("narrative", ""))
@@ -940,7 +941,7 @@ monthly_investment = st.sidebar.slider(
 )
 st.sidebar.markdown("---")
 generate = st.sidebar.button("Generate Investment Plan", type="primary",
-                             use_container_width=True)
+                             width="stretch")
 st.sidebar.caption(
     "Gates: walk-forward CAGR >= 18% (1-4yr) / 20% (5yr), max drawdown < 25%, "
     "walk-forward Sharpe > 1.0, and a benchmark beat after costs."
@@ -959,10 +960,14 @@ else:
     )
 
 st.markdown("---")
+manifest = load_release_manifest() or {}
+release = manifest.get("release_id", "legacy research bundle")
+source_commit = (manifest.get("source_commit") or "unknown")[:8]
 st.caption(
-    "v1 MVP - genuine: yfinance adjusted prices, damped-trend (Holt) time-series forecasts, "
+    f"Release: {release} | Source: {source_commit} | "
+    "Methodology: yfinance adjusted prices, damped-trend (Holt) time-series forecasts, "
     "CAGR / drawdown / volatility / Sharpe, walk-forward validation, Markowitz optimization, "
-    "pass/fail gates, benchmark beat, and month-over-month rebalancing. Simplified for v1 "
-    "(finishing next): point-in-time fundamentals (PE/PB are current, not historical), explicit "
-    "transaction-cost & tax modeling, and a richer multi-model forecast ensemble."
+    "pass/fail gates, benchmark comparison, and month-over-month rebalancing. Current limitations: "
+    "PE/PB are current rather than point-in-time, taxes/slippage are simplified, and the benchmark "
+    "series is undergoing a documented total-return methodology review."
 )

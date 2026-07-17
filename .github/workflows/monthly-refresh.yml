@@ -1,0 +1,73 @@
+name: Monthly research candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: "Maximum market date (YYYY-MM-DD); blank uses latest complete date"
+        required: false
+        type: string
+      allow_high_turnover:
+        description: "Allow turnover above 30% after explicit review"
+        required: true
+        default: false
+        type: boolean
+  schedule:
+    - cron: "30 3 1 * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: monthly-research-candidate
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install refresh environment
+        run: uv sync --frozen --all-extras
+      - name: Build and validate candidate
+        shell: bash
+        run: |
+          args=(--yes)
+          if [[ -n "${{ inputs.as_of }}" ]]; then
+            args+=(--as-of "${{ inputs.as_of }}")
+          fi
+          if [[ "${{ inputs.allow_high_turnover }}" == "true" ]]; then
+            args+=(--allow-high-turnover)
+          fi
+          uv run python vriddhi_monthly_refresh.py "${args[@]}"
+      - name: Run regression suite against candidate
+        run: uv run pytest -q
+      - name: Upload release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: vriddhi-refresh-evidence
+          path: |
+            research/manifest.json
+            research/validation_report.json
+            research/refresh_summary.md
+          if-no-files-found: error
+      - name: Open candidate pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automation/monthly-refresh
+          delete-branch: true
+          commit-message: "Monthly refresh: validated research candidate"
+          title: "Monthly research refresh candidate"
+          body-path: research/refresh_summary.md
+          labels: monthly-refresh

@@ -612,7 +612,10 @@ def run_vriddhi_backend(monthly_investment, horizon_months, expected_cagr):
 # 8. RESEARCH BUNDLE LOADERS (consumed by the investor dashboard)
 # ===============================
 
-RESEARCH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "research")
+RESEARCH_DIR = os.environ.get(
+    "VRIDDHI_RESEARCH_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "research"),
+)
 
 
 def load_portfolio_bundle(horizon_years):
@@ -649,6 +652,18 @@ def load_benchmark_series():
     """Load the normalized Nifty 50 benchmark series (DataFrame) or None."""
     path = os.path.join(RESEARCH_DIR, "benchmark.csv")
     if not os.path.exists(path):
+        return None
+
+
+def load_release_manifest():
+    """Return provenance for the currently published research release."""
+    path = os.path.join(RESEARCH_DIR, "manifest.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
         return None
     try:
         return pd.read_csv(path, parse_dates=["Date"])

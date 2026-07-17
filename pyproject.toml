@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vriddhi-core"
+version = "2.0.0"
+description = "Offline-validated Nifty 50 portfolio decision aid"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { file = "LICENSE" }
+authors = [{ name = "Anand Venkataraman" }]
+dependencies = [
+  "streamlit==1.59.2",
+  "pandas==3.0.3",
+  "numpy==2.5.1",
+  "matplotlib==3.11.0",
+]
+
+[project.optional-dependencies]
+refresh = [
+  "yfinance==1.5.1",
+  "scipy==1.18.0",
+  "statsmodels==0.14.6",
+]
+test = [
+  "pytest==9.0.2",
+  "ruff==0.15.7",
+]
+
+[tool.hatch.build.targets.wheel]
+include = ["*.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+  "app: headless Streamlit integration tests",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["backups", ".refresh_staging"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501"]

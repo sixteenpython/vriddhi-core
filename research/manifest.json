@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "release_id": "refresh-2026-07-17",
+  "built_at": "2026-07-17T23:08:24+05:30",
+  "requested_as_of": "latest-complete-market-date",
+  "data_through": "2026-07-17",
+  "source_commit": "e1a23aa2c65f751e50047f8777d8b71eac0e24b6",
+  "source_branch": "codex/production-hardening",
+  "data_provider": "Yahoo Finance via yfinance",
+  "benchmark": "Nifty 50 (^NSEI); benchmark methodology review tracked in docs/methodology.md",
+  "methodology_version": "2.0",
+  "python": "3.12.13",
+  "dependencies": {
+    "pandas": "3.0.3",
+    "numpy": "2.5.1",
+    "yfinance": "1.5.1",
+    "statsmodels": "0.14.6",
+    "scipy": "1.18.0",
+    "matplotlib": "3.11.0",
+    "streamlit": "1.59.2"
+  },
+  "validation_status": "passed",
+  "artifacts_sha256": {
+    "grand_table_expanded.csv": "93a8cfa495a5a47d28196b53c71feabbc26ee45e3ee10a0f6ee413a5f98a65f1",
+    "ticker_aliases.json": "7012a9d853b85bfc4c917d39f3ac7174caa0ddf0747120a54c7d254726daa60d",
+    "research/benchmark.csv": "7e5d502913b6fcbf37d155671361928341e02da7cdfff7a4f7b258c75d35cb8e",
+    "research/universe_health.json": "87c5ec89b460e2687ed00af3dc5c65c055e304016a4164adb51fd340a0af82c6",
+    "research/portfolio_1y.json": "a86684c4b61f4c524e28bdcdd62b5c9e55c67210c9a55040fbf79bf1f7e71961",
+    "research/portfolio_2y.json": "d4a56a7d1c9ade9275cc45353f94676fa02b94f7ab39228d9e9af5ae2897de0e",
+    "research/portfolio_3y.json": "ced6ccb41686f5e21949852235ab5d9a6ff9d60e3033b345ea1406b6d2fc0cb2",
+    "research/portfolio_4y.json": "5104e550d4a1a4ba53feb6628e14b49c43eb302e787a28bb02bf2243ac94a089",
+    "research/portfolio_5y.json": "be97de1b574ad0159db4e491f57c5968017c76fb17a7f639f1398ad3bec4cd8b",
+    "research/portfolio_1y_prev.json": "858173dd4bffe47d4f4ecaddc39e5ee950184de39fc2fc7147c567db895e00d2",
+    "research/portfolio_2y_prev.json": "95451235279b90ec32262bfb4690cd69ad95e22806146879446f13aaa660ec56",
+    "research/portfolio_3y_prev.json": "dd6163823c250b9e22b8e71e1c23e3d6f2a9288a0a1d793b1a2c78a780e5db59",
+    "research/portfolio_4y_prev.json": "9955e930ef46a9c08d892b8027f6da01b33e239ea8f8d23f5fbd73ab95190143",
+    "research/portfolio_5y_prev.json": "4ac3a1c24f6b06346accf175d58aca9c1595ae79dd0eafaaf69695f7703f1640",
+    "research/validation_report.json": "9a28a76289a8e6cfb64a8177ae515d734806e421ba0e423d254c45f4844d42ca"
+  }
+}
