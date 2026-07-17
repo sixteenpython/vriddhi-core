@@ -22,8 +22,10 @@ Yahoo Finance -> knowledge asset -> research bundles -> validation -> approval
 - `vriddhi_monthly_refresh.py` performs a staged, transactional monthly release.
 - `streamlit_app.py` renders only precomputed, committed artifacts.
 
-See [architecture](docs/architecture.md), [methodology](docs/methodology.md), and
-the [monthly operations runbook](docs/monthly-refresh-runbook.md).
+Start with the detailed [backend reengineering reference](docs/backend-reengineering-reference.md).
+Supporting documents cover the [architecture](docs/architecture.md),
+[methodology](docs/methodology.md), and
+[monthly operations runbook](docs/monthly-refresh-runbook.md).
 
 ## Local application
 
