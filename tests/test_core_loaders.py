@@ -1,6 +1,22 @@
 import json
 
+import pandas as pd
+
 import vriddhi_core
+
+
+def test_benchmark_series_loader_returns_dataframe(tmp_path, monkeypatch):
+    (tmp_path / "benchmark.csv").write_text(
+        "Date,Nifty50_Normalized\n2026-07-16,1.0\n2026-07-17,1.01\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(vriddhi_core, "RESEARCH_DIR", str(tmp_path))
+
+    frame = vriddhi_core.load_benchmark_series()
+
+    assert isinstance(frame, pd.DataFrame)
+    assert frame["Date"].tolist() == [pd.Timestamp("2026-07-16"), pd.Timestamp("2026-07-17")]
+    assert frame["Nifty50_Normalized"].tolist() == [1.0, 1.01]
 
 
 def test_release_manifest_loader(tmp_path, monkeypatch):

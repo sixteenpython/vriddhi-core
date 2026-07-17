@@ -653,6 +653,10 @@ def load_benchmark_series():
     path = os.path.join(RESEARCH_DIR, "benchmark.csv")
     if not os.path.exists(path):
         return None
+    try:
+        return pd.read_csv(path, parse_dates=["Date"])
+    except (OSError, ValueError):
+        return None
 
 
 def load_release_manifest():
@@ -664,10 +668,6 @@ def load_release_manifest():
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError):
-        return None
-    try:
-        return pd.read_csv(path, parse_dates=["Date"])
-    except (OSError, ValueError):
         return None
 
 
