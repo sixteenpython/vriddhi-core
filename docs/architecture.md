@@ -19,3 +19,7 @@ The append-only ledger is documented in
 [`recommendation-ledger.md`](recommendation-ledger.md). It accumulates actual
 monthly published recommendations prospectively and remains separate from the
 historical walk-forward evidence.
+
+The completed Backtest Evidence and Monthly Rebalance feature design, calculation
+semantics, regression contract, and deployment history are documented in
+[`2026-07-22-feature-build-reference.md`](2026-07-22-feature-build-reference.md).
