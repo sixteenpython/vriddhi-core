@@ -1341,8 +1341,8 @@ def _render_rebalance_action_card(row):
         previous_col, current_col, change_col, shares_col = st.columns(4)
         previous_col.metric("Last month", row["Last month ₹"])
         current_col.metric("This month", row["This month ₹"])
-        change_col.metric("Change", row["Change ₹"])
-        shares_col.metric("Share change", row["Change (shares)"])
+        change_col.metric("Target change", row["Target change ₹"])
+        shares_col.metric("Change in shares", row["Change in shares"])
         st.markdown("**Why Vriddhi recommends this action**")
         if action == "DROP (exit)":
             st.error(row["Rationale"])
@@ -1369,9 +1369,14 @@ def panel_rebalance(bundle, monthly_investment):
 
     cur_w = {s["ticker"]: s["weight"] for s in bundle["stocks"]}
     prev_w = {s["ticker"]: s["weight"] for s in prev["stocks"]}
-    price = {s["ticker"]: (s.get("current_price") or 0) for s in bundle["stocks"]}
-    for s in prev["stocks"]:
-        price.setdefault(s["ticker"], s.get("current_price") or 0)
+    cur_price = {
+        s["ticker"]: float(s.get("current_price") or 0)
+        for s in bundle["stocks"]
+    }
+    prev_price = {
+        s["ticker"]: float(s.get("current_price") or 0)
+        for s in prev["stocks"]
+    }
 
     THRESH = 0.01  # ignore weight wiggles under 1%
     PRIORITY = {"PICK (new buy)": 0, "DROP (exit)": 1, "TOP-UP": 2, "TRIM": 3, "HOLD": 4}
@@ -1382,7 +1387,8 @@ def panel_rebalance(bundle, monthly_investment):
         turnover += abs(cw - pw)
         prev_amt, cur_amt = pw * monthly_investment, cw * monthly_investment
         d_amt = cur_amt - prev_amt
-        p = price.get(t, 0) or 0
+        action_price = cur_price.get(t, 0) or prev_price.get(t, 0)
+        fractional_share_change = d_amt / action_price if action_price > 0 else None
         if pw == 0 and cw > 0:
             action = "PICK (new buy)"
         elif cw == 0 and pw > 0:
@@ -1399,8 +1405,12 @@ def panel_rebalance(bundle, monthly_investment):
             "Action": action,
             "Last month \u20b9": f"\u20b9{prev_amt:,.0f}",
             "This month \u20b9": f"\u20b9{cur_amt:,.0f}",
-            "Change \u20b9": f"{'+' if d_amt >= 0 else '-'}\u20b9{abs(d_amt):,.0f}",
-            "Change (shares)": f"{int(round(d_amt / p)):+d}" if p > 0 else "n/a",
+            "Target change \u20b9": f"{'+' if d_amt >= 0 else '-'}\u20b9{abs(d_amt):,.0f}",
+            "Change in shares": (
+                f"{fractional_share_change:+.1f}"
+                if fractional_share_change is not None
+                else "n/a"
+            ),
             "Reason at a glance": _rebalance_short_reason(action),
             "Rationale": _rebalance_rationale(t, action, pw, cw, bundle, prev),
         })
@@ -1426,8 +1436,8 @@ def panel_rebalance(bundle, monthly_investment):
         "Action",
         "Last month ₹",
         "This month ₹",
-        "Change ₹",
-        "Change (shares)",
+        "Target change ₹",
+        "Change in shares",
         "Reason at a glance",
     ]
     st.dataframe(
@@ -1441,7 +1451,10 @@ def panel_rebalance(bundle, monthly_investment):
     st.caption(
         "How to act: **PICK** - start buying it with this month's money. **DROP** - stop buying and sell "
         "what you hold of it. **TOP-UP / TRIM** - buy a bit more / less than before. **HOLD** - no change, "
-        "keep buying the same. (Change in shares is per month at your chosen contribution.)"
+        "keep buying the same. **Target change ₹** is the change in intended monthly allocation. "
+        "**Change in shares** translates that rupee change into a one-decimal share equivalent at "
+        "the applicable stock price. Fractional values are planning guidance; actual execution "
+        "depends on whether your broker supports fractional shares."
     )
     st.markdown("#### Actions to take now")
     actionable_rows = [row for row in rows if row["Action"] != "HOLD"]
