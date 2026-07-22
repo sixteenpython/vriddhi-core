@@ -5,10 +5,13 @@
 1. Open **Actions -> Monthly research candidate -> Run workflow**.
 2. Leave the as-of field blank to use the latest complete market date.
 3. Review the workflow summary and downloadable candidate report.
-4. Review the generated pull request: data date, unresolved tickers, turnover,
-   picks/drops, gate changes, and artifact hashes.
-5. Merge only after required checks pass. Streamlit redeploys from `master`.
-6. Confirm the app footer shows the new release ID and data date.
+4. Confirm the recommendation ledger gained exactly one new release date (or
+   remained unchanged for an intentional same-date retry).
+5. Review the generated pull request: data date, unresolved tickers, turnover,
+   picks/drops, gate changes, ledger progress, and artifact hashes.
+6. Merge only after required checks pass. Streamlit redeploys from `master`.
+7. Confirm the app footer and Actual Vriddhi Track Record section show the new
+   release ID, data date, and ledger count.
 
 ## Local fallback
 

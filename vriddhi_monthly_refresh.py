@@ -19,6 +19,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from vriddhi_ledger import update_recommendation_ledger
 from vriddhi_validation import ValidationError, artifact_hashes, validate_candidate
 
 ROOT = Path(__file__).resolve().parent
@@ -35,13 +36,14 @@ REQUIRED_PACKAGES = (
 )
 REQUIRED_FILES = (
     "build_grand_table.py", "build_research_db.py", "grand_table_expanded.csv",
-    "streamlit_app.py", "vriddhi_core.py", "ticker_aliases.json",
+    "streamlit_app.py", "vriddhi_core.py", "vriddhi_ledger.py", "ticker_aliases.json",
 )
 GENERATED_PATHS = [
     "grand_table_expanded.csv",
     "ticker_aliases.json",
     "research/benchmark.csv",
     "research/universe_health.json",
+    "research/recommendation_ledger.json",
     *[f"research/portfolio_{h}y.json" for h in HORIZONS],
     *[f"research/portfolio_{h}y_prev.json" for h in HORIZONS],
     "research/validation_report.json",
@@ -191,6 +193,13 @@ def build_candidate(stage: Path, *, skip_grand_table: bool, as_of: str | None) -
         command.extend(["--asof", as_of])
     run_step("Step 4/7 - Build candidate research bundles", command, cwd=stage)
     preserve_genuine_previous_snapshots(stage)
+    ledger, appended = update_recommendation_ledger(
+        stage / "research", stage / DATA_CSV.name
+    )
+    log(
+        f"Recommendation ledger: {len(ledger['snapshots'])} release(s); "
+        f"{'appended current release' if appended else 'same-date release already retained'}"
+    )
 
 
 def smoke_test(stage: Path) -> None:
@@ -244,6 +253,7 @@ def write_release_metadata(
         f"- Universe: **{report['universe_size']} stocks**",
         f"- Recommended horizons: **{recommended or 'none'}**",
         f"- Maximum portfolio turnover: **{report['max_turnover_pct']:.1f}%**",
+        f"- Recommendation ledger: **{report['ledger_releases']} of 12 validated releases**",
         f"- Validation: **{report['status'].upper()}**",
         "",
         "## Horizon changes",

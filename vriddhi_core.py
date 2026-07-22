@@ -671,6 +671,85 @@ def load_release_manifest():
         return None
 
 
+def load_recommendation_ledger():
+    """Load the append-only prospective recommendation ledger or None."""
+    path = os.path.join(RESEARCH_DIR, "recommendation_ledger.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def build_recommendation_ledger_replay(ledger, horizon_years, monthly_investment):
+    """Replay recorded monthly recommendations once the evidence gate is met."""
+    snapshots = ledger.get("snapshots", []) if ledger else []
+    policy = ledger.get("execution_policy", {}) if ledger else {}
+    minimum = int(policy.get("minimum_releases_for_performance", 12))
+    result = {
+        "available": False,
+        "recorded_releases": len(snapshots),
+        "required_releases": minimum,
+    }
+    if len(snapshots) < minimum:
+        result["reason"] = "insufficient recorded releases"
+        return result
+    if monthly_investment <= 0:
+        result["reason"] = "monthly investment must be positive"
+        return result
+
+    key = str(int(horizon_years))
+    units = {}
+    for snapshot in snapshots:
+        horizon = snapshot.get("horizons", {}).get(key, {})
+        if not horizon.get("recommended"):
+            result["reason"] = (
+                f"{horizon_years}-year horizon was not recommended for every recorded release"
+            )
+            return result
+        prices = {
+            ticker: float(price)
+            for ticker, price in snapshot.get("market_prices", {}).items()
+        }
+        missing = sorted(ticker for ticker in units if ticker not in prices)
+        if missing:
+            result["reason"] = f"missing recorded prices for {', '.join(missing)}"
+            return result
+
+        portfolio_value = sum(quantity * prices[ticker] for ticker, quantity in units.items())
+        portfolio_value += float(monthly_investment)
+        weights = {
+            stock["ticker"]: float(stock["weight"])
+            for stock in horizon.get("stocks", [])
+        }
+        missing = sorted(ticker for ticker in weights if ticker not in prices)
+        if missing:
+            result["reason"] = f"missing recorded prices for {', '.join(missing)}"
+            return result
+        units = {
+            ticker: portfolio_value * weight / prices[ticker]
+            for ticker, weight in weights.items()
+        }
+
+    final_snapshot = snapshots[-1]
+    final_prices = {
+        ticker: float(price)
+        for ticker, price in final_snapshot.get("market_prices", {}).items()
+    }
+    ending_value = sum(quantity * final_prices[ticker] for ticker, quantity in units.items())
+    result.update({
+        "available": True,
+        "start_date": snapshots[0]["data_through"],
+        "end_date": final_snapshot["data_through"],
+        "total_invested": float(monthly_investment * len(snapshots)),
+        "ending_value": float(ending_value),
+        "gain": float(ending_value - monthly_investment * len(snapshots)),
+    })
+    return result
+
+
 def build_oos_sip_replay(equity_curve, monthly_investment, periods=(12, 24, 36, 48, 60)):
     """Translate a stored OOS growth curve into an illustrative monthly SIP replay.
 

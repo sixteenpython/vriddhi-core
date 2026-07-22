@@ -92,6 +92,86 @@ def _portfolio_weights(bundle: dict[str, Any], horizon: int) -> dict[str, float]
     return weights
 
 
+def _validate_recommendation_ledger(research: Path, data_through: date) -> tuple[int, str]:
+    path = research / "recommendation_ledger.json"
+    if not path.exists():
+        raise ValidationError("missing research/recommendation_ledger.json")
+    ledger = _load_json(path)
+    _assert_finite(ledger, "recommendation_ledger")
+    if ledger.get("schema_version") != 1:
+        raise ValidationError("recommendation ledger has unsupported schema version")
+    policy = ledger.get("execution_policy")
+    if not isinstance(policy, dict) or policy.get("minimum_releases_for_performance") != 12:
+        raise ValidationError("recommendation ledger execution policy is missing or invalid")
+    snapshots = ledger.get("snapshots")
+    if not isinstance(snapshots, list) or not snapshots:
+        raise ValidationError("recommendation ledger has no snapshots")
+
+    snapshot_dates = [
+        _parse_date(item.get("data_through"), f"recommendation_ledger.snapshots[{index}]")
+        for index, item in enumerate(snapshots)
+    ]
+    if snapshot_dates != sorted(set(snapshot_dates)):
+        raise ValidationError("recommendation ledger dates are duplicated or not increasing")
+    if snapshot_dates[-1] != data_through:
+        raise ValidationError(
+            f"recommendation ledger ends {snapshot_dates[-1]}, expected {data_through}"
+        )
+
+    for snapshot_index, snapshot in enumerate(snapshots):
+        prices = snapshot.get("market_prices")
+        if not isinstance(prices, dict) or not prices:
+            raise ValidationError(
+                f"recommendation ledger snapshot {snapshot_index} has no market prices"
+            )
+        for ticker, raw_price in prices.items():
+            try:
+                price = float(raw_price)
+            except (TypeError, ValueError) as exc:
+                raise ValidationError(
+                    f"recommendation ledger has invalid price for {ticker}"
+                ) from exc
+            if not ticker or not math.isfinite(price) or price <= 0:
+                raise ValidationError(
+                    f"recommendation ledger has non-positive/non-finite price for {ticker}"
+                )
+
+        horizon_data = snapshot.get("horizons")
+        if not isinstance(horizon_data, dict):
+            raise ValidationError(
+                f"recommendation ledger snapshot {snapshot_index} has no horizons"
+            )
+        for horizon in HORIZONS:
+            entry = horizon_data.get(str(horizon))
+            if not isinstance(entry, dict):
+                raise ValidationError(
+                    f"recommendation ledger snapshot {snapshot_index} missing {horizon}y"
+                )
+            weights = _portfolio_weights(entry, horizon)
+            missing_prices = sorted(set(weights) - set(prices))
+            if missing_prices:
+                raise ValidationError(
+                    f"recommendation ledger {snapshot_dates[snapshot_index]} {horizon}y "
+                    f"missing prices for {missing_prices}"
+                )
+            actions = entry.get("actions")
+            if not isinstance(actions, list) or not actions:
+                raise ValidationError(
+                    f"recommendation ledger {snapshot_dates[snapshot_index]} {horizon}y "
+                    "has no recorded actions"
+                )
+            for action in actions:
+                if action.get("action") not in {
+                    "INITIAL", "PICK", "DROP", "TOP-UP", "TRIM", "HOLD"
+                }:
+                    raise ValidationError("recommendation ledger contains an invalid action")
+
+    tracking_started = str(ledger.get("tracking_started") or "")
+    if tracking_started != snapshot_dates[0].isoformat():
+        raise ValidationError("recommendation ledger tracking_started does not match first release")
+    return len(snapshots), tracking_started
+
+
 def validate_candidate(
     data_csv: os.PathLike[str] | str,
     research_dir: os.PathLike[str] | str,
@@ -243,6 +323,9 @@ def validate_candidate(
         raise ValidationError(
             f"benchmark ends {benchmark_last}, bundles end {data_through}"
         )
+    ledger_releases, ledger_tracking_started = _validate_recommendation_ledger(
+        research, data_through
+    )
     if expected_as_of and data_through > _parse_date(expected_as_of, "expected_as_of"):
         raise ValidationError(f"candidate data {data_through} exceeds requested as-of {expected_as_of}")
     reference_date = _parse_date(expected_as_of, "expected_as_of") if expected_as_of else date.today()
@@ -266,6 +349,8 @@ def validate_candidate(
         "data_age_days": age_days,
         "unresolved_or_stale": len(unresolved),
         "max_turnover_pct": round(max_turnover, 2),
+        "ledger_releases": ledger_releases,
+        "ledger_tracking_started": ledger_tracking_started,
         "turnover_limit_pct": turnover_limit,
         "warnings": warnings,
         "horizons": horizons,

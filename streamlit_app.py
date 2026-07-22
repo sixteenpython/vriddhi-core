@@ -9,9 +9,11 @@ import streamlit as st
 import vriddhi_core
 from vriddhi_core import (
     build_oos_sip_replay,
+    build_recommendation_ledger_replay,
     load_portfolio_bundle,
     load_previous_bundle,
     load_benchmark_series,
+    load_recommendation_ledger,
     load_release_manifest,
     scale_allocations,
 )
@@ -250,6 +252,79 @@ def panel_summary(bundle, monthly_investment):
         st.caption("Optimization chart unavailable in this bundle.")
 
 
+def _render_actual_track_record(bundle, monthly_investment):
+    st.markdown("### Actual Vriddhi Track Record")
+    ledger = load_recommendation_ledger()
+    if not ledger or not ledger.get("snapshots"):
+        st.warning(
+            "Prospective recommendation tracking has not started. Walk-forward evidence remains "
+            "available below, but no live monthly release ledger can be claimed yet."
+        )
+        return
+
+    snapshots = ledger["snapshots"]
+    policy = ledger.get("execution_policy", {})
+    recorded = len(snapshots)
+    required = int(policy.get("minimum_releases_for_performance", 12))
+    remaining = max(required - recorded, 0)
+    tracking_started = pd.Timestamp(ledger["tracking_started"]).strftime("%d %b %Y")
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Recorded releases", f"{recorded} of {required}")
+    c2.metric("Tracking since", tracking_started)
+    c3.metric("Evidence status", "Unlocked" if recorded >= required else "Collecting")
+    st.progress(min(recorded / required, 1.0))
+
+    release_rows = []
+    horizon_key = str(bundle["horizon_years"])
+    for snapshot in reversed(snapshots[-12:]):
+        horizon = snapshot.get("horizons", {}).get(horizon_key, {})
+        release_rows.append({
+            "Recorded release": pd.Timestamp(snapshot["data_through"]).strftime("%d %b %Y"),
+            "Decision": "Recommended" if horizon.get("recommended") else "Not recommended",
+            "Holdings": horizon.get("num_stocks", 0),
+            "Snapshot source": snapshot.get("provenance", "monthly_refresh").replace("_", " "),
+        })
+    st.dataframe(pd.DataFrame(release_rows), width="stretch", hide_index=True)
+
+    if recorded < required:
+        st.info(
+            f"**Prospective evidence collection is active: {recorded} of {required} validated "
+            f"monthly releases are recorded ({remaining} remaining).**\n\n"
+            "Each future transactional refresh appends its published holdings, weights, prices "
+            "and PICK / DROP / TOP-UP / TRIM / HOLD actions. Older entries are not overwritten.\n\n"
+            "When the evidence gate is reached, this section will automatically unlock the "
+            "actual recorded-recommendation SIP replay. Walk-forward evidence will remain below "
+            "as a separate test of the methodology."
+        )
+        return
+
+    replay = build_recommendation_ledger_replay(
+        ledger, bundle["horizon_years"], monthly_investment
+    )
+    if not replay.get("available"):
+        st.warning(
+            "The release-count gate has been reached, but an actual replay cannot yet be shown: "
+            f"{replay.get('reason', 'recorded evidence is incomplete')}."
+        )
+        return
+
+    st.success(
+        "**The prospective evidence gate is complete.** The figures below use only immutable "
+        "recommendation snapshots that Vriddhi actually published month by month."
+    )
+    r1, r2, r3 = st.columns(3)
+    r1.metric("Total invested", f"\u20b9{replay['total_invested']:,.0f}")
+    r2.metric("Recorded-replay value", f"\u20b9{replay['ending_value']:,.0f}")
+    r3.metric("Historical gain", f"\u20b9{replay['gain']:,.0f}")
+    st.caption(
+        f"Recorded releases from {replay['start_date']} through {replay['end_date']}. "
+        "Assumptions: one contribution before each release rebalance, fractional shares, full "
+        "investment and no transaction-cost deduction. This remains historical evidence, not "
+        "a forecast."
+    )
+
+
 def panel_backtest(bundle, benchmark_df, monthly_investment):
     st.markdown("#### B. Backtest Evidence")
     st.info(
@@ -316,7 +391,10 @@ def panel_backtest(bundle, benchmark_df, monthly_investment):
             "ahead of the market on data it couldn't have memorised."
         )
 
-        st.markdown("### What if you had started earlier?")
+        _render_actual_track_record(bundle, monthly_investment)
+
+        st.markdown("### Illustrative out-of-sample SIP replay")
+        st.markdown("**What if you had started earlier?**")
         st.caption(
             "See how a monthly contribution would have grown across the available "
             "out-of-sample return stream."
@@ -346,10 +424,11 @@ def panel_backtest(bundle, benchmark_df, monthly_investment):
             "Longer rows remain unavailable when the stored unseen-data period is shorter."
         )
         st.warning(
-            "**Important transparency note:** this is a SIP cash-flow view of the stored "
-            "walk-forward return stream. It is **not** a ledger of monthly PICK, DROP, TOP-UP, "
-            "TRIM and HOLD recommendations that were issued historically; Vriddhi currently "
-            "retains only the current and immediately previous monthly portfolio snapshots."
+            "**Important transparency note:** this table is a SIP cash-flow view of the stored "
+            "walk-forward return stream. It is **not** the actual recommendation ledger shown "
+            "above. The ledger now preserves published monthly PICK, DROP, TOP-UP, TRIM and "
+            "HOLD evidence prospectively and will unlock its own replay after 12 validated "
+            "releases."
         )
 
         st.markdown("### How is this calculated?")
@@ -409,6 +488,7 @@ def panel_backtest(bundle, benchmark_df, monthly_investment):
             "maximizes the probability of superior long-term, risk-adjusted returns?"
         )
     else:
+        _render_actual_track_record(bundle, monthly_investment)
         st.info(
             "### What if you had started earlier?\n\n"
             "This horizon does not contain enough out-of-sample history for a credible wealth "

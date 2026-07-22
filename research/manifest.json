@@ -35,6 +35,7 @@
     "research/portfolio_3y_prev.json": "dd6163823c250b9e22b8e71e1c23e3d6f2a9288a0a1d793b1a2c78a780e5db59",
     "research/portfolio_4y_prev.json": "9955e930ef46a9c08d892b8027f6da01b33e239ea8f8d23f5fbd73ab95190143",
     "research/portfolio_5y_prev.json": "4ac3a1c24f6b06346accf175d58aca9c1595ae79dd0eafaaf69695f7703f1640",
-    "research/validation_report.json": "9a28a76289a8e6cfb64a8177ae515d734806e421ba0e423d254c45f4844d42ca"
+    "research/validation_report.json": "9a28a76289a8e6cfb64a8177ae515d734806e421ba0e423d254c45f4844d42ca",
+    "research/recommendation_ledger.json": "63b2652a2601b592a8e89721af6bcc367bd69204067d6eddd9049458183ab913"
   }
 }

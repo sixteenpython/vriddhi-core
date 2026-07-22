@@ -1,6 +1,7 @@
 import json
 
 import pandas as pd
+import pytest
 
 import vriddhi_core
 
@@ -24,6 +25,42 @@ def test_release_manifest_loader(tmp_path, monkeypatch):
     (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setattr(vriddhi_core, "RESEARCH_DIR", str(tmp_path))
     assert vriddhi_core.load_release_manifest() == manifest
+
+
+def test_recommendation_ledger_loader(tmp_path, monkeypatch):
+    ledger = {"schema_version": 1, "snapshots": [{"data_through": "2026-07-17"}]}
+    (tmp_path / "recommendation_ledger.json").write_text(
+        json.dumps(ledger), encoding="utf-8"
+    )
+    monkeypatch.setattr(vriddhi_core, "RESEARCH_DIR", str(tmp_path))
+    assert vriddhi_core.load_recommendation_ledger() == ledger
+
+
+def test_recommendation_ledger_replay_unlocks_at_twelve_releases():
+    snapshots = []
+    for index in range(12):
+        price = 100 + index
+        snapshots.append({
+            "data_through": f"2026-{index + 1:02d}-01",
+            "market_prices": {"AAA": price},
+            "horizons": {
+                "5": {
+                    "recommended": True,
+                    "stocks": [{"ticker": "AAA", "weight": 1.0}],
+                }
+            },
+        })
+    ledger = {
+        "execution_policy": {"minimum_releases_for_performance": 12},
+        "snapshots": snapshots,
+    }
+
+    replay = vriddhi_core.build_recommendation_ledger_replay(ledger, 5, 1_000)
+
+    expected = sum(1_000 * 111 / (100 + index) for index in range(12))
+    assert replay["available"] is True
+    assert replay["total_invested"] == 12_000
+    assert replay["ending_value"] == pytest.approx(expected)
 
 
 def test_oos_sip_replay_uses_stored_growth_factors():

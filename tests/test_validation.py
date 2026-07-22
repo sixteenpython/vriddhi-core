@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
+from vriddhi_ledger import update_recommendation_ledger
 from vriddhi_validation import ValidationError, validate_candidate
 
 
@@ -66,6 +67,7 @@ def _write_candidate(tmp_path, *, turnover=False):
         (research / f"portfolio_{horizon}y_prev.json").write_text(
             json.dumps(previous), encoding="utf-8"
         )
+    update_recommendation_ledger(research, data)
     return data, research
 
 
@@ -95,3 +97,17 @@ def test_non_finite_json_is_rejected(tmp_path):
     path.write_text(payload, encoding="utf-8")
     with pytest.raises(ValidationError, match="non-finite"):
         validate_candidate(data, research)
+
+
+def test_recommendation_ledger_is_required(tmp_path):
+    data, research = _write_candidate(tmp_path)
+    (research / "recommendation_ledger.json").unlink()
+    with pytest.raises(ValidationError, match="recommendation_ledger"):
+        validate_candidate(data, research)
+
+
+def test_recommendation_ledger_does_not_duplicate_same_date(tmp_path):
+    data, research = _write_candidate(tmp_path)
+    ledger, changed = update_recommendation_ledger(research, data)
+    assert changed is False
+    assert len(ledger["snapshots"]) == 2
