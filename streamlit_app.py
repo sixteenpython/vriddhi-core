@@ -1416,6 +1416,58 @@ def _build_monthly_execution_plan(rows, sip_amount):
     }
 
 
+def _build_net_execution_ledger(execution, sip_amount):
+    """Net same-stock BUY/SELL legs and return a stepwise cash ledger."""
+    sells = {order["Stock"]: order for order in execution["sells"]}
+    buys = {
+        order["Stock"]: order
+        for order in execution["buys"]
+        if int(order["Shares"]) > 0
+    }
+    orders = []
+    for stock in sorted(set(sells) | set(buys)):
+        sell_order = sells.get(stock, {})
+        buy_order = buys.get(stock, {})
+        sell_quantity = int(sell_order.get("Shares", 0))
+        buy_quantity = int(buy_order.get("Shares", 0))
+        net_quantity = buy_quantity - sell_quantity
+        if net_quantity < 0:
+            price = float(sell_order["Estimated price ₹"])
+            orders.append({
+                "side": "SELL",
+                "stock": stock,
+                "shares": abs(net_quantity),
+                "price": price,
+                "cash_change": abs(net_quantity) * price,
+            })
+        elif net_quantity > 0:
+            price = float(buy_order["Estimated price ₹"])
+            orders.append({
+                "side": "BUY",
+                "stock": stock,
+                "shares": net_quantity,
+                "price": price,
+                "cash_change": -net_quantity * price,
+            })
+
+    orders.sort(key=lambda order: (0 if order["side"] == "SELL" else 1, order["stock"]))
+    running_cash = float(sip_amount)
+    ledger = []
+    for step, order in enumerate(orders, start=1):
+        running_cash += order["cash_change"]
+        shares_word = "share" if order["shares"] == 1 else "shares"
+        ledger.append({
+            "Step": step,
+            "Instruction": (
+                f"{order['side']} {order['shares']} {shares_word} of {order['stock']}"
+            ),
+            "Estimated price ₹": order["price"],
+            "Cash movement ₹": order["cash_change"],
+            "Cash after step ₹": running_cash,
+        })
+    return ledger
+
+
 def _render_rebalance_action_card(row):
     """Render one action as a readable, wrapped decision card."""
     action = row["Action"]
@@ -1575,7 +1627,48 @@ def panel_rebalance(bundle, monthly_investment):
     e3.metric("Total BUY buying power", f"₹{execution['buying_power']:,.0f}")
     e4.metric("Cash remaining", f"₹{execution['cash_remaining']:,.0f}")
 
-    st.markdown("##### 1. SELL first — release cash from DROP and TRIM")
+    st.markdown("##### Combined execution sheet — place these net orders in sequence")
+    net_ledger = _build_net_execution_ledger(execution, rebalance_sip)
+    st.dataframe(
+        pd.DataFrame(net_ledger),
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "Step": st.column_config.NumberColumn(format="%d", width="small"),
+            "Instruction": st.column_config.TextColumn(width="large"),
+            "Estimated price ₹": st.column_config.NumberColumn(format="₹%.2f"),
+            "Cash movement ₹": st.column_config.NumberColumn(format="₹%.0f"),
+            "Cash after step ₹": st.column_config.NumberColumn(format="₹%.0f"),
+        },
+    )
+    gross_sells = {order["Stock"]: int(order["Shares"]) for order in execution["sells"]}
+    gross_buys = {order["Stock"]: int(order["Shares"]) for order in execution["buys"]}
+    netting_examples = []
+    for stock in sorted(set(gross_sells) & set(gross_buys)):
+        net_quantity = gross_buys[stock] - gross_sells[stock]
+        if net_quantity:
+            net_side = "BUY" if net_quantity > 0 else "SELL"
+            netting_examples.append(
+                f"SELL {gross_sells[stock]} and BUY {gross_buys[stock]} {stock} "
+                f"becomes one **{net_side} {abs(net_quantity)} {stock}** order"
+            )
+    netting_note = (
+        " For example, " + "; ".join(netting_examples) + "."
+        if netting_examples
+        else ""
+    )
+    st.caption(
+        "This is the algorithm-friendly order sheet. Opposing instructions in the same "
+        "stock are netted before execution."
+        + netting_note
+        + " The "
+        f"₹{execution['buying_power']:,.0f} figure above is the gross accounting bridge; "
+        "the net cash ledger rises only for genuine SELL orders and reaches the same "
+        f"₹{execution['cash_remaining']:,.0f} closing balance with fewer trades."
+    )
+
+    st.markdown("##### Gross calculation detail")
+    st.markdown("###### 1. SELL first — release cash from DROP and TRIM")
     if execution["sells"]:
         sell_view = pd.DataFrame(execution["sells"])
         sell_view.insert(
@@ -1599,7 +1692,7 @@ def panel_rebalance(bundle, monthly_investment):
     else:
         st.info("No whole-share SELL order is generated for this model sleeve this month.")
 
-    st.markdown("##### 2. BUY — invest the SIP and reinvest estimated sale proceeds")
+    st.markdown("###### 2. BUY — invest the SIP and reinvest estimated sale proceeds")
     positive_buys = [order for order in execution["buys"] if order["Shares"] > 0]
     zero_buys = [order for order in execution["buys"] if order["Shares"] == 0]
     if positive_buys:
