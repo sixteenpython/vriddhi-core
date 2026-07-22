@@ -78,6 +78,110 @@ def show_disclaimer():
     )
 
 
+def render_landing_vision():
+    """Explain Vriddhi's purpose before asking the investor for inputs."""
+    st.markdown("## Invest with evidence, not emotion.")
+    st.markdown(
+        "Vriddhi is an **AI-assisted portfolio decision engine**. It helps you build "
+        "and maintain a long-term investment portfolio using quantitative analysis "
+        "instead of guesswork."
+    )
+    st.markdown(
+        "Every month, it analyses market data, evaluates the health of companies, "
+        "and recommends how your portfolio should evolve. It does not try to predict "
+        "tomorrow's winning stock."
+    )
+    st.success(
+        "**The question Vriddhi asks**\n\n"
+        "Given everything we know today, which portfolio maximizes the probability "
+        "of superior long-term, risk-adjusted returns?"
+    )
+    st.success(
+        "**What Vriddhi does**\n\n"
+        "✔ Builds diversified portfolios  \n"
+        "✔ Reviews your portfolio every month  \n"
+        "✔ Recommends what to buy, reduce, hold or exit  \n"
+        "✔ Balances return potential with investment risk  \n"
+        "✔ Helps remove emotion from investing"
+    )
+
+
+def render_rebalance_explainer():
+    """Give a first-time investor the vocabulary and purpose of rebalancing."""
+    st.markdown("### What should I do this month?")
+    st.markdown(
+        "Each month, Vriddhi reviews your portfolio using the latest market information. "
+        "Some companies become more attractive; others become less attractive."
+    )
+    st.markdown(
+        "You do not rebuild the portfolio from scratch. Vriddhi recommends only the "
+        "changes needed to keep it aligned with the latest analysis - a regular "
+        "**health check-up for your investments**, not a complete makeover."
+    )
+
+    st.markdown("#### Your action guide")
+    st.markdown(
+        """
+        <style>
+        .vriddhi-action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+            margin: 0.5rem 0 1rem;
+        }
+        .vriddhi-action-card {
+            background: #ecf8f1;
+            border: 1px solid #b7dfc8;
+            border-left: 0.35rem solid #2e8b57;
+            border-radius: 0.5rem;
+            padding: 0.8rem 0.9rem;
+            min-height: 8rem;
+        }
+        .vriddhi-action-card strong { color: #17643b; }
+        .vriddhi-action-card p { margin: 0.35rem 0 0; line-height: 1.4; }
+        </style>
+        <div class="vriddhi-action-grid">
+          <div class="vriddhi-action-card"><strong>🌱 PICK · Start investing</strong><p>A new company has entered the portfolio. Begin investing this month's allocation.</p></div>
+          <div class="vriddhi-action-card"><strong>🚪 DROP · Exit</strong><p>The company is no longer recommended. Stop future investments and sell your existing holding.</p></div>
+          <div class="vriddhi-action-card"><strong>⬆️ TOP-UP · Increase</strong><p>The company deserves a larger allocation. Invest slightly more than before.</p></div>
+          <div class="vriddhi-action-card"><strong>⬇️ TRIM · Reduce</strong><p>The company remains, but at a smaller allocation. Continue investing at the lower amount.</p></div>
+          <div class="vriddhi-action-card"><strong>✅ HOLD · No change</strong><p>No action is required. Continue investing exactly as you did last month.</p></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.expander("See a ₹50,000/month example", expanded=False):
+        st.markdown(
+            "Suppose you invest **₹50,000 every month**. Last month, Company A received "
+            "**₹5,000**; this month Vriddhi recommends **₹7,000**. That is a **TOP-UP**."
+        )
+        st.markdown(
+            "If another company falls from **₹5,000 to ₹2,500**, that is a **TRIM**. "
+            "A completely new company is a **PICK**; one that disappears is a **DROP**. "
+            "Everything else remains **HOLD**."
+        )
+        st.caption(
+            "The objective is to make only the necessary changes each month while "
+            "keeping your long-term investment strategy on track."
+        )
+
+    st.success(
+        "**Why rebalance every month?**\n\n"
+        "Markets, companies and economic conditions change. Vriddhi periodically "
+        "reassesses every company using the latest available information and adjusts "
+        "the portfolio only where necessary - without chasing short-term price moves.\n\n"
+        "Small, disciplined improvements made consistently over time can have a "
+        "significant impact on long-term investment outcomes."
+    )
+    st.success(
+        "**The most important question is not:** Which stock will go up tomorrow?\n\n"
+        "**It is:** Given everything we know today, is this still the best portfolio "
+        "for the next several years?\n\n"
+        "That is the question Vriddhi answers every month."
+    )
+
+
 def verdict_banner(bundle):
     v = bundle["verdict"]
     h = bundle["horizon_years"]
@@ -737,15 +841,8 @@ def panel_risk(bundle):
 
 def panel_rebalance(bundle, monthly_investment):
     st.markdown("#### E. Monthly Rebalance")
+    render_rebalance_explainer()
     prev = load_previous_bundle(bundle["horizon_years"])
-
-    st.info(
-        "**In plain English: what do I actually buy this month?**\n\n"
-        "You don't rebuild everything each month - you just nudge. Every month the engine refreshes "
-        "and this tab tells you the few changes versus last month: a stock to start buying (**PICK**), one "
-        "to stop and sell (**DROP**), a name to buy a little **more** (TOP-UP) or **less** (TRIM), and the "
-        "rest you simply **HOLD**. Small changes are good news - low churn means low cost and taxes."
-    )
 
     if prev is None:
         st.success(
@@ -1112,11 +1209,7 @@ def render_dashboard(horizon_years, monthly_investment):
 # PAGE
 # ===============================
 st.title("Vriddhi - Nifty 50 Portfolio Decision Aid")
-st.markdown(
-    "**Would you trust this portfolio with new monthly money?** "
-    "We screen the Nifty 50, validate with backtest + walk-forward, optimize with "
-    "Markowitz, and only recommend portfolios that clear robust return and risk gates."
-)
+render_landing_vision()
 show_disclaimer()
 st.markdown("---")
 
