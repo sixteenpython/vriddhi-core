@@ -891,8 +891,8 @@ def _rebalance_rationale(ticker, action, previous_weight, current_weight, bundle
             "it improved the overall balance between potential return and risk."
         )
         alignment = (
-            "Adding it supports Vriddhi's goal: choose the mix that today's evidence "
-            "says has the best chance of superior long-term returns for the risk taken."
+            "Adding it helps build the mix that today's evidence says has the best "
+            "chance of superior long-term returns for the risk taken."
         )
     elif action.startswith("DROP"):
         if current_candidate:
@@ -984,8 +984,53 @@ def _rebalance_rationale(ticker, action, previous_weight, current_weight, bundle
             evidence.append(f"{prefix} (price paid for growth) {peg}")
 
     evidence_text = "; ".join(evidence)
-    evidence_sentence = f"The numbers behind it: {evidence_text}. " if evidence else ""
-    return f"{decision} {evidence_sentence}{alignment}"
+    evidence_section = (
+        f"\n\n**Evidence in plain English:** {evidence_text}." if evidence else ""
+    )
+    return (
+        f"{decision}{evidence_section}\n\n"
+        f"**How this supports Vriddhi's philosophy:** {alignment}"
+    )
+
+
+def _rebalance_short_reason(action):
+    """One-line scan aid for the compact comparison table."""
+    return {
+        "PICK (new buy)": "Earned a place in today's strongest overall mix",
+        "DROP (exit)": "Makes room for a better overall portfolio fit",
+        "TOP-UP": "A larger role improves the return-risk balance",
+        "TRIM": "A smaller role improves the return-risk balance",
+        "HOLD": "Still fits; no meaningful weight change",
+    }[action]
+
+
+def _render_rebalance_action_card(row):
+    """Render one action as a readable, wrapped decision card."""
+    action = row["Action"]
+    icon, label = {
+        "PICK (new buy)": ("🌱", "PICK · Start investing"),
+        "DROP (exit)": ("🚪", "DROP · Exit"),
+        "TOP-UP": ("⬆️", "TOP-UP · Increase"),
+        "TRIM": ("⬇️", "TRIM · Reduce"),
+        "HOLD": ("✅", "HOLD · No change"),
+    }[action]
+
+    with st.container(border=True):
+        st.markdown(f"#### {icon} {row['Stock']} — {label}")
+        previous_col, current_col, change_col, shares_col = st.columns(4)
+        previous_col.metric("Last month", row["Last month ₹"])
+        current_col.metric("This month", row["This month ₹"])
+        change_col.metric("Change", row["Change ₹"])
+        shares_col.metric("Share change", row["Change (shares)"])
+        st.markdown("**Why Vriddhi recommends this action**")
+        if action == "DROP (exit)":
+            st.error(row["Rationale"])
+        elif action == "TRIM":
+            st.warning(row["Rationale"])
+        elif action == "HOLD":
+            st.info(row["Rationale"])
+        else:
+            st.success(row["Rationale"])
 
 
 def panel_rebalance(bundle, monthly_investment):
@@ -1035,6 +1080,7 @@ def panel_rebalance(bundle, monthly_investment):
             "This month \u20b9": f"\u20b9{cur_amt:,.0f}",
             "Change \u20b9": f"{'+' if d_amt >= 0 else '-'}\u20b9{abs(d_amt):,.0f}",
             "Change (shares)": f"{int(round(d_amt / p)):+d}" if p > 0 else "n/a",
+            "Reason at a glance": _rebalance_short_reason(action),
             "Rationale": _rebalance_rationale(t, action, pw, cw, bundle, prev),
         })
     rows.sort(key=lambda r: (PRIORITY[r["Action"]], r["Stock"]))
@@ -1053,21 +1099,54 @@ def panel_rebalance(bundle, monthly_investment):
     else:
         st.success(summary + " A quiet month - mostly just keep buying as usual.")
 
+    st.markdown("#### At-a-glance comparison")
+    compact_columns = [
+        "Stock",
+        "Action",
+        "Last month ₹",
+        "This month ₹",
+        "Change ₹",
+        "Change (shares)",
+        "Reason at a glance",
+    ]
     st.dataframe(
-        pd.DataFrame(rows),
+        pd.DataFrame(rows)[compact_columns],
         width="stretch",
         hide_index=True,
-        column_config={"Rationale": st.column_config.TextColumn(width="large")},
+        column_config={
+            "Reason at a glance": st.column_config.TextColumn(width="large"),
+        },
     )
     st.caption(
         "How to act: **PICK** - start buying it with this month's money. **DROP** - stop buying and sell "
         "what you hold of it. **TOP-UP / TRIM** - buy a bit more / less than before. **HOLD** - no change, "
         "keep buying the same. (Change in shares is per month at your chosen contribution.)"
     )
+    st.markdown("#### Actions to take now")
+    actionable_rows = [row for row in rows if row["Action"] != "HOLD"]
+    if actionable_rows:
+        st.caption(
+            f"Focus on these **{len(actionable_rows)} changes** first. Each card shows "
+            "the money movement, the evidence behind it, and how it improves the whole portfolio."
+        )
+        for row in actionable_rows:
+            _render_rebalance_action_card(row)
+    else:
+        st.success("No changes are needed this month. Keep investing as before.")
+
+    hold_rows = [row for row in rows if row["Action"] == "HOLD"]
+    if hold_rows:
+        with st.expander(
+            f"✅ No change needed — review {len(hold_rows)} HOLD rationale(s)",
+            expanded=False,
+        ):
+            for row in hold_rows:
+                _render_rebalance_action_card(row)
+
     st.caption(
-        "How to read Rationale: these are the stored health metrics and optimizer inputs "
-        "behind each result. Final weights come from the full return/covariance matrix, "
-        "so no action is attributed to one metric in isolation."
+        "How to read the evidence: the cards translate stored health metrics and optimizer "
+        "inputs into plain English. Final weights use the full return/covariance matrix, "
+        "so no action is attributed to one number in isolation."
     )
 
     st.markdown("---")
