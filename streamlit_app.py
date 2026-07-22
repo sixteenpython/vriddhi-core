@@ -750,6 +750,7 @@ def _render_stock_thesis_card(stock, bundle, monthly_investment):
     """Render one holding as an evidence-led, plain-English decision card."""
     horizon = int(bundle["horizon_years"])
     weight = float(stock.get("weight", 0) or 0)
+    sector = stock.get("sector", "Unknown")
     backtest = stock.get("backtest", {})
     cagr = backtest.get(f"cagr_{horizon}y")
     volatility = backtest.get("volatility")
@@ -758,6 +759,9 @@ def _render_stock_thesis_card(stock, bundle, monthly_investment):
     portfolio_volatility = bundle.get("portfolio_metrics", {}).get("volatility")
     portfolio_drawdown = bundle.get("portfolio_metrics", {}).get("max_drawdown")
     peg = _stock_peg(stock)
+    pe = float(stock.get("pe_ratio", 0) or 0)
+    pb = float(stock.get("pb_ratio", 0) or 0)
+    contribution_points = None if cagr is None else float(cagr) * weight
 
     if weight >= 0.145:
         role = "a core holding at the 15% safety cap"
@@ -767,15 +771,57 @@ def _render_stock_thesis_card(stock, bundle, monthly_investment):
         role = "a supporting holding sized to limit single-stock risk"
 
     if peg is None:
-        valuation = "Its PEG valuation reading is unavailable."
+        peg_reading = "PEG is unavailable, so no price-versus-growth claim is made."
     elif peg < 1:
-        valuation = f"Its PEG of {peg:.2f} suggests a low price relative to its past growth."
+        peg_reading = (
+            f"PEG is **{peg:.2f}**. Below 1.0 usually means the price looks inexpensive "
+            "relative to the company's historical growth."
+        )
     elif peg <= 1.3:
-        valuation = f"Its PEG of {peg:.2f} is roughly fair relative to its past growth."
+        peg_reading = (
+            f"PEG is **{peg:.2f}**—roughly fair relative to the company's historical growth."
+        )
     else:
-        valuation = (
-            f"Its PEG of {peg:.2f} is expensive relative to past growth, so it is held "
-            "for its contribution to the whole portfolio—not because it looks cheap."
+        peg_reading = (
+            f"PEG is **{peg:.2f}**, which is expensive relative to historical growth. "
+            "It must therefore earn its place through quality or portfolio balance—not cheapness."
+        )
+
+    if pe <= 0:
+        pe_reading = "PE is unavailable."
+    elif pe >= 45:
+        pe_reading = (
+            f"PE is **{pe:.1f}**: the price is roughly equivalent to {pe:.1f} years of "
+            "today's annual profit. That is expensive, so very high expectations are already "
+            "built into the price."
+        )
+    elif pe >= 25:
+        pe_reading = (
+            f"PE is **{pe:.1f}**: the price is roughly equivalent to {pe:.1f} years of "
+            "today's annual profit, which implies above-average expectations."
+        )
+    else:
+        pe_reading = (
+            f"PE is **{pe:.1f}**: the price is roughly equivalent to {pe:.1f} years of "
+            "today's annual profit—a less demanding earnings valuation."
+        )
+
+    if pb <= 0:
+        pb_reading = "PB is unavailable."
+    elif pb >= 8:
+        pb_reading = (
+            f"PB is **{pb:.1f}**: the market pays about ₹{pb:.1f} for each ₹1 of accounting "
+            "net worth, which is a rich premium."
+        )
+    elif pb >= 4:
+        pb_reading = (
+            f"PB is **{pb:.1f}**: the market pays about ₹{pb:.1f} for each ₹1 of accounting "
+            "net worth, so a meaningful quality premium is present."
+        )
+    else:
+        pb_reading = (
+            f"PB is **{pb:.1f}**: the market pays about ₹{pb:.1f} for each ₹1 of accounting "
+            "net worth—a comparatively moderate premium."
         )
 
     cagr_text = "n/a" if cagr is None else f"{float(cagr):.1f}%"
@@ -788,36 +834,64 @@ def _render_stock_thesis_card(stock, bundle, monthly_investment):
     portfolio_drawdown_text = (
         "n/a" if portfolio_drawdown is None else f"{float(portfolio_drawdown):.1f}%"
     )
+    contribution_text = (
+        "n/a" if contribution_points is None else f"{contribution_points:.1f} pts"
+    )
+    if cagr is not None and float(cagr) > -100:
+        growth_multiple = (1 + float(cagr) / 100) ** horizon
+        growth_story = (
+            f"If ₹1 had followed that exact historical path, it would have become about "
+            f"**₹{growth_multiple:.2f} after {horizon} years**."
+        )
+    else:
+        growth_story = "There is not enough retained history to translate growth into a ₹1 example."
 
     with st.container(border=True):
-        st.markdown(f"#### 🌿 {stock['ticker']} — {stock.get('sector', 'Unknown')}")
+        st.markdown(f"#### 🌿 {stock['ticker']} — {sector}")
         weight_col, money_col, growth_col, sharpe_col = st.columns(4)
         weight_col.metric("Portfolio weight", f"{weight*100:.1f}%")
         money_col.metric("Monthly allocation", f"₹{weight*monthly_investment:,.0f}")
         growth_col.metric(f"Historical {horizon}Y growth", cagr_text)
-        sharpe_col.metric("Risk-adjusted score", sharpe_text)
+        sharpe_col.metric("Growth contribution", contribution_text)
 
         st.markdown("**Why this stock earned its place**")
+        st.markdown(
+            f"**{stock['ticker']} is {role}.** It passed the value/growth screen and then "
+            "earned a place when the optimizer considered how all shortlisted stocks work "
+            "together. No single number below is the reason on its own."
+        )
+
+        st.markdown("**Valuation in plain English**")
+        st.info(f"{peg_reading}\n\n{pe_reading}\n\n{pb_reading}")
+
+        st.markdown("**Growth and contribution in plain English**")
         st.success(
-            f"{stock['ticker']} is {role}. Over the retained {horizon}-year history, "
-            f"it compounded at **{cagr_text} a year** with a risk-adjusted score of "
-            f"**{sharpe_text}** (higher is better). {valuation}"
+            f"The stock's retained {horizon}-year history grew at **{cagr_text} a year**. "
+            f"{growth_story} At its **{weight*100:.1f}% portfolio weight**, its standalone "
+            f"growth accounts for roughly **{contribution_text}** of the portfolio's weighted "
+            "historical growth calculation. That is attribution—not cash credited to your "
+            "account and not a future promise."
         )
 
-        st.markdown("**Risk to understand**")
+        st.markdown("**Risk in plain English**")
         st.warning(
-            f"On its own, the stock's usual annual ups and downs were **{volatility_text}**, "
-            f"and its worst historical fall was **{drawdown_text}**. The combined portfolio "
-            f"was steadier at **{portfolio_volatility_text} volatility** with a "
-            f"**{portfolio_drawdown_text} worst fall**. Position sizing and diversification "
-            "are what keep this single-company risk from dominating your plan."
+            f"**Volatility {volatility_text}** describes how bumpy the stock's usual journey "
+            f"was; it is not a loss forecast. **Max drawdown {drawdown_text}** was the worst "
+            f"drop from a previous high that an investor had to sit through. Its **Sharpe "
+            f"score was {sharpe_text}**—a summary of how much historical return it earned for "
+            "the bumpiness taken, where higher is better. The combined portfolio was steadier "
+            f"at **{portfolio_volatility_text} volatility** with a **{portfolio_drawdown_text} "
+            "worst fall**, showing why position sizing and diversification matter."
         )
 
-        contribution = stock.get("explanation", {}).get("contribution", "")
+        st.markdown("**Why it fits the whole portfolio**")
         st.info(
-            f"**How this supports Vriddhi's philosophy:** {contribution} It remains in the "
-            "portfolio because, together with the other holdings, it helps form today's "
-            "best evidence-based balance of long-term return and risk."
+            f"**How this supports Vriddhi's philosophy:** at a **{weight*100:.1f}% weight**, "
+            f"{stock['ticker']} supplies **{sector} exposure** and about **{contribution_text}** "
+            "of weighted historical growth. Its return pattern and risk were considered "
+            "alongside every other holding. An attractive stock in isolation is not enough; "
+            "it remains only because the evidence says it improves today's overall balance "
+            "of long-term return and risk."
         )
         st.caption(
             f"Forward model signal (context only, not relied upon): ~"
@@ -884,29 +958,31 @@ def panel_portfolio(bundle, monthly_investment):
             ax.set_title("Allocation by Sector", fontweight="bold")
             st.pyplot(fig)
 
-    with st.expander("Why these stocks? (per-stock rationale + how to read the numbers)", expanded=False):
-        st.markdown("### How to read each stock decision")
-        st.info(
-            "**Quick guide to the jargon, in everyday terms:**\n"
-            "- **PEG** - *are you paying a fair price for the growth?* Below **1.0** = a bargain "
-            "(you're paying less than \u20b91 for each \u20b91 of growth); around **1** = fair; "
-            "well above **1** = expensive, so we only keep it for quality or balance, not because it's cheap.\n"
-            "- **PE (price-to-earnings)** - roughly *how many years of the company's profit you're paying for "
-            "one share*. Lower is cheaper; a very high PE means big expectations are already baked in.\n"
-            "- **PB (price-to-book)** - *price versus the company's accounting net worth*. A high PB means the "
-            "market is paying a big premium over what's on the books.\n"
-            "- **Volatility** - *how bumpy the ride is* month to month. **Max drawdown** - *the worst drop from "
-            "a previous high* you'd have had to sit through.\n"
-            "- **Contribution** - how much this one holding actually added to the portfolio's past growth.\n\n"
-            "_Below: the plain-language reason each stock earned its place._"
-        )
-        st.markdown("### Stock-by-stock decision cards")
-        st.caption(
-            "Each card separates the investment case, the risk you must accept, and the "
-            "stock's role in Vriddhi's overall long-term return-versus-risk philosophy."
-        )
-        for s in bundle["stocks"]:
-            _render_stock_thesis_card(s, bundle, monthly_investment)
+    st.markdown("---")
+    st.markdown("### Why these stocks?")
+    st.caption("Per-stock rationale + how to read the numbers")
+    st.markdown("#### How to read each stock decision")
+    st.info(
+        "**Quick guide to the jargon, in everyday terms:**\n"
+        "- **PEG** - *are you paying a fair price for the growth?* Below **1.0** = a bargain "
+        "(you're paying less than \u20b91 for each \u20b91 of growth); around **1** = fair; "
+        "well above **1** = expensive, so we only keep it for quality or balance, not because it's cheap.\n"
+        "- **PE (price-to-earnings)** - roughly *how many years of the company's profit you're paying for "
+        "one share*. Lower is cheaper; a very high PE means big expectations are already baked in.\n"
+        "- **PB (price-to-book)** - *price versus the company's accounting net worth*. A high PB means the "
+        "market is paying a big premium over what's on the books.\n"
+        "- **Volatility** - *how bumpy the ride is* month to month. **Max drawdown** - *the worst drop from "
+        "a previous high* you'd have had to sit through.\n"
+        "- **Contribution** - how much this one holding actually added to the portfolio's past growth.\n\n"
+        "_Below: the plain-language reason each stock earned its place._"
+    )
+    st.markdown("### Stock-by-stock decision cards")
+    st.caption(
+        "Each card separates the investment case, the risk you must accept, and the "
+        "stock's role in Vriddhi's overall long-term return-versus-risk philosophy."
+    )
+    for s in bundle["stocks"]:
+        _render_stock_thesis_card(s, bundle, monthly_investment)
 
 
 def panel_risk(bundle):
