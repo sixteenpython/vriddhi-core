@@ -1,18 +1,29 @@
-import io
+import importlib
 import os
-import pandas as pd
-import numpy as np
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+import numpy as np
+import pandas as pd
 import streamlit as st
 
 import vriddhi_core
+
+# Streamlit can rerun this entry point in a long-lived worker after deploying
+# updated source. Reload only when that worker still holds the pre-ledger core
+# module, so the new exports below are resolved from the current checkout.
+if not all(
+    hasattr(vriddhi_core, name)
+    for name in ("build_recommendation_ledger_replay", "load_recommendation_ledger")
+):
+    vriddhi_core = importlib.reload(vriddhi_core)
+
 from vriddhi_core import (
     build_oos_sip_replay,
     build_recommendation_ledger_replay,
+    load_benchmark_series,
     load_portfolio_bundle,
     load_previous_bundle,
-    load_benchmark_series,
     load_recommendation_ledger,
     load_release_manifest,
     scale_allocations,
