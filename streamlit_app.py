@@ -191,7 +191,8 @@ def verdict_banner(bundle):
         st.success(
             f"### RECOMMENDED for a {h}-year horizon\n"
             f"This {bundle['num_stocks']}-stock portfolio cleared every credibility gate: "
-            f"~{pct(base)} walk-forward CAGR, beats Nifty 50 by {pct(beat)} after costs, "
+            f"~{pct(base)} validated out-of-sample CAGR, beats Nifty 50 by {pct(beat)} "
+            f"after costs, "
             f"with risk inside our limits. Would you trust it with new monthly money? "
             f"The evidence says yes."
         )
@@ -275,7 +276,8 @@ def finance_doctor_note(bundle, monthly_investment):
         f"cleared every credibility check - it **beat the index by ~{pct(beat)}** after costs, "
         f"scored a healthy risk-adjusted (Sharpe) **{sharpe:.2f}**, and kept its worst "
         f"peak-to-trough fall to about **{pct(dd)}**, spread across **{n_sectors} sectors**. "
-        f"So yes - there is **high confidence** in a roughly **{pct(base)} CAGR** *if* you stay the course.\n\n"
+        f"So yes - the historical evidence supports a **validated out-of-sample CAGR of "
+        f"roughly {pct(base)}** *if* you stay the course.\n\n"
         f"**Now the honest risks - because a good doctor doesn't only give good news:** this is "
         f"100% equity, so it *will* have ugly years; expect a 20%+ drop at some point and don't "
         f"panic-sell when it happens. It leans on its biggest 3 names (~{top3:.0f}% of the money). "
@@ -295,27 +297,37 @@ def panel_summary(bundle, monthly_investment):
     bench = bundle["benchmark"]
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Expected CAGR (base)", pct(s["base"]),
-              help="Anchored to validated out-of-sample walk-forward returns.")
-    c2.metric("Best / Worst case", f"{pct(s['best'])} / {pct(s['worst'])}")
+    c1.metric("Validated OOS CAGR", pct(s["base"]),
+              help="Annualized compound growth observed in the binding walk-forward "
+                   "out-of-sample test. This is strategy evidence, not your personal XIRR.")
+    c2.metric("Illustrative annual range", f"{pct(s['best'])} / {pct(s['worst'])}",
+              help="A volatility-based sensitivity band around the validated OOS CAGR; "
+                   "it is not a promised best or worst outcome.")
     c3.metric("Max Drawdown", pct(pm.get("max_drawdown")),
               help="Largest peak-to-trough loss over the backtest.")
     c4.metric("Sharpe (walk-forward)", f"{wf.get('oos_sharpe', 0):.2f}" if wf.get("oos_sharpe") is not None else "n/a")
 
     c5, c6, c7 = st.columns(3)
-    c5.metric(f"Portfolio {bundle['horizon_years']}yr CAGR",
+    c5.metric(f"Historical portfolio CAGR ({bundle['horizon_years']}yr)",
               pct(pm.get(f"cagr_{bundle['horizon_years']}y")),
               help="Lump-sum historical annual growth of the basket (one-time investment "
                    "held for the period) - distinct from your monthly-contribution projection.")
-    c6.metric("Nifty 50 (same window)",
-              pct(bench["metrics"].get(f"cagr_{bundle['horizon_years']}y")))
+    c6.metric("Historical Nifty 50 CAGR",
+              pct(bench["metrics"].get(f"cagr_{bundle['horizon_years']}y")),
+              help=f"Nifty 50 compound annual growth over the same {bundle['horizon_years']}-year window.")
     c7.metric("Beat after costs", pct(bench.get("beat_after_costs")),
               delta="vs Nifty 50")
 
     st.caption(
-        f"A forward forecast model signals higher upside (~{pct(s.get('forecast_signal'))} "
-        f"CAGR), but we treat that as optimistic and **do not rely on it** - the base case "
+        f"A forward model signals a higher annualized return (~{pct(s.get('forecast_signal'))}), "
+        f"but we treat that as optimistic and **do not rely on it** - the headline rate "
         f"above is deliberately anchored to validated out-of-sample walk-forward returns."
+    )
+    st.caption(
+        "**Why CAGR, not XIRR?** CAGR describes the strategy's annualized compound growth "
+        "without investor cash-flow timing. Vriddhi will label a figure XIRR only when it is "
+        "calculated from the actual dated contributions and ending value in the prospective "
+        "recommendation ledger."
     )
 
     # ---- TL;DR: the whole story in one headline + two pictures ----
@@ -350,7 +362,8 @@ def panel_summary(bundle, monthly_investment):
     if beat is not None:
         narrative += (
             f"\n\nThe payoff: a portfolio that has **beaten the index by ~{pct(beat)} after costs** "
-            f"and earns a **validated ~{pct(s['base'])} CAGR** on money the model had **never seen** "
+            f"and earns a **validated out-of-sample CAGR of ~{pct(s['base'])}** on money the "
+            f"model had **never seen** "
             f"- not a forecast, a track record."
         )
     st.success(narrative)
@@ -461,10 +474,10 @@ def panel_backtest(bundle, benchmark_df, monthly_investment):
         wf = wf_all.get(str(yr), {})
         rows.append({
             "Window": f"{yr}-year",
-            "Portfolio CAGR": pct(pm.get(f"cagr_{yr}y")),
-            "Nifty 50 CAGR": pct(bench.get(f"cagr_{yr}y")),
+            "Historical portfolio CAGR": pct(pm.get(f"cagr_{yr}y")),
+            "Historical Nifty 50 CAGR": pct(bench.get(f"cagr_{yr}y")),
             "In-sample CAGR": pct(wf.get("in_sample_cagr")),
-            "Out-of-sample CAGR": pct(wf.get("oos_cagr")),
+            "Validated OOS CAGR": pct(wf.get("oos_cagr")),
             "OOS Sharpe": f"{wf.get('oos_sharpe'):.2f}" if wf.get("oos_sharpe") is not None else "n/a",
         })
     st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
@@ -678,8 +691,8 @@ def display_release_date(value):
 
 def build_projection_figure(bundle, monthly_investment, alloc):
     """projection.png-style visual: SIP growth journey + year-wise breakdown +
-    monthly stock allocation. Uses the VALIDATED walk-forward base CAGR (not the
-    optimistic forecast) so the projection is consistent with the verdict."""
+    monthly stock allocation. Uses the validated walk-forward OOS CAGR as an
+    illustrative annual-rate input (not the optimistic forecast)."""
     horizon_years = bundle["horizon_years"]
     base_cagr = bundle["scenarios"]["base"] or 0.0
     horizon_months = horizon_years * 12
@@ -702,7 +715,7 @@ def build_projection_figure(bundle, monthly_investment, alloc):
                      label="Potential gains")
     ax1.plot(months, invested, "--", lw=2.5, color="#2E86AB", label="Total invested")
     ax1.plot(months, projected, "-", lw=2.5, color="#A23B72",
-             label=f"Portfolio value ({base_cagr:.1f}% validated CAGR)")
+             label=f"Illustrative value ({base_cagr:.1f}% annual-rate input)")
     for m in [y for y in (12, 24, 36, 48, 60) if y <= horizon_months]:
         ax1.annotate(_inr(projected[m - 1]), xy=(m, projected[m - 1]),
                      xytext=(m, projected[m - 1] + max(projected) * 0.07),
@@ -923,22 +936,23 @@ def panel_portfolio(bundle, monthly_investment):
         "the same inputs always produce the same portfolio."
     )
 
-    # ---- projection.png-style growth visual (validated CAGR) ----
+    # ---- projection.png-style growth visual (validated OOS rate as input) ----
     fig, total_invested, final_value, total_gains = build_projection_figure(
         bundle, monthly_investment, alloc)
     m1, m2, m3 = st.columns(3)
     m1.metric("Total invested", _inr(total_invested),
               help=f"\u20b9{monthly_investment:,}/month for {bundle['horizon_years']} years.")
-    m2.metric("Projected value", _inr(final_value),
-              help="Illustrative growth of your monthly contributions at the validated "
-                   "walk-forward CAGR (not the optimistic forecast).")
-    m3.metric("Projected gains", _inr(total_gains))
+    m2.metric("Illustrative SIP value", _inr(final_value),
+              help="A hypothetical monthly-contribution outcome using the validated "
+                   "walk-forward OOS CAGR as the annual-rate input. This is not an XIRR "
+                   "or a forecast of your actual result.")
+    m3.metric("Illustrative gains", _inr(total_gains))
     st.pyplot(fig)
     st.caption(
-        "Illustrative only. This projects *your monthly contributions* compounding at the "
-        f"portfolio's validated {bundle['horizon_years']}-yr walk-forward CAGR "
-        f"({pct(bundle['scenarios']['base'])}) - it is not the lump-sum historical return and "
-        "not a guarantee."
+        "Illustrative only. This applies the portfolio's validated out-of-sample CAGR "
+        f"({pct(bundle['scenarios']['base'])}) as the annual-rate input for a hypothetical "
+        f"{bundle['horizon_years']}-year monthly SIP. It is neither your personal XIRR nor "
+        "a guaranteed future outcome."
     )
     st.markdown("---")
 
@@ -1624,7 +1638,7 @@ def panel_optimal(bundle):
     )
     st.caption(
         "Note: this chart's return axis is the MPT mean-return basis the optimizer works in. The "
-        "headline recommendation is still anchored to the validated walk-forward CAGR shown on the "
+        "headline recommendation is still anchored to the validated out-of-sample CAGR shown on the "
         "other tabs."
     )
 
@@ -1702,7 +1716,7 @@ def panel_optimal(bundle):
         {"Metric": "In-sample Sharpe",
          "Pure-math optimum": f"{opt.get('sharpe', 0):.2f}",
          "Vriddhi recommended": f"{rec.get('sharpe', 0):.2f}"},
-        {"Metric": f"Out-of-sample CAGR ({lb}-yr walk-forward)",
+        {"Metric": f"Validated OOS CAGR ({lb}-yr walk-forward)",
          "Pure-math optimum": _p(unc.get("oos_cagr")),
          "Vriddhi recommended": _p(reg.get("oos_cagr"))},
         {"Metric": "Out-of-sample max drawdown",
@@ -1798,7 +1812,7 @@ st.sidebar.markdown("---")
 generate = st.sidebar.button("Generate Investment Plan", type="primary",
                              width="stretch")
 st.sidebar.caption(
-    "Gates: walk-forward CAGR >= 18% (1-4yr) / 20% (5yr), max drawdown < 25%, "
+    "Gates: validated OOS CAGR >= 18% (1-4yr) / 20% (5yr), max drawdown < 25%, "
     "walk-forward Sharpe > 1.0, and a benchmark beat after costs."
 )
 
