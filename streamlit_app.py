@@ -865,6 +865,129 @@ def panel_risk(bundle):
     )
 
 
+def _rebalance_rationale(ticker, action, previous_weight, current_weight, bundle, previous):
+    """Explain an action from optimizer inputs and retained health metrics."""
+    current_stocks = {stock["ticker"]: stock for stock in bundle.get("stocks", [])}
+    previous_stocks = {stock["ticker"]: stock for stock in previous.get("stocks", [])}
+    current_candidates = {
+        stock["ticker"]: stock
+        for stock in bundle.get("optimal_view", {}).get("candidates", [])
+    }
+    previous_candidates = {
+        stock["ticker"]: stock
+        for stock in previous.get("optimal_view", {}).get("candidates", [])
+    }
+
+    current_stock = current_stocks.get(ticker)
+    previous_stock = previous_stocks.get(ticker)
+    current_candidate = current_candidates.get(ticker)
+    previous_candidate = previous_candidates.get(ticker)
+    horizon = int(bundle.get("horizon_years", 5))
+
+    if action.startswith("PICK"):
+        decision = (
+            "This company earned a place in today's final portfolio at "
+            f"{current_weight*100:.1f}%. When considered alongside the other holdings, "
+            "it improved the overall balance between potential return and risk."
+        )
+        alignment = (
+            "Adding it supports Vriddhi's goal: choose the mix that today's evidence "
+            "says has the best chance of superior long-term returns for the risk taken."
+        )
+    elif action.startswith("DROP"):
+        if current_candidate:
+            decision = (
+                "The company still passed the first health screen, but it did not make "
+                "today's final portfolio once every candidate was compared together, "
+                "including how their prices tend to move alongside one another. This is "
+                "about its fit in the whole portfolio, not a claim that it is unhealthy."
+            )
+        else:
+            decision = (
+                "The latest evidence no longer kept the company in the screened shortlist, "
+                "so its portfolio weight moved to zero."
+            )
+        alignment = (
+            "Removing it makes room for the combination that today's evidence says has "
+            "the better chance of superior long-term returns for the risk taken."
+        )
+    elif action == "TOP-UP":
+        decision = (
+            "The company still belongs in the portfolio, and today's analysis gives it "
+            f"a slightly larger role: {previous_weight*100:.1f}% to "
+            f"{current_weight*100:.1f}%."
+        )
+        alignment = (
+            "Putting a little more money behind it moves the whole portfolio toward the "
+            "best evidence-based balance of long-term return and risk available today."
+        )
+    elif action == "TRIM":
+        decision = (
+            "The company still adds value, but today's analysis gives it a smaller role: "
+            f"{previous_weight*100:.1f}% to {current_weight*100:.1f}%."
+        )
+        alignment = (
+            "Keeping it with less money preserves its benefit while moving the whole "
+            "portfolio toward a better long-term return-versus-risk balance."
+        )
+    else:
+        decision = (
+            "The company still fits today's portfolio, and its suggested weight barely "
+            f"changed ({previous_weight*100:.1f}% to {current_weight*100:.1f}%). The "
+            "movement was less than 1 percentage point, so no action is needed."
+        )
+        alignment = (
+            "Leaving it unchanged avoids needless trading while preserving the mix that "
+            "today's evidence supports for superior long-term, risk-adjusted returns."
+        )
+
+    evidence = []
+    if current_candidate:
+        evidence.append(
+            "historical annualized return input "
+            f"{float(current_candidate.get('ret', 0))*100:.1f}%"
+        )
+        evidence.append(
+            "volatility (the usual ups and downs) "
+            f"{float(current_candidate.get('vol', 0))*100:.1f}%"
+        )
+    if previous_candidate and current_candidate:
+        evidence.append(
+            "risk-adjusted score (Sharpe; higher is better) moved from "
+            f"{float(previous_candidate.get('sharpe', 0)):.2f} to "
+            f"{float(current_candidate.get('sharpe', 0)):.2f}"
+        )
+    elif current_candidate:
+        evidence.append(
+            "risk-adjusted score (Sharpe; higher is better) "
+            f"{float(current_candidate.get('sharpe', 0)):.2f}"
+        )
+
+    health_stock = current_stock or previous_stock
+    if health_stock:
+        backtest = health_stock.get("backtest", {})
+        cagr = backtest.get(f"cagr_{horizon}y")
+        drawdown = backtest.get("max_drawdown")
+        if cagr is not None:
+            prefix = "historical" if current_stock else "previously recorded historical"
+            evidence.append(
+                f"{prefix} {horizon}-year growth (CAGR) {float(cagr):.1f}% a year"
+            )
+        if drawdown is not None:
+            prefix = "worst historical fall" if current_stock else "previously recorded worst fall"
+            evidence.append(f"{prefix} {float(drawdown):.1f}%")
+
+        fundamental = health_stock.get("explanation", {}).get("fundamental", "")
+        if fundamental.startswith("PEG "):
+            peg = fundamental.removeprefix("PEG ").split(" ", 1)[0]
+            prefix = "PEG" if current_stock else "previously recorded PEG"
+            evidence.append(f"{prefix} (price paid for growth) {peg}")
+
+    evidence_text = "; ".join(evidence)
+    evidence_sentence = f"The numbers behind it: {evidence_text}. " if evidence else ""
+    return f"{decision} {evidence_sentence}{alignment}"
+
+
 def panel_rebalance(bundle, monthly_investment):
     st.markdown("#### E. Monthly Rebalance")
     render_rebalance_explainer()
@@ -912,6 +1035,7 @@ def panel_rebalance(bundle, monthly_investment):
             "This month \u20b9": f"\u20b9{cur_amt:,.0f}",
             "Change \u20b9": f"{'+' if d_amt >= 0 else '-'}\u20b9{abs(d_amt):,.0f}",
             "Change (shares)": f"{int(round(d_amt / p)):+d}" if p > 0 else "n/a",
+            "Rationale": _rebalance_rationale(t, action, pw, cw, bundle, prev),
         })
     rows.sort(key=lambda r: (PRIORITY[r["Action"]], r["Stock"]))
 
@@ -929,11 +1053,21 @@ def panel_rebalance(bundle, monthly_investment):
     else:
         st.success(summary + " A quiet month - mostly just keep buying as usual.")
 
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    st.dataframe(
+        pd.DataFrame(rows),
+        width="stretch",
+        hide_index=True,
+        column_config={"Rationale": st.column_config.TextColumn(width="large")},
+    )
     st.caption(
         "How to act: **PICK** - start buying it with this month's money. **DROP** - stop buying and sell "
         "what you hold of it. **TOP-UP / TRIM** - buy a bit more / less than before. **HOLD** - no change, "
         "keep buying the same. (Change in shares is per month at your chosen contribution.)"
+    )
+    st.caption(
+        "How to read Rationale: these are the stored health metrics and optimizer inputs "
+        "behind each result. Final weights come from the full return/covariance matrix, "
+        "so no action is attributed to one metric in isolation."
     )
 
     st.markdown("---")
