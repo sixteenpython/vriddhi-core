@@ -26,6 +26,20 @@ def test_release_manifest_loader(tmp_path, monkeypatch):
     assert vriddhi_core.load_release_manifest() == manifest
 
 
+def test_oos_sip_replay_uses_stored_growth_factors():
+    curve = {
+        "dates": ["2026-01-02", "2026-02-02"],
+        "portfolio": [1.0, 2.0],
+    }
+
+    replay = vriddhi_core.build_oos_sip_replay(curve, 1_000, periods=(2, 3))
+
+    assert replay.loc[0, "Contributions"] == 2
+    assert replay.loc[0, "Total invested"] == 2_000
+    assert replay.loc[0, "Replay value"] == 3_000
+    assert pd.isna(replay.loc[1, "Replay value"])
+
+
 def test_scale_allocations_preserves_total():
     bundle = {
         "stocks": [

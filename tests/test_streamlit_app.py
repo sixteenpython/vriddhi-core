@@ -18,6 +18,12 @@ def test_streamlit_renders_every_horizon_in_isolated_process():
         "    app.sidebar.selectbox[0].set_value(horizon).run()\n"
         "    app.sidebar.button[0].click().run()\n"
         "    assert not app.exception, (horizon, app.exception)\n"
+        "    text_groups = (app.markdown, app.info, app.success, app.warning, app.caption)\n"
+        "    page_text = ' '.join(x.value for group in text_groups for x in group)\n"
+        "    assert 'What if you had started earlier?' in page_text, horizon\n"
+        "    if horizon >= 2:\n"
+        "        assert 'Why should I trust these results?' in page_text, horizon\n"
+        "        assert 'How Vriddhi thinks' in page_text, horizon\n"
     )
     env = os.environ.copy()
     env["STREAMLIT_SERVER_ENABLE_CORS"] = "true"

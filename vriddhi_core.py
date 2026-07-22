@@ -671,6 +671,60 @@ def load_release_manifest():
         return None
 
 
+def build_oos_sip_replay(equity_curve, monthly_investment, periods=(12, 24, 36, 48, 60)):
+    """Translate a stored OOS growth curve into an illustrative monthly SIP replay.
+
+    This is a presentation-layer cash-flow view of the existing walk-forward
+    return stream. It does not reconstruct or claim historical recommendation
+    snapshots. A contribution is added on the first OOS observation in each
+    calendar month and then grows by the remaining stored equity-curve factor.
+    """
+    columns = ["Months", "Start date", "Contributions", "Total invested", "Replay value"]
+    if not equity_curve or monthly_investment <= 0:
+        return pd.DataFrame(columns=columns)
+
+    dates = pd.to_datetime(equity_curve.get("dates", []), errors="coerce")
+    values = pd.to_numeric(pd.Series(equity_curve.get("portfolio", [])), errors="coerce")
+    if len(dates) != len(values) or len(values) == 0:
+        return pd.DataFrame(columns=columns)
+
+    curve = pd.DataFrame({"Date": dates, "Equity": values}).dropna()
+    curve = curve[curve["Equity"] > 0].sort_values("Date").drop_duplicates("Date")
+    if curve.empty:
+        return pd.DataFrame(columns=columns)
+
+    curve["Month"] = curve["Date"].dt.to_period("M")
+    monthly_points = curve.groupby("Month", sort=True, as_index=False).first()
+    final_equity = float(curve.iloc[-1]["Equity"])
+
+    rows = []
+    for months in periods:
+        months = int(months)
+        if months <= 0 or len(monthly_points) < months:
+            rows.append({
+                "Months": months,
+                "Start date": None,
+                "Contributions": None,
+                "Total invested": None,
+                "Replay value": None,
+            })
+            continue
+
+        contribution_points = monthly_points.tail(months)
+        replay_value = float(
+            (monthly_investment * final_equity / contribution_points["Equity"]).sum()
+        )
+        rows.append({
+            "Months": months,
+            "Start date": contribution_points.iloc[0]["Date"],
+            "Contributions": months,
+            "Total invested": float(monthly_investment * months),
+            "Replay value": replay_value,
+        })
+
+    return pd.DataFrame(rows, columns=columns)
+
+
 def scale_allocations(bundle, monthly_investment):
     """Turn a bundle's portfolio weights into a concrete monthly SIP plan.
 

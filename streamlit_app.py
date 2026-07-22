@@ -8,6 +8,7 @@ import streamlit as st
 
 import vriddhi_core
 from vriddhi_core import (
+    build_oos_sip_replay,
     load_portfolio_bundle,
     load_previous_bundle,
     load_benchmark_series,
@@ -249,7 +250,7 @@ def panel_summary(bundle, monthly_investment):
         st.caption("Optimization chart unavailable in this bundle.")
 
 
-def panel_backtest(bundle, benchmark_df):
+def panel_backtest(bundle, benchmark_df, monthly_investment):
     st.markdown("#### B. Backtest Evidence")
     st.info(
         "**In plain English: did this actually work in the past - or does it just look good on paper?**\n\n"
@@ -313,6 +314,106 @@ def panel_backtest(bundle, benchmark_df):
             "(your \u20b91 grew into more), and (2) it stays **above the dashed line** (you beat simply buying "
             "the market). Dips along the way are normal - what matters is the destination and that it kept "
             "ahead of the market on data it couldn't have memorised."
+        )
+
+        st.markdown("### What if you had started earlier?")
+        st.caption(
+            "See how a monthly contribution would have grown across the available "
+            "out-of-sample return stream."
+        )
+        replay = build_oos_sip_replay(eq, monthly_investment)
+        replay_end = dates.max().strftime("%d %b %Y")
+        replay_rows = []
+        for row in replay.to_dict("records"):
+            available = row["Replay value"] is not None and not pd.isna(row["Replay value"])
+            replay_rows.append({
+                "Started": f"{row['Months']} months ago",
+                "Historical start": (
+                    pd.Timestamp(row["Start date"]).strftime("%d %b %Y")
+                    if available else "Not enough OOS history"
+                ),
+                "Total invested": (
+                    f"\u20b9{row['Total invested']:,.0f}" if available else "\u2014"
+                ),
+                f"Value at replay end ({replay_end})": (
+                    f"\u20b9{row['Replay value']:,.0f}" if available else "\u2014"
+                ),
+            })
+        st.dataframe(pd.DataFrame(replay_rows), width="stretch", hide_index=True)
+        st.caption(
+            f"Illustration uses your selected \u20b9{monthly_investment:,} monthly contribution. "
+            "A contribution is added at the first available OOS observation each month. "
+            "Longer rows remain unavailable when the stored unseen-data period is shorter."
+        )
+        st.warning(
+            "**Important transparency note:** this is a SIP cash-flow view of the stored "
+            "walk-forward return stream. It is **not** a ledger of monthly PICK, DROP, TOP-UP, "
+            "TRIM and HOLD recommendations that were issued historically; Vriddhi currently "
+            "retains only the current and immediately previous monthly portfolio snapshots."
+        )
+
+        st.markdown("### How is this calculated?")
+        st.success(
+            "Imagine you had started investing on one of the available dates above.\n\n"
+            "At the beginning of each month, your chosen contribution is added to Vriddhi's "
+            "stored walk-forward return stream. Each contribution then experiences only the "
+            "out-of-sample market returns that follow it.\n\n"
+            f"The value shown is what those contributions would have been worth at the replay's "
+            f"final historical date, **{replay_end}**."
+        )
+        st.info(
+            "**This is not a prediction of future returns.** It is an illustration based on "
+            "historical walk-forward results, where each test period used only the price "
+            "history available before that unseen period began."
+        )
+
+        st.markdown("### Why should I trust these results?")
+        trust_cards = [
+            (
+                "This is NOT a forecast",
+                "The figures are not predictions. They replay the stored out-of-sample return "
+                "stream using historical market prices as they occurred.",
+            ),
+            (
+                "No future prices were used",
+                "Each walk-forward portfolio was fitted using earlier prices, then measured on "
+                "the next unseen period. Future test-period prices were not available when its "
+                "weights were chosen.",
+            ),
+            (
+                "Disciplined re-optimization",
+                "The walk-forward test rebuilds portfolio weights at its train/test boundaries. "
+                "It does not simply apply one fixed set of weights across the entire chart.",
+            ),
+            (
+                "Tested on unseen data",
+                "The displayed stream comes from Walk-Forward Out-of-Sample Validation, where "
+                "performance is measured after fitting rather than on the data used to fit.",
+            ),
+            (
+                "Built for probability, not certainty",
+                "Markets are uncertain and future returns will differ. Vriddhi aims to improve "
+                "the probability of superior long-term risk-adjusted returns through disciplined "
+                "portfolio construction, not to guarantee profits.",
+            ),
+        ]
+        for title, body in trust_cards:
+            st.success(f"**{title}**\n\n{body}")
+
+        st.markdown("### How Vriddhi thinks")
+        st.info(
+            "Vriddhi does not try to predict tomorrow's best stock.\n\n"
+            "Instead, it evaluates available market information and refreshes your portfolio "
+            "through a disciplined monthly process.\n\n"
+            "**The objective is simple:** given everything we know today, which portfolio "
+            "maximizes the probability of superior long-term, risk-adjusted returns?"
+        )
+    else:
+        st.info(
+            "### What if you had started earlier?\n\n"
+            "This horizon does not contain enough out-of-sample history for a credible wealth "
+            "replay. Vriddhi leaves the illustration unavailable rather than filling it with "
+            "in-sample or forecast values."
         )
 
 
@@ -863,7 +964,7 @@ def render_panels(bundle, benchmark_df, monthly_investment):
     with tabs[0]:
         panel_summary(bundle, monthly_investment)
     with tabs[1]:
-        panel_backtest(bundle, benchmark_df)
+        panel_backtest(bundle, benchmark_df, monthly_investment)
     with tabs[2]:
         panel_portfolio(bundle, monthly_investment)
     with tabs[3]:
