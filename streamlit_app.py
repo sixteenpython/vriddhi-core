@@ -734,6 +734,98 @@ def build_projection_figure(bundle, monthly_investment, alloc):
     return fig, invested[-1], projected[-1], gains[-1]
 
 
+def _stock_peg(stock):
+    """Read the retained PEG value from a stock's generated explanation."""
+    fundamental = stock.get("explanation", {}).get("fundamental", "")
+    if not fundamental.startswith("PEG "):
+        return None
+    token = fundamental.removeprefix("PEG ").split(" ", 1)[0]
+    try:
+        return float(token)
+    except ValueError:
+        return None
+
+
+def _render_stock_thesis_card(stock, bundle, monthly_investment):
+    """Render one holding as an evidence-led, plain-English decision card."""
+    horizon = int(bundle["horizon_years"])
+    weight = float(stock.get("weight", 0) or 0)
+    backtest = stock.get("backtest", {})
+    cagr = backtest.get(f"cagr_{horizon}y")
+    volatility = backtest.get("volatility")
+    drawdown = backtest.get("max_drawdown")
+    sharpe = backtest.get("sharpe")
+    portfolio_volatility = bundle.get("portfolio_metrics", {}).get("volatility")
+    portfolio_drawdown = bundle.get("portfolio_metrics", {}).get("max_drawdown")
+    peg = _stock_peg(stock)
+
+    if weight >= 0.145:
+        role = "a core holding at the 15% safety cap"
+    elif weight >= 0.10:
+        role = "a meaningful core holding"
+    else:
+        role = "a supporting holding sized to limit single-stock risk"
+
+    if peg is None:
+        valuation = "Its PEG valuation reading is unavailable."
+    elif peg < 1:
+        valuation = f"Its PEG of {peg:.2f} suggests a low price relative to its past growth."
+    elif peg <= 1.3:
+        valuation = f"Its PEG of {peg:.2f} is roughly fair relative to its past growth."
+    else:
+        valuation = (
+            f"Its PEG of {peg:.2f} is expensive relative to past growth, so it is held "
+            "for its contribution to the whole portfolio—not because it looks cheap."
+        )
+
+    cagr_text = "n/a" if cagr is None else f"{float(cagr):.1f}%"
+    sharpe_text = "n/a" if sharpe is None else f"{float(sharpe):.2f}"
+    volatility_text = "n/a" if volatility is None else f"{float(volatility):.1f}%"
+    drawdown_text = "n/a" if drawdown is None else f"{float(drawdown):.1f}%"
+    portfolio_volatility_text = (
+        "n/a" if portfolio_volatility is None else f"{float(portfolio_volatility):.1f}%"
+    )
+    portfolio_drawdown_text = (
+        "n/a" if portfolio_drawdown is None else f"{float(portfolio_drawdown):.1f}%"
+    )
+
+    with st.container(border=True):
+        st.markdown(f"#### 🌿 {stock['ticker']} — {stock.get('sector', 'Unknown')}")
+        weight_col, money_col, growth_col, sharpe_col = st.columns(4)
+        weight_col.metric("Portfolio weight", f"{weight*100:.1f}%")
+        money_col.metric("Monthly allocation", f"₹{weight*monthly_investment:,.0f}")
+        growth_col.metric(f"Historical {horizon}Y growth", cagr_text)
+        sharpe_col.metric("Risk-adjusted score", sharpe_text)
+
+        st.markdown("**Why this stock earned its place**")
+        st.success(
+            f"{stock['ticker']} is {role}. Over the retained {horizon}-year history, "
+            f"it compounded at **{cagr_text} a year** with a risk-adjusted score of "
+            f"**{sharpe_text}** (higher is better). {valuation}"
+        )
+
+        st.markdown("**Risk to understand**")
+        st.warning(
+            f"On its own, the stock's usual annual ups and downs were **{volatility_text}**, "
+            f"and its worst historical fall was **{drawdown_text}**. The combined portfolio "
+            f"was steadier at **{portfolio_volatility_text} volatility** with a "
+            f"**{portfolio_drawdown_text} worst fall**. Position sizing and diversification "
+            "are what keep this single-company risk from dominating your plan."
+        )
+
+        contribution = stock.get("explanation", {}).get("contribution", "")
+        st.info(
+            f"**How this supports Vriddhi's philosophy:** {contribution} It remains in the "
+            "portfolio because, together with the other holdings, it helps form today's "
+            "best evidence-based balance of long-term return and risk."
+        )
+        st.caption(
+            f"Forward model signal (context only, not relied upon): ~"
+            f"{float(stock.get('forecast', 0) or 0):.0f}% annualized. The recommendation "
+            "is anchored to historical and walk-forward evidence, not this forecast."
+        )
+
+
 def panel_portfolio(bundle, monthly_investment):
     st.markdown("#### C. Final Portfolio")
     alloc = scale_allocations(bundle, monthly_investment)
@@ -793,7 +885,8 @@ def panel_portfolio(bundle, monthly_investment):
             st.pyplot(fig)
 
     with st.expander("Why these stocks? (per-stock rationale + how to read the numbers)", expanded=False):
-        st.markdown(
+        st.markdown("### How to read each stock decision")
+        st.info(
             "**Quick guide to the jargon, in everyday terms:**\n"
             "- **PEG** - *are you paying a fair price for the growth?* Below **1.0** = a bargain "
             "(you're paying less than \u20b91 for each \u20b91 of growth); around **1** = fair; "
@@ -807,61 +900,199 @@ def panel_portfolio(bundle, monthly_investment):
             "- **Contribution** - how much this one holding actually added to the portfolio's past growth.\n\n"
             "_Below: the plain-language reason each stock earned its place._"
         )
-        st.markdown("---")
+        st.markdown("### Stock-by-stock decision cards")
+        st.caption(
+            "Each card separates the investment case, the risk you must accept, and the "
+            "stock's role in Vriddhi's overall long-term return-versus-risk philosophy."
+        )
         for s in bundle["stocks"]:
-            e = s.get("explanation", {})
-            st.markdown(
-                f"**{s['ticker']}** ({s['sector']}, {s['weight']*100:.1f}%)  \n"
-                f"- Fundamental: {e.get('fundamental', '')}  \n"
-                f"- Forecast: {e.get('forecast', '')}  \n"
-                f"- Risk: {e.get('risk', '')}  \n"
-                f"- {e.get('contribution', '')}"
-            )
+            _render_stock_thesis_card(s, bundle, monthly_investment)
 
 
 def panel_risk(bundle):
     st.markdown("#### D. Risk View")
-    st.info(
-        "**In plain English: how badly could this hurt along the way?**\n\n"
-        "Returns are only half the story - a good adviser also tells you how rough the ride can get. "
-        "Here's how to read the numbers below:\n"
-        "- **Largest holding / Top-3 concentration** - *how many eggs are in a few baskets.* The smaller "
-        "these are, the less any single company can hurt you (we cap any one stock at 15%).\n"
-        "- **Largest sector** - the same idea for industries, so you're not secretly betting on just one theme.\n"
-        "- **Annualized volatility** - *how bumpy* the journey is. Higher = bigger swings up **and** down.\n"
-        "- **Max drawdown** - the single most important one: *the worst peak-to-trough fall* you'd have had "
-        "to live through. If it says 20%, it means at some point \u20b91,00,000 would have shown as ~\u20b980,000 "
-        "on your statement before recovering. The honest question is: **could you stay calm and not sell?**"
-    )
     pm = bundle["portfolio_metrics"]
     bench = bundle["benchmark"]["metrics"]
     stocks = sorted(bundle["stocks"], key=lambda x: x["weight"], reverse=True)
-    sectors = bundle.get("sector_allocation", {})
+    sectors = {
+        name: float(weight)
+        for name, weight in bundle.get("sector_allocation", {}).items()
+        if float(weight) > 0.0001
+    }
 
     top1 = stocks[0]["weight"] if stocks else 0
     top3 = sum(s["weight"] for s in stocks[:3])
     max_sector = max(sectors.items(), key=lambda kv: kv[1]) if sectors else ("n/a", 0)
+    portfolio_volatility = float(pm.get("volatility") or 0)
+    benchmark_volatility = float(bench.get("volatility") or 0)
+    portfolio_drawdown = float(pm.get("max_drawdown") or 0)
+    benchmark_drawdown = float(bench.get("max_drawdown") or 0)
+    portfolio_sharpe = float(pm.get("sharpe") or 0)
+    benchmark_sharpe = float(bench.get("sharpe") or 0)
+    volatility_gap = portfolio_volatility - benchmark_volatility
+    drawdown_gap = portfolio_drawdown - benchmark_drawdown
+    rupee_after_drawdown = 100_000 * (1 - portfolio_drawdown / 100)
+    weighted_stock_volatility = sum(
+        float(stock.get("weight", 0) or 0)
+        * float(stock.get("backtest", {}).get("volatility") or 0)
+        for stock in stocks
+    )
+
+    st.markdown("### Your risk, in one sentence")
+    summary_method = st.success if portfolio_drawdown < 25 and portfolio_sharpe > 1 else st.warning
+    summary_method(
+        f"The portfolio stayed inside Vriddhi's **25% historical drawdown guardrail** "
+        f"at **{portfolio_drawdown:.1f}%**, while producing a historical risk-adjusted "
+        f"score of **{portfolio_sharpe:.2f}**. It was "
+        f"**{abs(volatility_gap):.1f} percentage points "
+        f"{'bumpier' if volatility_gap >= 0 else 'steadier'} than Nifty 50**, so this is "
+        "a disciplined equity portfolio—not a low-risk product."
+    )
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Largest holding", f"{top1*100:.1f}%")
+    c1.metric("Largest holding", f"{top1*100:.1f}%", help="Hard cap: 15% per stock.")
     c2.metric("Top-3 concentration", f"{top3*100:.1f}%")
     c3.metric("Largest sector", f"{max_sector[0]} {max_sector[1]*100:.0f}%")
-    c4.metric("Annualized volatility", pct(pm.get("volatility")))
+    c4.metric("Portfolio volatility", f"{portfolio_volatility:.1f}%")
 
-    st.markdown("**Worst historical period (max drawdown)**")
-    d1, d2 = st.columns(2)
-    d1.metric("Portfolio max drawdown", pct(pm.get("max_drawdown")))
-    d2.metric("Nifty 50 max drawdown", pct(bench.get("max_drawdown")))
+    st.markdown("### Risk scorecard")
+    drawdown_reading = (
+        f"Passed the 25% gate; {abs(drawdown_gap):.1f} points "
+        f"{'worse' if drawdown_gap > 0 else 'better'} than Nifty in this history."
+    )
+    volatility_reading = (
+        f"{abs(volatility_gap):.1f} points "
+        f"{'bumpier' if volatility_gap > 0 else 'steadier'} than Nifty."
+    )
+    scorecard = pd.DataFrame([
+        {
+            "Risk lens": "Single-company exposure",
+            "Vriddhi portfolio": f"{top1*100:.1f}% largest holding",
+            "Reference": "15% hard cap",
+            "Plain-English reading": "At the limit, but no company exceeds it.",
+        },
+        {
+            "Risk lens": "Top-three exposure",
+            "Vriddhi portfolio": f"{top3*100:.1f}%",
+            "Reference": ", ".join(stock["ticker"] for stock in stocks[:3]),
+            "Plain-English reading": f"₹{top3*100_000:,.0f} of each ₹1 lakh sits in the top three.",
+        },
+        {
+            "Risk lens": "Sector exposure",
+            "Vriddhi portfolio": f"{max_sector[0]} {max_sector[1]*100:.1f}%",
+            "Reference": f"{len(sectors)} sectors represented",
+            "Plain-English reading": "No single industry owns the entire outcome.",
+        },
+        {
+            "Risk lens": "Usual market swings",
+            "Vriddhi portfolio": f"{portfolio_volatility:.1f}% volatility",
+            "Reference": f"Nifty 50 {benchmark_volatility:.1f}%",
+            "Plain-English reading": volatility_reading,
+        },
+        {
+            "Risk lens": "Worst historical fall",
+            "Vriddhi portfolio": f"{portfolio_drawdown:.1f}% drawdown",
+            "Reference": f"25% gate; Nifty 50 {benchmark_drawdown:.1f}%",
+            "Plain-English reading": drawdown_reading,
+        },
+        {
+            "Risk lens": "Return earned per unit of risk",
+            "Vriddhi portfolio": f"Sharpe {portfolio_sharpe:.2f}",
+            "Reference": f"Nifty 50 {benchmark_sharpe:.2f}",
+            "Plain-English reading": "Higher was better historically; this is not a future promise.",
+        },
+    ])
+    st.dataframe(scorecard, width="stretch", hide_index=True)
+
+    st.markdown("### What could hurt this portfolio?")
+    with st.container(border=True):
+        st.markdown("#### 🧺 Concentration risk — several eggs still share a basket")
+        st.markdown(
+            f"The top three names—**{', '.join(stock['ticker'] for stock in stocks[:3])}**—"
+            f"hold **{top3*100:.1f}%** of the money. The largest sector is "
+            f"**{max_sector[0]} at {max_sector[1]*100:.1f}%**. These are meaningful "
+            "exposures, even though the 15% stock cap and sector spread prevent a single "
+            "company or industry from controlling everything."
+        )
+
+    with st.container(border=True):
+        st.markdown("#### 📉 A bad market can still produce an uncomfortable loss")
+        st.warning(
+            f"The worst historical portfolio fall was **{portfolio_drawdown:.1f}%**. In "
+            f"plain money terms, **₹1,00,000 could temporarily have shown about "
+            f"₹{rupee_after_drawdown:,.0f}**. Nifty 50's historical fall in the same data "
+            f"was **{benchmark_drawdown:.1f}%**—"
+            f"{abs(drawdown_gap):.1f} percentage points "
+            f"{'less' if drawdown_gap > 0 else 'more'} than Vriddhi. Passing the 25% gate "
+            "does not mean the journey will feel comfortable."
+        )
+
+    if stocks:
+        most_volatile = max(
+            stocks,
+            key=lambda stock: float(stock.get("backtest", {}).get("volatility") or 0),
+        )
+        deepest_fall = max(
+            stocks,
+            key=lambda stock: float(stock.get("backtest", {}).get("max_drawdown") or 0),
+        )
+        premium_stocks = sorted(
+            (stock for stock in stocks if (_stock_peg(stock) or 0) > 1.3),
+            key=lambda stock: _stock_peg(stock) or 0,
+            reverse=True,
+        )
+        with st.container(border=True):
+            st.markdown("#### 🔍 Single-stock hotspots — where to keep your eyes open")
+            st.markdown(
+                f"**{most_volatile['ticker']}** had the largest usual swings at "
+                f"**{float(most_volatile['backtest']['volatility']):.1f}% volatility**. "
+                f"**{deepest_fall['ticker']}** had the deepest historical fall at "
+                f"**{float(deepest_fall['backtest']['max_drawdown']):.1f}%**."
+            )
+            if premium_stocks:
+                st.markdown(
+                    "The richest growth valuations are "
+                    + ", ".join(
+                        f"**{stock['ticker']} (PEG {_stock_peg(stock):.2f})**"
+                        for stock in premium_stocks[:3]
+                    )
+                    + ". These are not automatically bad holdings, but expectations are "
+                    "higher and disappointment can hurt more. Their position limits matter."
+                )
+
+    with st.container(border=True):
+        st.markdown("#### 🛡️ What diversification is doing for you")
+        st.success(
+            f"The weighted average volatility of the individual holdings was about "
+            f"**{weighted_stock_volatility:.1f}%**, while the combined portfolio measured "
+            f"**{portfolio_volatility:.1f}%** across **{len(stocks)} stocks and "
+            f"{len(sectors)} sectors**. Historically, the holdings did not all move in the "
+            "same direction at the same time—that is the risk-reduction job of diversification."
+        )
+
+    st.markdown("### If markets turn ugly: your investor playbook")
+    st.info(
+        f"1. **Expect a fall before it happens.** A temporary decline around the historical "
+        f"**{portfolio_drawdown:.1f}%** level should not surprise you—and the future could be worse.\n\n"
+        "2. **Do not redesign the portfolio during panic.** Use the Monthly Rebalance tab; "
+        "do not react to headlines or one bad week.\n\n"
+        "3. **Keep the time horizon honest.** Only invest money you can leave untouched for "
+        f"the full **{bundle['horizon_years']} years**.\n\n"
+        "4. **Review the evidence, not your emotions.** A change is justified when the monthly "
+        "data and portfolio fit change—not simply because prices fell."
+    )
+
     st.caption(
-        "Concentration is capped at 15% per stock with a 5% floor, so no single name can "
-        "sink the portfolio and every holding is meaningful. Drawdown is held under the 25% gate."
+        "Important limitation: historical volatility and drawdown describe what happened in "
+        "the retained data. They are not a ceiling on future losses, and taxes, liquidity and "
+        "investor behavior can make real outcomes worse."
     )
     st.success(
-        f"**The takeaway:** notice the portfolio's worst fall ({pct(pm.get('max_drawdown'))}) is compared "
-        f"against the Nifty 50's ({pct(bench.get('max_drawdown'))}) - we aim to fall *less* than the market "
-        "in bad times while still beating it overall. **Golden rule:** only invest money you won't need for "
-        f"the next {bundle['horizon_years']} years. That way a temporary drop is just a number on a screen - "
-        "you're never forced to sell at the bottom, and time does the healing."
+        "**How this supports Vriddhi's philosophy:** risk is not something Vriddhi pretends "
+        "to eliminate. It asks whether today's complete portfolio offers the strongest "
+        "evidence-based probability of superior long-term returns **for the risk you must "
+        "live through**. The caps, diversification and monthly review exist to ensure that "
+        "risk is deliberate rather than accidental."
     )
 
 
