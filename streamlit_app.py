@@ -644,6 +644,38 @@ def build_monthly_allocation_figure(alloc):
     return fig
 
 
+def portfolio_table_view(alloc):
+    """Format a scaled allocation for consistent display across portfolio views."""
+    display = alloc.copy()
+    display["Weight"] = display["Weight"].apply(lambda value: f"{value*100:.1f}%")
+    display["Monthly Allocation (INR)"] = display["Monthly Allocation (INR)"].apply(
+        lambda value: f"₹{value:,.0f}"
+    )
+    display["Current_Price"] = display["Current_Price"].apply(
+        lambda value: f"₹{value:,.0f}"
+    )
+    display = display[
+        [
+            "Ticker",
+            "Sector",
+            "Weight",
+            "Monthly Allocation (INR)",
+            "Current_Price",
+            "Whole_Shares",
+        ]
+    ]
+    display.columns = ["Stock", "Sector", "Weight", "Monthly ₹", "Price", "Whole Shares"]
+    return display
+
+
+def display_release_date(value):
+    """Format a bundle date as the compact release label used in the UI."""
+    timestamp = pd.to_datetime(value, errors="coerce")
+    if pd.isna(timestamp):
+        return str(value or "date unavailable")
+    return f"{timestamp.day}-{timestamp.strftime('%b-%Y')}"
+
+
 def build_projection_figure(bundle, monthly_investment, alloc):
     """projection.png-style visual: SIP growth journey + year-wise breakdown +
     monthly stock allocation. Uses the VALIDATED walk-forward base CAGR (not the
@@ -747,13 +779,7 @@ def panel_portfolio(bundle, monthly_investment):
     col1, col2 = st.columns([3, 2])
     with col1:
         st.markdown(f"**{bundle['num_stocks']} stocks | \u20b9{monthly_investment:,}/month**")
-        disp = alloc.copy()
-        disp["Weight"] = disp["Weight"].apply(lambda x: f"{x*100:.1f}%")
-        disp["Monthly Allocation (INR)"] = disp["Monthly Allocation (INR)"].apply(lambda x: f"\u20b9{x:,.0f}")
-        disp["Current_Price"] = disp["Current_Price"].apply(lambda x: f"\u20b9{x:,.0f}")
-        disp = disp[["Ticker", "Sector", "Weight", "Monthly Allocation (INR)", "Current_Price", "Whole_Shares"]]
-        disp.columns = ["Stock", "Sector", "Weight", "Monthly \u20b9", "Price", "Whole Shares"]
-        st.dataframe(disp, width="stretch", hide_index=True)
+        st.dataframe(portfolio_table_view(alloc), width="stretch", hide_index=True)
 
     with col2:
         sectors = bundle.get("sector_allocation", {})
@@ -908,6 +934,30 @@ def panel_rebalance(bundle, monthly_investment):
         "How to act: **PICK** - start buying it with this month's money. **DROP** - stop buying and sell "
         "what you hold of it. **TOP-UP / TRIM** - buy a bit more / less than before. **HOLD** - no change, "
         "keep buying the same. (Change in shares is per month at your chosen contribution.)"
+    )
+
+    st.markdown("---")
+    st.markdown("#### The two portfolios being compared")
+    st.caption(
+        f"Both snapshots use your selected **₹{monthly_investment:,}/month** contribution. "
+        "Weights and prices come from each recorded release, so you can see the complete "
+        "before-and-after portfolios behind the action table above."
+    )
+
+    st.markdown(f"##### Current portfolio — {display_release_date(cdate)}")
+    current_allocation = scale_allocations(bundle, monthly_investment)
+    st.dataframe(
+        portfolio_table_view(current_allocation),
+        width="stretch",
+        hide_index=True,
+    )
+
+    st.markdown(f"##### Previous portfolio — {display_release_date(pdate)}")
+    previous_allocation = scale_allocations(prev, monthly_investment)
+    st.dataframe(
+        portfolio_table_view(previous_allocation),
+        width="stretch",
+        hide_index=True,
     )
 
 
