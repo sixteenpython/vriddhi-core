@@ -1,5 +1,6 @@
 import importlib
 import os
+from itertools import combinations
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -1325,6 +1326,122 @@ def _rebalance_short_reason(action):
     }[action]
 
 
+def _build_surplus_purchase_plan(rows, surplus, max_actions=3):
+    """Allocate surplus to at most `max_actions` whole-share PICK/TOP-UP buys.
+
+    The target rupee increases determine the desired split. We enumerate the
+    feasible stock subsets, then add whole shares to the subset whose final
+    spend stays closest to that split while leaving as little cash idle as the
+    available share prices allow.
+    """
+    budget = float(surplus or 0)
+    if budget <= 0 or max_actions <= 0:
+        return []
+
+    candidates = [
+        {
+            "ticker": row["Stock"],
+            "action": row["Action"],
+            "price": float(row.get("_Action price", 0) or 0),
+            "target_increase": float(row.get("_Target increase", 0) or 0),
+        }
+        for row in rows
+        if row["Action"] in {"PICK (new buy)", "TOP-UP"}
+        and float(row.get("_Action price", 0) or 0) > 0
+        and float(row.get("_Target increase", 0) or 0) > 0
+    ]
+    candidates = [candidate for candidate in candidates if candidate["price"] <= budget]
+    if not candidates:
+        return []
+
+    candidates.sort(
+        key=lambda item: (
+            0 if item["action"] == "PICK (new buy)" else 1,
+            -item["target_increase"],
+            item["ticker"],
+        )
+    )
+    total_target = sum(item["target_increase"] for item in candidates)
+    desired = {
+        item["ticker"]: budget * item["target_increase"] / total_target
+        for item in candidates
+    }
+
+    # Use three distinct actions whenever the budget can buy at least one share
+    # of a feasible three-name combination; otherwise gracefully fall back.
+    feasible_subsets = []
+    for count in range(min(max_actions, len(candidates)), 0, -1):
+        feasible_subsets = [
+            subset
+            for subset in combinations(candidates, count)
+            if sum(item["price"] for item in subset) <= budget
+        ]
+        if feasible_subsets:
+            break
+
+    best = None
+    for subset in feasible_subsets:
+        quantities = {item["ticker"]: 1 for item in subset}
+        spent = {item["ticker"]: item["price"] for item in subset}
+        total_spent = sum(spent.values())
+
+        while True:
+            fitting = [item for item in subset if item["price"] <= budget - total_spent + 1e-9]
+            if not fitting:
+                break
+
+            def incremental_score(item):
+                trial = dict(spent)
+                trial[item["ticker"]] += item["price"]
+                deviation = sum(
+                    abs(trial.get(candidate["ticker"], 0) - desired[candidate["ticker"]])
+                    for candidate in candidates
+                )
+                leftover = budget - total_spent - item["price"]
+                return deviation + 0.20 * leftover, item["price"], item["ticker"]
+
+            chosen = min(fitting, key=incremental_score)
+            quantities[chosen["ticker"]] += 1
+            spent[chosen["ticker"]] += chosen["price"]
+            total_spent += chosen["price"]
+
+        deviation = sum(
+            abs(spent.get(candidate["ticker"], 0) - desired[candidate["ticker"]])
+            for candidate in candidates
+        )
+        leftover = budget - total_spent
+        score = deviation + 0.20 * leftover
+        candidate_result = (score, leftover, subset, quantities, spent)
+        if best is None or candidate_result[:2] < best[:2]:
+            best = candidate_result
+
+    if best is None:
+        return []
+
+    _, _, subset, quantities, spent = best
+    action_priority = {"PICK (new buy)": 0, "TOP-UP": 1}
+    plan = [
+        {
+            "Stock": item["ticker"],
+            "Source action": item["action"],
+            "Whole shares": quantities[item["ticker"]],
+            "Price ₹": item["price"],
+            "Estimated cost ₹": spent[item["ticker"]],
+            "Target increase ₹": item["target_increase"],
+        }
+        for item in subset
+    ]
+    plan.sort(
+        key=lambda item: (
+            action_priority[item["Source action"]],
+            -item["Target increase ₹"],
+            -item["Price ₹"],
+            item["Stock"],
+        )
+    )
+    return plan
+
+
 def _render_rebalance_action_card(row):
     """Render one action as a readable, wrapped decision card."""
     action = row["Action"]
@@ -1411,6 +1528,8 @@ def panel_rebalance(bundle, monthly_investment):
                 if fractional_share_change is not None
                 else "n/a"
             ),
+            "_Action price": action_price,
+            "_Target increase": max(d_amt, 0),
             "Reason at a glance": _rebalance_short_reason(action),
             "Rationale": _rebalance_rationale(t, action, pw, cw, bundle, prev),
         })
@@ -1456,6 +1575,63 @@ def panel_rebalance(bundle, monthly_investment):
         "the applicable stock price. Fractional values are planning guidance; actual execution "
         "depends on whether your broker supports fractional shares."
     )
+
+    st.markdown("#### Top 3 recommended actions")
+    released_cash = sum(
+        max(
+            float(prev_w.get(row["Stock"], 0) - cur_w.get(row["Stock"], 0))
+            * monthly_investment,
+            0,
+        )
+        for row in rows
+        if row["Action"] in {"DROP (exit)", "TRIM"}
+    )
+    suggested_surplus = int(round(released_cash))
+    surplus = st.number_input(
+        "Available surplus this month (₹)",
+        min_value=0,
+        max_value=1_000_000,
+        value=suggested_surplus,
+        step=500,
+        help=(
+            "Defaults to the target cash released by this month's DROP and TRIM actions. "
+            "Override it if you have additional cash available."
+        ),
+    )
+    st.caption(
+        "Vriddhi considers only this month's **PICK** and **TOP-UP** names, uses complete "
+        "shares, and selects up to three buys that stay close to the intended rebalance "
+        "split while minimizing idle cash."
+    )
+    surplus_plan = _build_surplus_purchase_plan(rows, surplus)
+    if surplus <= 0:
+        st.info("Enter a surplus above ₹0 to generate a whole-share purchase plan.")
+    elif not surplus_plan:
+        st.warning(
+            "The available surplus cannot buy one whole share of any current PICK or "
+            "TOP-UP candidate. Keep it as cash or combine it with a future contribution."
+        )
+    else:
+        deployed = sum(item["Estimated cost ₹"] for item in surplus_plan)
+        remainder = float(surplus) - deployed
+        d1, d2, d3 = st.columns(3)
+        d1.metric("Surplus available", f"₹{float(surplus):,.0f}")
+        d2.metric("Deployed into whole shares", f"₹{deployed:,.0f}")
+        d3.metric("Cash remaining", f"₹{remainder:,.0f}")
+
+        for rank, item in enumerate(surplus_plan, start=1):
+            shares = int(item["Whole shares"])
+            source = "new PICK" if item["Source action"] == "PICK (new buy)" else "TOP-UP"
+            st.success(
+                f"**#{rank}: Buy {shares} whole share{'s' if shares != 1 else ''} of "
+                f"{item['Stock']}** — approximately ₹{item['Estimated cost ₹']:,.0f} "
+                f"at ₹{item['Price ₹']:,.2f}/share. This executes part of the current "
+                f"**{source}** allocation."
+            )
+        st.caption(
+            "Best-fit execution aid, not a guarantee of exact exhaustion: whole-share prices "
+            "can leave a small remainder, and live market prices may differ at execution."
+        )
     st.markdown("#### Actions to take now")
     actionable_rows = [row for row in rows if row["Action"] != "HOLD"]
     if actionable_rows:
