@@ -1,6 +1,5 @@
 import importlib
 import os
-from itertools import combinations
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -1326,120 +1325,95 @@ def _rebalance_short_reason(action):
     }[action]
 
 
-def _build_surplus_purchase_plan(rows, surplus, max_actions=3):
-    """Allocate surplus to at most `max_actions` whole-share PICK/TOP-UP buys.
+def _build_monthly_execution_plan(rows, sip_amount):
+    """Build a whole-share order sheet for one SIP-sized model sleeve."""
+    sell_orders = []
+    for row in rows:
+        action = row["Action"]
+        previous_price = float(row.get("_Previous price", 0) or 0)
+        current_price = float(row.get("_Current price", 0) or 0)
+        previous_amount = float(row.get("_Previous amount", 0) or 0)
+        current_amount = float(row.get("_Current amount", 0) or 0)
+        previous_shares = int(previous_amount // previous_price) if previous_price > 0 else 0
+        current_shares = int(current_amount // current_price) if current_price > 0 else 0
+        if action == "DROP (exit)":
+            quantity, execution_price = previous_shares, previous_price
+        elif action == "TRIM":
+            quantity = max(previous_shares - current_shares, 0)
+            execution_price = current_price or previous_price
+        else:
+            continue
+        if quantity > 0 and execution_price > 0:
+            sell_orders.append({
+                "Stock": row["Stock"],
+                "Portfolio action": action,
+                "Shares": quantity,
+                "Estimated price ₹": execution_price,
+                "Estimated proceeds ₹": quantity * execution_price,
+            })
 
-    The target rupee increases determine the desired split. We enumerate the
-    feasible stock subsets, then add whole shares to the subset whose final
-    spend stays closest to that split while leaving as little cash idle as the
-    available share prices allow.
-    """
-    budget = float(surplus or 0)
-    if budget <= 0 or max_actions <= 0:
-        return []
-
+    sale_proceeds = sum(order["Estimated proceeds ₹"] for order in sell_orders)
+    buying_power = float(sip_amount) + sale_proceeds
     candidates = [
         {
-            "ticker": row["Stock"],
-            "action": row["Action"],
-            "price": float(row.get("_Action price", 0) or 0),
-            "target_increase": float(row.get("_Target increase", 0) or 0),
+            "Stock": row["Stock"],
+            "Portfolio action": row["Action"],
+            "Weight": float(row.get("_Current weight", 0) or 0),
+            "Price": float(row.get("_Current price", 0) or 0),
         }
         for row in rows
-        if row["Action"] in {"PICK (new buy)", "TOP-UP"}
-        and float(row.get("_Action price", 0) or 0) > 0
-        and float(row.get("_Target increase", 0) or 0) > 0
+        if float(row.get("_Current weight", 0) or 0) > 0
+        and float(row.get("_Current price", 0) or 0) > 0
     ]
-    candidates = [candidate for candidate in candidates if candidate["price"] <= budget]
-    if not candidates:
-        return []
+    for item in candidates:
+        item["Target"] = buying_power * item["Weight"]
+        item["Shares"] = int(item["Target"] // item["Price"])
+        item["Spend"] = item["Shares"] * item["Price"]
 
-    candidates.sort(
-        key=lambda item: (
-            0 if item["action"] == "PICK (new buy)" else 1,
-            -item["target_increase"],
-            item["ticker"],
-        )
-    )
-    total_target = sum(item["target_increase"] for item in candidates)
-    desired = {
-        item["ticker"]: budget * item["target_increase"] / total_target
-        for item in candidates
-    }
-
-    # Use three distinct actions whenever the budget can buy at least one share
-    # of a feasible three-name combination; otherwise gracefully fall back.
-    feasible_subsets = []
-    for count in range(min(max_actions, len(candidates)), 0, -1):
-        feasible_subsets = [
-            subset
-            for subset in combinations(candidates, count)
-            if sum(item["price"] for item in subset) <= budget
+    total_spend = sum(item["Spend"] for item in candidates)
+    while True:
+        fitting = [
+            item for item in candidates
+            if item["Price"] <= buying_power - total_spend + 1e-9
         ]
-        if feasible_subsets:
+        if not fitting:
             break
 
-    best = None
-    for subset in feasible_subsets:
-        quantities = {item["ticker"]: 1 for item in subset}
-        spent = {item["ticker"]: item["price"] for item in subset}
-        total_spent = sum(spent.values())
+        def allocation_score(candidate):
+            return (
+                abs(candidate["Spend"] + candidate["Price"] - candidate["Target"])
+                - abs(candidate["Spend"] - candidate["Target"]),
+                candidate["Price"],
+                candidate["Stock"],
+            )
 
-        while True:
-            fitting = [item for item in subset if item["price"] <= budget - total_spent + 1e-9]
-            if not fitting:
-                break
+        chosen = min(fitting, key=allocation_score)
+        chosen["Shares"] += 1
+        chosen["Spend"] += chosen["Price"]
+        total_spend += chosen["Price"]
 
-            def incremental_score(item):
-                trial = dict(spent)
-                trial[item["ticker"]] += item["price"]
-                deviation = sum(
-                    abs(trial.get(candidate["ticker"], 0) - desired[candidate["ticker"]])
-                    for candidate in candidates
-                )
-                leftover = budget - total_spent - item["price"]
-                return deviation + 0.20 * leftover, item["price"], item["ticker"]
-
-            chosen = min(fitting, key=incremental_score)
-            quantities[chosen["ticker"]] += 1
-            spent[chosen["ticker"]] += chosen["price"]
-            total_spent += chosen["price"]
-
-        deviation = sum(
-            abs(spent.get(candidate["ticker"], 0) - desired[candidate["ticker"]])
-            for candidate in candidates
-        )
-        leftover = budget - total_spent
-        score = deviation + 0.20 * leftover
-        candidate_result = (score, leftover, subset, quantities, spent)
-        if best is None or candidate_result[:2] < best[:2]:
-            best = candidate_result
-
-    if best is None:
-        return []
-
-    _, _, subset, quantities, spent = best
-    action_priority = {"PICK (new buy)": 0, "TOP-UP": 1}
-    plan = [
-        {
-            "Stock": item["ticker"],
-            "Source action": item["action"],
-            "Whole shares": quantities[item["ticker"]],
-            "Price ₹": item["price"],
-            "Estimated cost ₹": spent[item["ticker"]],
-            "Target increase ₹": item["target_increase"],
-        }
-        for item in subset
-    ]
-    plan.sort(
-        key=lambda item: (
-            action_priority[item["Source action"]],
-            -item["Target increase ₹"],
-            -item["Price ₹"],
-            item["Stock"],
-        )
-    )
-    return plan
+    instruction = {
+        "PICK (new buy)": "BUY · new PICK",
+        "TOP-UP": "BUY MORE · TOP-UP",
+        "HOLD": "BUY AGAIN · HOLD",
+        "TRIM": "BUY LESS · TRIM",
+    }
+    buy_orders = [{
+        "Stock": item["Stock"],
+        "Instruction": instruction[item["Portfolio action"]],
+        "Shares": item["Shares"],
+        "Estimated price ₹": item["Price"],
+        "Estimated cost ₹": item["Spend"],
+        "Target weight": item["Weight"] * 100,
+    } for item in candidates]
+    buy_orders.sort(key=lambda order: (-order["Target weight"], order["Stock"]))
+    return {
+        "sells": sell_orders,
+        "buys": buy_orders,
+        "sale_proceeds": sale_proceeds,
+        "buying_power": buying_power,
+        "cash_remaining": buying_power - total_spend,
+    }
 
 
 def _render_rebalance_action_card(row):
@@ -1484,6 +1458,20 @@ def panel_rebalance(bundle, monthly_investment):
         )
         return
 
+    rebalance_sip = st.number_input(
+        "Current month's SIP amount (₹)",
+        min_value=50_000,
+        max_value=100_000,
+        value=int(monthly_investment),
+        step=5_000,
+        help="This amount drives the complete whole-share BUY and SELL execution plan below.",
+        key=f"rebalance_sip_{bundle['horizon_years']}",
+    )
+    st.caption(
+        "Enter the amount you are investing this month. Vriddhi will translate today's "
+        "PICK, DROP, TOP-UP, TRIM and HOLD decisions into a practical order sheet."
+    )
+
     cur_w = {s["ticker"]: s["weight"] for s in bundle["stocks"]}
     prev_w = {s["ticker"]: s["weight"] for s in prev["stocks"]}
     cur_price = {
@@ -1502,7 +1490,7 @@ def panel_rebalance(bundle, monthly_investment):
     for t in set(cur_w) | set(prev_w):
         pw, cw = prev_w.get(t, 0.0), cur_w.get(t, 0.0)
         turnover += abs(cw - pw)
-        prev_amt, cur_amt = pw * monthly_investment, cw * monthly_investment
+        prev_amt, cur_amt = pw * rebalance_sip, cw * rebalance_sip
         d_amt = cur_amt - prev_amt
         action_price = cur_price.get(t, 0) or prev_price.get(t, 0)
         fractional_share_change = d_amt / action_price if action_price > 0 else None
@@ -1528,8 +1516,11 @@ def panel_rebalance(bundle, monthly_investment):
                 if fractional_share_change is not None
                 else "n/a"
             ),
-            "_Action price": action_price,
-            "_Target increase": max(d_amt, 0),
+            "_Previous amount": prev_amt,
+            "_Current amount": cur_amt,
+            "_Previous price": prev_price.get(t, 0),
+            "_Current price": cur_price.get(t, 0),
+            "_Current weight": cw,
             "Reason at a glance": _rebalance_short_reason(action),
             "Rationale": _rebalance_rationale(t, action, pw, cw, bundle, prev),
         })
@@ -1538,7 +1529,7 @@ def panel_rebalance(bundle, monthly_investment):
     pdate = prev.get("data_through", "last month")
     cdate = bundle.get("data_through", "this month")
     st.caption(f"Comparing **{pdate}** (last month) -> **{cdate}** (this month), "
-               f"at \u20b9{monthly_investment:,}/month.")
+               f"at \u20b9{rebalance_sip:,}/month.")
 
     summary = (f"**This month's plan:** {counts['PICK (new buy)']} new pick(s), "
                f"{counts['DROP (exit)']} exit(s), {counts['TOP-UP']} top-up(s), "
@@ -1576,62 +1567,75 @@ def panel_rebalance(bundle, monthly_investment):
         "depends on whether your broker supports fractional shares."
     )
 
-    st.markdown("#### Top 3 recommended actions")
-    released_cash = sum(
-        max(
-            float(prev_w.get(row["Stock"], 0) - cur_w.get(row["Stock"], 0))
-            * monthly_investment,
+    st.markdown("#### Your monthly execution plan")
+    execution = _build_monthly_execution_plan(rows, rebalance_sip)
+    e1, e2, e3, e4 = st.columns(4)
+    e1.metric("This month's SIP", f"₹{rebalance_sip:,.0f}")
+    e2.metric("Estimated SELL proceeds", f"₹{execution['sale_proceeds']:,.0f}")
+    e3.metric("Total BUY buying power", f"₹{execution['buying_power']:,.0f}")
+    e4.metric("Cash remaining", f"₹{execution['cash_remaining']:,.0f}")
+
+    st.markdown("##### 1. SELL first — release cash from DROP and TRIM")
+    if execution["sells"]:
+        sell_view = pd.DataFrame(execution["sells"])
+        sell_view.insert(
             0,
+            "Instruction",
+            sell_view.apply(
+                lambda order: f"SELL {int(order['Shares'])} share"
+                f"{'s' if int(order['Shares']) != 1 else ''}",
+                axis=1,
+            ),
         )
-        for row in rows
-        if row["Action"] in {"DROP (exit)", "TRIM"}
-    )
-    suggested_surplus = int(round(released_cash))
-    surplus = st.number_input(
-        "Available surplus this month (₹)",
-        min_value=0,
-        max_value=1_000_000,
-        value=suggested_surplus,
-        step=500,
-        help=(
-            "Defaults to the target cash released by this month's DROP and TRIM actions. "
-            "Override it if you have additional cash available."
-        ),
-    )
-    st.caption(
-        "Vriddhi considers only this month's **PICK** and **TOP-UP** names, uses complete "
-        "shares, and selects up to three buys that stay close to the intended rebalance "
-        "split while minimizing idle cash."
-    )
-    surplus_plan = _build_surplus_purchase_plan(rows, surplus)
-    if surplus <= 0:
-        st.info("Enter a surplus above ₹0 to generate a whole-share purchase plan.")
-    elif not surplus_plan:
-        st.warning(
-            "The available surplus cannot buy one whole share of any current PICK or "
-            "TOP-UP candidate. Keep it as cash or combine it with a future contribution."
+        st.dataframe(
+            sell_view,
+            width="stretch",
+            hide_index=True,
+            column_config={
+                "Estimated price ₹": st.column_config.NumberColumn(format="₹%.2f"),
+                "Estimated proceeds ₹": st.column_config.NumberColumn(format="₹%.0f"),
+            },
         )
     else:
-        deployed = sum(item["Estimated cost ₹"] for item in surplus_plan)
-        remainder = float(surplus) - deployed
-        d1, d2, d3 = st.columns(3)
-        d1.metric("Surplus available", f"₹{float(surplus):,.0f}")
-        d2.metric("Deployed into whole shares", f"₹{deployed:,.0f}")
-        d3.metric("Cash remaining", f"₹{remainder:,.0f}")
+        st.info("No whole-share SELL order is generated for this model sleeve this month.")
 
-        for rank, item in enumerate(surplus_plan, start=1):
-            shares = int(item["Whole shares"])
-            source = "new PICK" if item["Source action"] == "PICK (new buy)" else "TOP-UP"
-            st.success(
-                f"**#{rank}: Buy {shares} whole share{'s' if shares != 1 else ''} of "
-                f"{item['Stock']}** — approximately ₹{item['Estimated cost ₹']:,.0f} "
-                f"at ₹{item['Price ₹']:,.2f}/share. This executes part of the current "
-                f"**{source}** allocation."
-            )
-        st.caption(
-            "Best-fit execution aid, not a guarantee of exact exhaustion: whole-share prices "
-            "can leave a small remainder, and live market prices may differ at execution."
+    st.markdown("##### 2. BUY — invest the SIP and reinvest estimated sale proceeds")
+    positive_buys = [order for order in execution["buys"] if order["Shares"] > 0]
+    zero_buys = [order for order in execution["buys"] if order["Shares"] == 0]
+    if positive_buys:
+        st.dataframe(
+            pd.DataFrame(positive_buys),
+            width="stretch",
+            hide_index=True,
+            column_config={
+                "Target weight": st.column_config.NumberColumn(format="%.1f%%"),
+                "Estimated price ₹": st.column_config.NumberColumn(format="₹%.2f"),
+                "Estimated cost ₹": st.column_config.NumberColumn(format="₹%.0f"),
+            },
         )
+        hold_buys = [
+            f"{int(order['Shares'])} {order['Stock']}"
+            for order in positive_buys
+            if order["Instruction"] == "BUY AGAIN · HOLD"
+        ]
+        if hold_buys:
+            st.success(
+                "**HOLD means retain and repeat the monthly purchase:** buy again "
+                + ", ".join(hold_buys)
+                + "."
+            )
+    if zero_buys:
+        st.caption(
+            "No whole share fits this month's plan for: "
+            + ", ".join(order["Stock"] for order in zero_buys)
+            + ". Their target remains valid; whole-share rounding directs the available cash elsewhere."
+        )
+    st.caption(
+        "This is an executable **model-sleeve** plan, not a reading of your demat account. "
+        "SELL quantities represent one previous-month sleeve scaled to the SIP entered above; "
+        "adjust them to your actual holdings. Prices are stored snapshot prices, so verify live "
+        "quotes before placing orders. Whole-share rounding can leave a small cash balance."
+    )
     st.markdown("#### Actions to take now")
     actionable_rows = [row for row in rows if row["Action"] != "HOLD"]
     if actionable_rows:
@@ -1662,13 +1666,13 @@ def panel_rebalance(bundle, monthly_investment):
     st.markdown("---")
     st.markdown("#### The two portfolios being compared")
     st.caption(
-        f"Both snapshots use your selected **₹{monthly_investment:,}/month** contribution. "
+        f"Both snapshots use your selected **₹{rebalance_sip:,}/month** contribution. "
         "Weights and prices come from each recorded release, so you can see the complete "
         "before-and-after portfolios behind the action table above."
     )
 
     st.markdown(f"##### Current portfolio — {display_release_date(cdate)}")
-    current_allocation = scale_allocations(bundle, monthly_investment)
+    current_allocation = scale_allocations(bundle, rebalance_sip)
     st.dataframe(
         portfolio_table_view(current_allocation),
         width="stretch",
@@ -1676,7 +1680,7 @@ def panel_rebalance(bundle, monthly_investment):
     )
 
     st.markdown(f"##### Previous portfolio — {display_release_date(pdate)}")
-    previous_allocation = scale_allocations(prev, monthly_investment)
+    previous_allocation = scale_allocations(prev, rebalance_sip)
     st.dataframe(
         portfolio_table_view(previous_allocation),
         width="stretch",
