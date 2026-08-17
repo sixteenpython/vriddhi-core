@@ -14,6 +14,8 @@ Most Indians invest in one of two ways. Either they do the **safe, slow** thing 
 
 This paper explains the gap Vriddhi fills, the finance behind why it complements (not competes with) the classic SIP, and — importantly — the honest risk framing that makes it suitable for a balanced investor rather than a speculator.
 
+Vriddhi's method is **not improvised**. It descends from a formal **CQF (Certificate in Quantitative Finance) final-project thesis** on portfolio construction and machine-learning-driven strategy design — now translated from research into a live, self-validating tool.
+
 ---
 
 ## 1. The problem: the missing middle
@@ -77,9 +79,9 @@ This is wonderful, and nothing here argues against it. But notice: it took **15 
 
 Vriddhi builds a **focused 11–12 stock portfolio from the Nifty 50** using a transparent pipeline:
 
-1. **Screen** ~18 fundamentally sound candidates (PEG/PE/PB driven — "good companies at fair prices").
+1. **Screen** ~18 fundamentally sound candidates (PEG/PE/PB driven — "good companies at fair prices"). The PEG metric is **precomputed and transparent** — price paid per unit of the company's actual past growth — not a hidden, on-the-fly number.
 2. **Validate** them with **backtesting and walk-forward testing** across 3/4/5-year windows.
-3. **Optimise** the final 11–12 names using **Markowitz** mean-variance optimisation, with a 15% single-stock cap, a 5% minimum weight, sector sense, and no shorting.
+3. **Optimise** the final 11–12 names using **Markowitz** mean-variance optimisation, with a 15% single-stock cap, a 5% minimum weight, **genuine sector diversification** (sectors classified from real company data, so a broad label can't mask hidden concentration), and no shorting.
 4. **Gate** the result: the portfolio is recommended **only if** it clears robust thresholds.
 
 > **Illustration B — the focused satellite.** ₹1,00,000/month for **5 years** at a **validated ~20–25% CAGR** band.
@@ -135,6 +137,7 @@ Vriddhi's higher return target is **earned by construction**, and the app is del
 - **It validates before it recommends.** The verdict is anchored to **walk-forward, out-of-sample** performance — the closest honest proxy for "would this have worked on money I hadn't seen yet?"
 - **It benchmarks ruthlessly.** If the portfolio doesn't beat the Nifty 50 after costs, it isn't shown.
 - **It explains itself in plain English.** Every stock, metric, and risk is narrated for a non-specialist — no black boxes.
+- **It shows you where it stands.** A visual **Optimal View** places the portfolio on the **efficient frontier** — beside both the textbook "perfect" (mathematically optimal) portfolio and the Nifty 50 itself — so you can *see* that it earns more return for similar-or-less risk. It is also candid about a deliberate trade-off: the raw optimum would concentrate into a handful of names, while Vriddhi gives up a sliver of theoretical return to spread across a diversified ~12 — a healthier, more survivable position.
 - **It rebalances transparently.** Each month it tells you exactly what to **pick / drop / top-up / hold**, and treats *low* turnover as a virtue.
 - **It is reproducible.** The entire "knowledge asset" is rebuilt monthly from public market data with one command — and even **self-heals** when a stock's ticker changes (e.g. a demerger). No opaque, un-auditable inputs.
 - **It says no.** When a horizon fails the gate, it shows **"Not Recommended"** and points you to the horizons that pass.
@@ -167,7 +170,62 @@ Because real money is involved, balance demands candour:
 
 ---
 
-## 10. Conclusion
+## 10. A lean-by-design engine (and what's on the horizon)
+
+Vriddhi runs on a deliberately **lean, four-part process** — each pillar doing its job, none carrying the whole weight:
+
+> **Fundamentals → Back-testing → Predicted growth → Optimisation**
+
+This leanness is a **conscious design choice, not a limitation.** We intentionally kept **heavy machine learning, deep learning, and sentiment analysis out** of the live engine — and even the predictive layer uses a **simple exponential-smoothing (moving-average style) forecast rather than a neural network.** The reasoning is principled: **prediction is only one of the four pillars, not the whole process,** so it does not need to be a heavyweight model. Keeping it simple keeps the entire system **transparent, reproducible, and robust** — and, crucially, the app never *acts* on the forecast anyway; recommendations are anchored to validated, out-of-sample evidence. A modest forecast feeding a rigorously validated pipeline is far safer than a sophisticated forecast acted on blindly.
+
+**What's on the horizon — market awareness.** The natural next chapter is knowing not just *what* to hold, but *when the market itself looks fragile*. That capability already exists in the research behind Vriddhi: the methodology traces to a formal quantitative-finance thesis whose **second half built a deep-learning framework for reading market stress** — the **gap between realized and implied (VIX) volatility**, a studied early-warning signal for turbulence, alongside the symbiotic link between the market's "fear gauge" and investor sentiment.
+
+In a future version, a light **volatility-regime overlay** could let the satellite **tread more carefully when the market looks stressed** and lean in when conditions are calm — *without ever overriding the core evidence gate, and without abandoning the lean philosophy above.* Tellingly, that same research found that **simpler, more transparent models often beat more complex ones** on this problem — which is exactly why our restraint is principled, not lazy. This is on the roadmap, **not in the product today**, and Vriddhi will keep its founding rule: never show what it cannot yet validate.
+
+---
+
+## 11. What you're actually paying for (the genuine USPs)
+
+Vriddhi is **not a stock-tip service**, and its edge is **not** a claim to pick winners. Stripped to essentials, here is what genuinely differentiates it — and what a subscriber is actually paying for:
+
+1. **It answers the "missing middle" question nothing else does.** The young, earning, risk-tolerant professional who can invest ₹50–75k/month and wants **meaningful growth over 4–5 years** — not a 15-year wait, not an FD, not gold — has no honest, structured product speaking to them. Vriddhi is built for exactly that person.
+2. **Discipline-as-a-service.** The recurring value isn't a pick — it's the **monthly cadence**: re-screen, re-optimise, rebalance with low turnover, and (most valuable) the behavioural coaching that stops a panic-sell in a bad month and an over-bet in a euphoric one. People don't lack ideas; they lack the discipline to execute one consistently for five years. Vriddhi rents them that discipline.
+3. **Symmetric honesty about outcomes.** Good case ~20–25%, **base case mid-teens, bad case negative — sized so a bad five years can't wreck you.** The downside is as loud as the upside, *by design*. In a space where most hide risk in fine print, making honesty the loudest voice in the room is the real moat.
+4. **Quant made legible.** The efficient frontier, PEG, Sharpe, drawdown, walk-forward — all translated into plain-English intuition (the "North Star" view, "how to read this chart," the finance-doctor narration). It dumbs down nothing; it *clarifies* everything.
+5. **A transparent, reproducible engine — no black box.** The entire knowledge asset rebuilds monthly from public data with one command, self-heals when a ticker changes, and shows its work. Nothing un-auditable.
+6. **The willingness to say "Not Recommended."** The rarest feature in finance: a tool that *withholds* a recommendation when the evidence isn't there.
+7. **Lean by design.** A four-pillar process — **fundamentals → back-testing → predicted growth → optimisation** — where no single fragile component (and no opaque deep-learning model) carries the weight.
+
+> **In one line:** you are paying for **disciplined, diversified, honestly-narrated medium-term equity investing — the process and the coaching, not a promise of alpha.**
+
+---
+
+## 12. Regulatory positioning & responsible compliance
+
+Because real money — and potentially a subscription — is involved, Vriddhi treats its regulatory posture as a **first-class design constraint, not an afterthought.**
+
+**The principle: substance over form.** Indian securities regulation (SEBI) judges an activity by *what it does*, not by the label attached to it. A product that outputs specific securities, weights, and buy/sell actions is treated as research/advice **regardless of an "educational only" banner.** Vriddhi does not pretend otherwise, and explicitly rejects the common — and increasingly penalised — practice of stapling "do your own research" onto what is functionally advice as a way to evade registration.
+
+**Two honest, compliant paths — Vriddhi will operate on one of them:**
+
+| Path | What it means | Trade-off |
+|---|---|---|
+| **Register** (SEBI Research Analyst / Investment Adviser, or operate under a registered entity) | Keep delivering the full named, weighted, monthly portfolio — *legally* | Compliance overhead; the right answer if specific recommendations are the product |
+| **Genuinely educational in substance** | Teach the *method*, let users analyse *their own* inputs; stop short of a live named buy-list | Lighter footprint, but it changes the product |
+
+The dangerous middle — *advice in substance, "education" in label, monetised* — is the one Vriddhi will **not** occupy.
+
+**What the user always sees, regardless of path:**
+
+- Prominent disclosure that Vriddhi is a **data-driven decision aid and educational tool, not personalised investment advice** — surfaced at the **point of payment**, not buried in fine print.
+- The honest return **distribution** (good / base / bad case), with the downside as visible as the upside.
+- A standing reminder to **do your own research and consult a SEBI-registered adviser** for personal financial decisions.
+
+**Commitment:** the regulatory question is resolved with qualified legal counsel *before* monetisation scales. For a tool whose entire value proposition is **trust**, operating cleanly is not optional — it is the product.
+
+---
+
+## 13. Conclusion
 
 The classic SIP answered *"how do I build wealth safely over a lifetime?"* — and it answered it well. Vriddhi answers a different, complementary question: ***"how do I pursue a faster, higher goal over 4–5 years without abandoning discipline and evidence?"***
 
