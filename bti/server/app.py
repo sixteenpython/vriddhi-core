@@ -77,6 +77,18 @@ def create_app(save_dir: str | Path | None = None,
     async def result(request: Request) -> Response:
         return _ok(service.latest_result(owner(request), request.path_params["campaign_id"]))
 
+    async def move_history(request: Request) -> Response:
+        return _ok(service.move_history(owner(request), request.path_params["campaign_id"]))
+
+    async def review_move(request: Request) -> Response:
+        return _ok(
+            service.review_move(
+                owner(request),
+                request.path_params["campaign_id"],
+                request.path_params["move_number"],
+            )
+        )
+
     async def resign(request: Request) -> Response:
         return _ok(service.resign(owner(request), request.path_params["campaign_id"]))
 
@@ -96,6 +108,12 @@ def create_app(save_dir: str | Path | None = None,
         Route("/api/v1/campaigns/{campaign_id:str}/moves/validate", validate_move, methods=["POST"]),
         Route("/api/v1/campaigns/{campaign_id:str}/moves", commit_move, methods=["POST"]),
         Route("/api/v1/campaigns/{campaign_id:str}/result", result, methods=["GET"]),
+        Route("/api/v1/campaigns/{campaign_id:str}/history", move_history, methods=["GET"]),
+        Route(
+            "/api/v1/campaigns/{campaign_id:str}/history/{move_number:int}",
+            review_move,
+            methods=["GET"],
+        ),
         Route("/api/v1/campaigns/{campaign_id:str}/resign", resign, methods=["POST"]),
         Route("/api/v1/lessons", lessons, methods=["GET"]),
         Route("/api/v1/puzzles", puzzles, methods=["GET"]),

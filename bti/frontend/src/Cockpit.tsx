@@ -313,13 +313,7 @@ export function PortfolioRibbon({
   );
 }
 
-export function IntelligenceDeck({
-  market,
-  openNews,
-}: {
-  market: Market;
-  openNews: () => void;
-}) {
+export function IntelligenceDeck({ market }: { market: Market }) {
   const [tiles, setTiles] = useState<TileConfig[]>(loadLayout);
   const [settings, setSettings] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -510,21 +504,21 @@ export function IntelligenceDeck({
       );
     return (
       <div className="tile-news">
-        <button onClick={openNews}>
+        <article>
           <small>SIM NOW · {movers[0].sector.toUpperCase()}</small>
           <b>
             {movers[0].ticker} draws attention after {signed(move(movers[0]))}
             with sentiment at {movers[0].sentiment_score.toFixed(0)}/100.
           </b>
-        </button>
-        <button onClick={openNews}>
+        </article>
+        <article>
           <small>SIM 08:18 · RISK DESK</small>
           <b>
             Volume, volatility and expectations—not headline tone alone—shape
             this month’s signal.
           </b>
-        </button>
-        <button onClick={openNews}>OPEN FULL NEWSWIRE →</button>
+        </article>
+        <small>NEWS SIGNALS ARE EMBEDDED IN THIS MARKET DESK</small>
       </div>
     );
   };

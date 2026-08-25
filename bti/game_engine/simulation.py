@@ -9,10 +9,40 @@ from typing import Any
 
 SIMULATION_VERSION = "bti-calibrated-synthetic-2026-08-v2"
 
+REGIMES = (
+    ("SELECTIVE GROWTH", "Growth remains available, but valuation discipline separates leaders.", 0.10, 0.95),
+    ("SECTOR ROTATION", "Leadership is rotating; yesterday's strongest sector is no longer enough.", 0.00, 1.08),
+    ("EARNINGS DISPERSION", "Company delivery matters more than the broad index direction.", 0.02, 1.15),
+    ("RISK OFF", "Liquidity tightens and concentrated portfolios face a harder downside test.", -0.22, 1.25),
+    ("VALUATION RESET", "Forecasts remain positive while expensive expectations compress.", -0.12, 1.18),
+    ("RECOVERY", "Risk appetite improves, but weak balance sheets still lag the rebound.", 0.18, 1.05),
+)
+
 
 def _rng(seed: str, *parts: object) -> random.Random:
     digest = hashlib.sha256("|".join([seed, *map(str, parts)]).encode()).digest()
     return random.Random(int.from_bytes(digest[:8], "big"))
+
+
+def build_regime_schedule(seed: str, horizon: int) -> list[dict[str, Any]]:
+    """Pre-generate a fair campaign path that cannot inspect player holdings."""
+    schedule = []
+    for month in range(1, horizon + 1):
+        rng = _rng(seed, "regime", month)
+        index = (rng.randrange(len(REGIMES)) + (month - 1) // 6) % len(REGIMES)
+        label, narrative, bias, volatility = REGIMES[index]
+        difficulty = round(1.0 + (month / horizon) * 0.35, 3)
+        schedule.append(
+            {
+                "month": month,
+                "label": label,
+                "narrative": narrative,
+                "difficulty": difficulty,
+                "market_bias": bias,
+                "volatility_multiplier": round(volatility * difficulty, 3),
+            }
+        )
+    return schedule
 
 
 def _simulated_lookback(
@@ -153,9 +183,19 @@ def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str,
     return market
 
 
-def advance_market(market: dict[str, Any], seed: str, month: int) -> tuple[dict[str, Any], float]:
+def advance_market(
+    market: dict[str, Any],
+    seed: str,
+    month: int,
+    regime: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], float]:
     """Advance independently of player and reference holdings."""
-    common = _rng(seed, "market", month).gauss(0, 1)
+    regime = regime or {"market_bias": 0.0, "volatility_multiplier": 1.0}
+    common = (
+        _rng(seed, "market", month).gauss(0, 1)
+        * float(regime.get("volatility_multiplier", 1.0))
+        + float(regime.get("market_bias", 0.0))
+    )
     sectors = {
         sector: _rng(seed, "sector", sector, month).gauss(0, 1)
         for sector in {v["sector"] for v in market.values()}

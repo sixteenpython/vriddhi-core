@@ -99,11 +99,11 @@ def test_complete_campaign_smoke(horizon: int) -> None:
     for _ in range(horizon):
         result = _fund_one_month(game)
         assert result["classification"] in {
-            "BEST MOVE",
+            "BRILLIANT",
             "EXCELLENT",
             "GOOD",
             "INACCURACY",
-            "MISS",
+            "MISTAKE",
             "BLUNDER",
         }
         assert 0 <= result["score"] <= 100
@@ -123,3 +123,35 @@ def test_rating_is_capital_neutral_for_equivalent_decisions() -> None:
     large_result = _fund_one_month(large)
     assert small_result["score"] == pytest.approx(large_result["score"], abs=8)
     assert abs(small.public_state()["rating"] - large.public_state()["rating"]) <= 32
+
+
+def test_rated_history_is_immutable_reconstructable_and_chase_ready() -> None:
+    game = BTIGame.create(25_000, 36, "rated-history")
+    first = _fund_one_month(game)
+    second = _fund_one_month(game)
+    state_before_review = game.to_json()
+    review = game.review_move(1)
+
+    assert game.public_state()["gameplay_mode"] == "RATED"
+    assert game.public_state()["can_repeat_last_move"] is True
+    assert game.public_state()["last_move_instructions"]
+    assert first["notation"].startswith("M01 ·")
+    assert -3 <= first["position_evaluation"]["value"] <= 3
+    assert len(game.performance_series()) == 2
+    assert game.performance_series()[-1]["move"] == 2
+    assert review["review_mode"] is True
+    assert review["selected_move"] == 1
+    assert len(review["performance_series"]) == 1
+    assert review["result"] == first
+    assert review["market"]["month"] == 1
+    assert game.to_json() == state_before_review
+    assert second["regime"]["difficulty"] >= first["regime"]["difficulty"]
+
+
+def test_market_regime_path_is_precomputed_and_portfolio_independent() -> None:
+    left = BTIGame.create(25_000, 24, "fair-market")
+    right = BTIGame.create(25_000, 24, "fair-market")
+    left.state["holdings"] = {"BPCL": 10}
+    right.state["holdings"] = {"TCS": 10}
+    assert left.state["regime_schedule"] == right.state["regime_schedule"]
+    assert left._market_at_month(6) == right._market_at_month(6)

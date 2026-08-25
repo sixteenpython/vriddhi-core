@@ -12,7 +12,6 @@ type BaseProps = { market: Market; campaign: Campaign };
 type MarketProps = BaseProps & {
   select: (stock: Stock) => void;
   buildMove: () => void;
-  openNews: () => void;
   trades: Trade[];
   setTrades: (trades: Trade[]) => void;
 };
@@ -144,11 +143,11 @@ export function MarketTerminal({
   campaign,
   select,
   buildMove,
-  openNews,
   trades,
   setTrades,
 }: MarketProps) {
   const [query, setQuery] = useState("");
+  const [repeatNotice, setRepeatNotice] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>(
     {
@@ -303,17 +302,55 @@ export function MarketTerminal({
           SIM SESSION · M{campaign.current_move}/{campaign.horizon_months} ·
           FEED HEALTH 100%
         </div>
-        <button onClick={buildMove}>
-          OPEN ORDER WORKBENCH <b>F9</b>
-        </button>
+        <div className="market-turn-actions">
+          {campaign.can_repeat_last_move && (
+            <button
+              className="repeat-move"
+              onClick={() => {
+                setTrades(
+                  campaign.last_move_instructions.map((trade) => ({
+                    ...trade,
+                  })),
+                );
+                setRepeatNotice(
+                  "Previous whole-share instructions copied exactly. This market is different—review affordability, holdings and portfolio health before committing.",
+                );
+              }}
+            >
+              ↻ REPEAT LAST MOVE
+            </button>
+          )}
+          <button onClick={buildMove}>
+            REVIEW MOVE <b>F9</b>
+          </button>
+        </div>
       </div>
+      <div className="market-regime-strip">
+        <span>MARKET COUNTERMOVE</span>
+        <b>{market.regime?.label || campaign.current_regime.label}</b>
+        <p>{market.regime?.narrative || campaign.current_regime.narrative}</p>
+        <em>
+          DIFFICULTY{" "}
+          {(
+            market.regime?.difficulty || campaign.current_regime.difficulty
+          ).toFixed(2)}
+          ×
+        </em>
+      </div>
+      {repeatNotice && (
+        <div className="repeat-warning">
+          <b>REPEATED MOVE · NOT RECOMMENDED BLINDLY</b>
+          <span>{repeatNotice}</span>
+          <button onClick={() => setRepeatNotice("")}>×</button>
+        </div>
+      )}
       <PortfolioRibbon
         campaign={campaign}
         draft={draft}
         trades={trades}
         openWorkbench={buildMove}
       />
-      <IntelligenceDeck market={market} openNews={openNews} />
+      <IntelligenceDeck market={market} />
       <div className="terminal-grid">
         <div className="terminal-main">
           <div className="terminal-toolbar">

@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from .artifacts import VriddhiArtifacts
-from .scoring import evaluate
-from .simulation import advance_market, initial_market, public_market
+from .scoring import evaluate, portfolio_health
+from .simulation import advance_market, build_regime_schedule, initial_market, public_market
 
 
 class GameRuleError(ValueError):
@@ -80,6 +80,8 @@ class BTIGame:
             "total_invested_paise": 0,
             "moves": [],
             "rating": 1200,
+            "gameplay_mode": "RATED",
+            "regime_schedule": build_regime_schedule(seed, horizon_months),
         }
         return self
 
@@ -88,9 +90,46 @@ class BTIGame:
         return self.state["status"]
 
     def market_view(self) -> dict[str, Any]:
-        return public_market(
+        view = public_market(
             self.state["market"], self.state["current_month"], self.state["data_through"]
         )
+        view["regime"] = deepcopy(self._regime_for_move(self.state["current_month"] + 1))
+        return view
+
+    def _regime_for_move(self, move: int) -> dict[str, Any]:
+        schedule = self.state.setdefault(
+            "regime_schedule",
+            build_regime_schedule(self.state["seed"], self.state["horizon_months"]),
+        )
+        index = max(0, min(len(schedule) - 1, move - 1))
+        public = deepcopy(schedule[index])
+        public.pop("market_bias", None)
+        public.pop("volatility_multiplier", None)
+        return public
+
+    def _regime_internal(self, move: int) -> dict[str, Any]:
+        schedule = self.state.setdefault(
+            "regime_schedule",
+            build_regime_schedule(self.state["seed"], self.state["horizon_months"]),
+        )
+        return schedule[max(0, min(len(schedule) - 1, move - 1))]
+
+    def _market_at_month(self, completed_months: int) -> dict[str, Any]:
+        """Reconstruct a historical public information set without storing giant snapshots."""
+        market = initial_market(self.artifacts.stocks, self.state["horizon_months"])
+        for month in range(1, completed_months + 1):
+            market, _ = advance_market(
+                market, self.state["seed"], month, self._regime_internal(month)
+            )
+        return market
+
+    @staticmethod
+    def _notation(move: int, execution: list[dict[str, Any]]) -> str:
+        orders = " · ".join(
+            f"{'+' if item['side'] == 'BUY' else '−'}{item['ticker']} {item['shares']}"
+            for item in execution
+        )
+        return f"M{move:02d} · {orders}"
 
     def _reference_holdings(self, total_capital: int) -> dict[str, int]:
         """Solve a whole-share reference feasible for this campaign's actual capital."""
@@ -147,6 +186,8 @@ class BTIGame:
             raise GameRuleError("A move needs at least one BUY or SELL instruction")
         market = self.state["market"]
         holdings = dict(self.state["holdings"])
+        holdings_before = dict(holdings)
+        cash_before = self.state["cash_paise"]
         seen: set[tuple[str, str]] = set()
         sells: list[tuple[str, int]] = []
         buys: list[tuple[str, int]] = []
@@ -210,16 +251,39 @@ class BTIGame:
             raise RuntimeError("Portfolio accounting invariant failed")
         reference = self._reference_holdings(opening_value + self.state["monthly_amount_paise"])
         decision = evaluate(holdings, reference, market)
-        next_market, benchmark_return = advance_market(market, self.state["seed"], month + 1)
+        regime = self._regime_internal(month + 1)
+        next_market, benchmark_return = advance_market(
+            market, self.state["seed"], month + 1, regime
+        )
         before_outcome = cash + _value(holdings, market)
         after_outcome = cash + _value(holdings, next_market)
         portfolio_return = after_outcome / before_outcome - 1
         benchmark_before = self.state["benchmark_value_paise"] + self.state["monthly_amount_paise"]
         benchmark_after = round(benchmark_before * (1 + benchmark_return))
+        invested_after = self.state["total_invested_paise"] + self.state["monthly_amount_paise"]
+        move_number = month + 1
+        rating_average = (
+            sum(item["score"] for item in self.state["moves"]) + decision["score"]
+        ) / (len(self.state["moves"]) + 1)
+        rating_after = max(600, round(1200 + (rating_average - 70) * 4))
         result = {
             **decision,
-            "move": month + 1,
+            "move": move_number,
             "execution": execution,
+            "notation": self._notation(move_number, execution),
+            "rating_after": rating_after,
+            "regime": self._regime_for_move(move_number),
+            "portfolio_before": {
+                "holdings": holdings_before,
+                "cash_paise": cash_before,
+                "value_paise": cash_before + _value(holdings_before, market),
+            },
+            "portfolio_after_execution": {
+                "holdings": dict(holdings),
+                "cash_paise": cash,
+                "value_paise": before_outcome,
+                "health": portfolio_health(holdings, market),
+            },
             "market_outcome": {
                 "headline": "What happened next is an outcome, not a retroactive judgment of your decision.",
                 "portfolio_return_pct": round(portfolio_return * 100, 2),
@@ -227,10 +291,22 @@ class BTIGame:
                 "alpha_pct": round((portfolio_return - benchmark_return) * 100, 2),
             },
             "progress": {
-                "move": month + 1,
+                "move": move_number,
                 "total": self.state["horizon_months"],
+                "total_invested_paise": invested_after,
                 "portfolio_value_paise": after_outcome,
                 "benchmark_value_paise": benchmark_after,
+                "portfolio_xirr_pct": _annualised_sip_return(
+                    self.state["monthly_amount_paise"], move_number, after_outcome
+                ),
+                "benchmark_xirr_pct": _annualised_sip_return(
+                    self.state["monthly_amount_paise"], move_number, benchmark_after
+                ),
+                "projected_annual_return_pct": round(
+                    decision["portfolio_health"]["forecast"], 2
+                ),
+                "benchmark_projected_annual_return_pct": 8.0,
+                "position_evaluation": deepcopy(decision["position_evaluation"]),
             },
         }
         self.state.update(
@@ -239,19 +315,97 @@ class BTIGame:
                 "holdings": holdings,
                 "market": next_market,
                 "benchmark_value_paise": benchmark_after,
-                "total_invested_paise": self.state["total_invested_paise"]
-                + self.state["monthly_amount_paise"],
+                "total_invested_paise": invested_after,
                 "current_month": month + 1,
             }
         )
         self.state["moves"].append(deepcopy(result))
-        average = sum(item["score"] for item in self.state["moves"]) / len(self.state["moves"])
-        self.state["rating"] = max(600, round(1200 + (average - 70) * 4))
+        self.state["rating"] = rating_after
         if self.state["current_month"] == self.state["horizon_months"]:
             self.state["status"] = "COMPLETED"
             result["final_result"] = self.final_result()
             self.state["moves"][-1] = deepcopy(result)
         return deepcopy(result)
+
+    def performance_series(self) -> list[dict[str, Any]]:
+        series = []
+        contribution = self.state["monthly_amount_paise"]
+        for index, move in enumerate(self.state["moves"], start=1):
+            progress = move.get("progress", {})
+            portfolio = int(progress.get("portfolio_value_paise", 0))
+            benchmark = int(progress.get("benchmark_value_paise", 0))
+            invested = int(progress.get("total_invested_paise", contribution * index))
+            series.append(
+                {
+                    "move": index,
+                    "total_invested_paise": invested,
+                    "portfolio_value_paise": portfolio,
+                    "benchmark_value_paise": benchmark,
+                    "wealth_gap_paise": portfolio - benchmark,
+                    "alpha_pct": round((portfolio / benchmark - 1) * 100, 2)
+                    if benchmark
+                    else 0.0,
+                    "portfolio_xirr_pct": progress.get(
+                        "portfolio_xirr_pct",
+                        _annualised_sip_return(contribution, index, portfolio),
+                    ),
+                    "benchmark_xirr_pct": progress.get(
+                        "benchmark_xirr_pct",
+                        _annualised_sip_return(contribution, index, benchmark),
+                    ),
+                    "projected_annual_return_pct": progress.get(
+                        "projected_annual_return_pct", 0.0
+                    ),
+                    "benchmark_projected_annual_return_pct": progress.get(
+                        "benchmark_projected_annual_return_pct", 8.0
+                    ),
+                    "position_evaluation": deepcopy(
+                        move.get(
+                            "position_evaluation",
+                            {"value": 0.0, "display": "+0.00", "label": "LEVEL"},
+                        )
+                    ),
+                }
+            )
+        return series
+
+    def move_history(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "move": index,
+                "notation": move.get("notation", self._notation(index, move["execution"])),
+                "score": move["score"],
+                "classification": move["classification"],
+                "position_evaluation": deepcopy(
+                    move.get(
+                        "position_evaluation",
+                        {"value": 0.0, "display": "+0.00", "label": "LEVEL"},
+                    )
+                ),
+                "alpha_pct": move.get("market_outcome", {}).get("alpha_pct", 0.0),
+                "rating_after": move.get("rating_after", self.state["rating"]),
+                "regime": deepcopy(move.get("regime", self._regime_for_move(index))),
+            }
+            for index, move in enumerate(self.state["moves"], start=1)
+        ]
+
+    def review_move(self, move_number: int) -> dict[str, Any]:
+        if move_number < 1 or move_number > len(self.state["moves"]):
+            raise GameRuleError("That completed move is not available for review")
+        market = self._market_at_month(move_number - 1)
+        market_view = public_market(market, move_number - 1, self.state["data_through"])
+        market_view["regime"] = deepcopy(self._regime_for_move(move_number))
+        return {
+            "review_mode": True,
+            "selected_move": move_number,
+            "live_move": min(
+                self.state["current_month"] + 1, self.state["horizon_months"]
+            ),
+            "result": deepcopy(self.state["moves"][move_number - 1]),
+            "market": market_view,
+            "performance_series": self.performance_series()[:move_number],
+            "move_history": self.move_history(),
+        }
 
     def public_state(self) -> dict[str, Any]:
         market = self.state["market"]
@@ -272,6 +426,25 @@ class BTIGame:
             "total_invested_paise": self.state["total_invested_paise"],
             "rating": self.state["rating"],
             "last_result": deepcopy(self.state["moves"][-1]) if self.state["moves"] else None,
+            "gameplay_mode": "RATED",
+            "current_regime": deepcopy(
+                self._regime_for_move(
+                    min(self.state["current_month"] + 1, self.state["horizon_months"])
+                )
+            ),
+            "move_history": self.move_history(),
+            "performance_series": self.performance_series(),
+            "can_repeat_last_move": bool(self.state["moves"] and self.status == "ACTIVE"),
+            "last_move_instructions": [
+                {
+                    "side": item["side"],
+                    "ticker": item["ticker"],
+                    "shares": item["shares"],
+                }
+                for item in self.state["moves"][-1]["execution"]
+            ]
+            if self.state["moves"]
+            else [],
             "release_id": self.state["release_id"],
             "market_label": "SIMULATED MARKET",
         }
@@ -320,4 +493,9 @@ class BTIGame:
             raise GameRuleError("Unsupported saved campaign engine version")
         if self.state.get("release_id") != self.artifacts.release_id:
             raise GameRuleError("Saved campaign requires a different governed Vriddhi release")
+        self.state.setdefault("gameplay_mode", "RATED")
+        self.state.setdefault(
+            "regime_schedule",
+            build_regime_schedule(self.state["seed"], self.state["horizon_months"]),
+        )
         return self

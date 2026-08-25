@@ -146,6 +146,7 @@ def test_research_and_market_analysis_surfaces_remain_first_class() -> None:
     terminal = (WEB / "src" / "Terminal.tsx").read_text(encoding="utf-8")
     cockpit = (WEB / "src" / "Cockpit.tsx").read_text(encoding="utf-8")
     research = (WEB / "src" / "StockResearch.tsx").read_text(encoding="utf-8")
+    game_board = (WEB / "src" / "GameBoard.tsx").read_text(encoding="utf-8")
 
     for phrase in (
         "Minimum forecast",
@@ -163,3 +164,11 @@ def test_research_and_market_analysis_surfaces_remain_first_class() -> None:
         "SIMULATION MODE",
     ):
         assert phrase in research
+    for phrase in (
+        "RATED GAME BOARD",
+        "THE CHASE · PORTFOLIO VS NIFTY",
+        "IMMUTABLE MOVE HISTORY",
+        "RETURN TO LIVE MOVE",
+        "NO TAKEBACKS",
+    ):
+        assert phrase in game_board

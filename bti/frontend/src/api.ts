@@ -15,7 +15,63 @@ export type Campaign = {
   total_invested_paise: number;
   rating: number;
   last_result: MoveResult | null;
+  gameplay_mode: "RATED";
+  current_regime: MarketRegime;
+  move_history: MoveHistory[];
+  performance_series: PerformancePoint[];
+  can_repeat_last_move: boolean;
+  last_move_instructions: Trade[];
   market_label: string;
+};
+export type MarketRegime = {
+  month: number;
+  label: string;
+  narrative: string;
+  difficulty: number;
+};
+export type PositionEvaluation = {
+  value: number;
+  display: string;
+  label: string;
+  player_advantage: boolean;
+};
+export type PortfolioHealth = {
+  forecast: number;
+  risk: number;
+  concentration: number;
+  sector_concentration: number;
+  valuation: number;
+  sharpe: number;
+  drawdown_pct: number;
+  var_95_pct: number;
+  positions: number;
+  sectors: number;
+  top_weight_pct: number;
+  health_score: number;
+  health_label: string;
+};
+export type MoveHistory = {
+  move: number;
+  notation: string;
+  score: number;
+  classification: string;
+  position_evaluation: PositionEvaluation;
+  alpha_pct: number;
+  rating_after: number;
+  regime: MarketRegime;
+};
+export type PerformancePoint = {
+  move: number;
+  total_invested_paise: number;
+  portfolio_value_paise: number;
+  benchmark_value_paise: number;
+  wealth_gap_paise: number;
+  alpha_pct: number;
+  portfolio_xirr_pct: number;
+  benchmark_xirr_pct: number;
+  projected_annual_return_pct: number;
+  benchmark_projected_annual_return_pct: number;
+  position_evaluation: PositionEvaluation;
 };
 export type Stock = {
   ticker: string;
@@ -64,12 +120,18 @@ export type Market = {
   basis: string;
   month: number;
   stocks: Stock[];
+  regime?: MarketRegime;
 };
 export type Trade = { side: "BUY" | "SELL"; ticker: string; shares: number };
 export type MoveResult = {
   score: number;
   classification: string;
   move: number;
+  notation: string;
+  rating_after: number;
+  regime: MarketRegime;
+  position_evaluation: PositionEvaluation;
+  portfolio_health: PortfolioHealth;
   decision_quality: { headline: string; did_well: string[]; improve: string[] };
   execution: Array<
     Trade & { price_paise: number; cash_movement_paise: number }
@@ -85,7 +147,33 @@ export type MoveResult = {
     total: number;
     portfolio_value_paise: number;
     benchmark_value_paise: number;
+    total_invested_paise: number;
+    portfolio_xirr_pct: number;
+    benchmark_xirr_pct: number;
+    projected_annual_return_pct: number;
+    benchmark_projected_annual_return_pct: number;
+    position_evaluation: PositionEvaluation;
   };
+  portfolio_before: {
+    holdings: Record<string, number>;
+    cash_paise: number;
+    value_paise: number;
+  };
+  portfolio_after_execution: {
+    holdings: Record<string, number>;
+    cash_paise: number;
+    value_paise: number;
+    health: PortfolioHealth;
+  };
+};
+export type MoveReview = {
+  review_mode: true;
+  selected_move: number;
+  live_move: number;
+  result: MoveResult;
+  market: Market;
+  performance_series: PerformancePoint[];
+  move_history: MoveHistory[];
 };
 
 const TOKEN = "bti_access_token";
@@ -189,6 +277,8 @@ export const api = {
       }),
     ),
   market: (id: string) => request<Market>(`/api/v1/campaigns/${id}/market`),
+  reviewMove: (id: string, move: number) =>
+    request<MoveReview>(`/api/v1/campaigns/${id}/history/${move}`),
   commit: async (id: string, expected_month: number, instructions: Trade[]) => {
     const response = await request<{ campaign: Campaign; result: MoveResult }>(
       `/api/v1/campaigns/${id}/moves`,

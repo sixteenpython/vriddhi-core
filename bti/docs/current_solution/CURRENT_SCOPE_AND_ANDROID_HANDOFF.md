@@ -10,18 +10,18 @@
 - Hidden whole-share feasible reference portfolio.
 - Whole-share BUY/SELL execution, cash accounting and 90% deployment rule.
 - Deterministic score, move classification, explanation, outcome and rating.
-- Immersive market terminal with spreadsheet-style analysis, generated newsroom, comprehensive
-  movers, stock research workstation and order workbench.
-- Campaign state, latest result, resignation, lesson and puzzle APIs.
+- Immersive Market Monitor with spreadsheet-style analysis, embedded generated news, comprehensive
+  movers, stock research and live portfolio construction.
+- Rated Game Board with permanent commit, scoring, position evaluation, cricket-chase progress,
+  exact repeat-last-move and immutable historical review.
+- Campaign state, latest result and historical-review APIs.
 - Docker build, Render auto-deployment and health endpoint.
 - Simulation and private-oracle contract tests.
 
 ## Present but still being product-tested
 
 - review/commit and score-reveal choreography;
-- campaign progress and historical move analysis;
-- puzzle and lesson breadth;
-- player profile, rankings and achievement depth;
+- long-campaign progress and historical move analysis;
 - final campaign report and replay value;
 - responsive behaviour below desktop width;
 - empty, error, offline and long-campaign usability states.
@@ -34,6 +34,7 @@
 - real-money execution;
 - durable database, multi-instance scaling and production analytics;
 - native Android application and Play Store release;
+- puzzles, lessons, rankings, leaderboards and social/player ecosystem;
 - push notifications, subscriptions or monetisation.
 
 ## Web-complete gate

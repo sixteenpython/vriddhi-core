@@ -12,19 +12,11 @@ The persistent **SIMULATION MODE** label remains non-negotiable so realism never
 - campaign identity and move counter in the top control bar;
 - repeated simulation disclosure strip;
 - desktop-first, responsive layout;
-- professional contextual navigation during a move:
-  - Overview;
-  - Market Monitor;
-  - Order Workbench;
-  - Performance;
-  - Scenario Lab;
-  - Research Academy;
-  - Analyst Rankings;
-  - Newswire.
+- exactly two active-campaign destinations: **Market Monitor** and **Game Board**.
 
 ## Landing and campaign setup
 
-The landing page explains the core challenge and provides campaign/puzzle entry. Setup exposes
+The landing page explains the core challenge and provides campaign entry. Setup exposes
 monthly contribution and 24/36/48/60-month horizon, previews total contribution and move count, and
 states the immutable campaign rules.
 
@@ -58,42 +50,37 @@ generated catalysts, sector peers and explicit portfolio questions. Fundamental,
 sentiment signals include ROE, earnings growth, margin, leverage, yield, beta, RSI, momentum,
 activity and sentiment. The public board never marks the hidden best move.
 
-## Newswire
+## Embedded news intelligence
 
-The simulated newsroom provides a macro lead story, sector and earnings cards, market pulse,
-trending securities and generated event context. Every article and tape is locally marked as
-generated/simulated. News changes context; it does not directly dictate the move.
+News and sentiment are signals inside Market Monitor and stock research, not a separate destination.
+They provide generated macro, sector, earnings, mover and security context. News changes context; it
+does not dictate the move.
 
-The Newswire also carries separate ranked top-gainer and top-loser tables for the current simulated
-month. Positive and negative lists are directionally strict; before the first market advance the UI
-shows an awaiting-first-move state rather than mislabelling flat securities.
+## Rated Game Board
 
-## Order workbench
-
-The order-management screen includes:
+The Game Board combines final order review, irreversible execution, move analysis and progress:
 
 - buying power, order count, deployment, post-trade cash, positions and concentration;
-- quick security ticket with price, PEG, Sharpe and forecast;
-- whole-share BUY/SELL blotter;
-- collision-free quantity steppers with separately aligned simulated price and notional columns;
-- estimated notional and portfolio effect;
-- projected holdings and allocation bars;
-- projected sector exposure;
-- weighted PE, PEG, Sharpe, forecast and volatility;
-- concentration and scenario lenses;
+- sell-first then buy execution sheet with running cash;
 - cash reconciliation and 90% deployment gate.
+- deterministic 0–100 move quality and chess-like signed position evaluation;
+- separate decision-quality and next-market-outcome explanations;
+- a cricket-chase chart where Nifty supplies the projected target and the player advances one
+  completed over per committed monthly move;
+- immutable move cards and read-only historical reconstruction with chart rewind;
+- exact repeat-last-move from Market Monitor, subject to the new month’s holdings, prices, cash and
+  deployment rules.
 
 The UI estimates are advisory previews. The server performs the authoritative validation and
 commit. The player should net related actions into one final security instruction rather than sell
 and repurchase the same security unnecessarily.
 
-## Analysis and learning surfaces
+## Release boundary
 
-The release includes move-result analysis, campaign progress, puzzles, lessons, rankings/profile
-shells and final-result concepts. Puzzles now accept and score an explicit decision; lessons expose
-expandable teaching content and surface the player's most recent improvement opportunity. Their
-catalogue depth is still being expanded. No screen should claim live social, brokerage or real-news
-functionality.
+Puzzles, lessons, rankings, leaderboards, profile shells, scenario labs and standalone Newswire are
+not part of this web release. Learning occurs through the market signals, permanent decisions,
+deterministic feedback and historical review in the core game. No screen claims live social,
+brokerage or real-news functionality.
 
 ## Responsive principle
 

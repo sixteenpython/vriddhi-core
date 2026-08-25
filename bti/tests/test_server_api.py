@@ -83,6 +83,21 @@ def test_campaign_move_is_validated_committed_once_and_resumable(tmp_path):
     assert first[1] == second[1]
     assert first[1]["data"]["campaign"]["moves_completed"] == 1
     assert request(app, "GET", f"/api/v1/campaigns/{campaign_id}/result", headers=auth)[0] == 200
+    history = request(
+        app, "GET", f"/api/v1/campaigns/{campaign_id}/history", headers=auth
+    )
+    assert history[0] == 200
+    assert history[1]["data"]["gameplay_mode"] == "RATED"
+    assert len(history[1]["data"]["moves"]) == 1
+    review = request(
+        app, "GET", f"/api/v1/campaigns/{campaign_id}/history/1", headers=auth
+    )
+    assert review[0] == 200
+    assert review[1]["data"]["review_mode"] is True
+    assert review[1]["data"]["performance_series"][0]["move"] == 1
+    assert request(
+        app, "GET", f"/api/v1/campaigns/{campaign_id}/history/2", headers=auth
+    )[0] == 404
 
     # A fresh app instance resumes from durable storage using the same opaque token.
     resumed = create_app(save_dir=tmp_path / "saves")

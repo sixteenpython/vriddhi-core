@@ -99,6 +99,21 @@ class BTIService:
             raise APIError(404, "RESULT_NOT_AVAILABLE", "Submit the first move to create a result.")
         return game.state["moves"][-1]
 
+    def move_history(self, owner: str, campaign_id: str) -> dict[str, Any]:
+        game = self._load(self.repo.get_campaign(owner, campaign_id))
+        return {
+            "gameplay_mode": "RATED",
+            "moves": game.move_history(),
+            "performance_series": game.performance_series(),
+        }
+
+    def review_move(self, owner: str, campaign_id: str, move_number: int) -> dict[str, Any]:
+        game = self._load(self.repo.get_campaign(owner, campaign_id))
+        try:
+            return game.review_move(move_number)
+        except GameRuleError as exc:
+            raise APIError(404, "MOVE_NOT_AVAILABLE", str(exc)) from exc
+
     def resign(self, owner: str, campaign_id: str) -> dict[str, Any]:
         def mutation(envelope: dict[str, Any]):
             game = self._load(envelope)

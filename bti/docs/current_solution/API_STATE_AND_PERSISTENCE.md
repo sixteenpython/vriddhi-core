@@ -22,6 +22,8 @@ Failures use a stable code and safe message; Python tracebacks are not returned 
 | POST | `/api/v1/campaigns/{id}/moves/validate` | non-committing server validation |
 | POST | `/api/v1/campaigns/{id}/moves` | atomic move commit |
 | GET | `/api/v1/campaigns/{id}/result` | latest committed result |
+| GET | `/api/v1/campaigns/{id}/history` | immutable move summaries |
+| GET | `/api/v1/campaigns/{id}/history/{move}` | reconstructed move, market and chase state |
 | POST | `/api/v1/campaigns/{id}/resign` | explicit campaign resignation |
 | GET | `/api/v1/lessons` | governed lesson content |
 | GET | `/api/v1/puzzles` | governed puzzle content |
@@ -32,8 +34,8 @@ silently applying the move to the wrong information set.
 ## Canonical campaign state
 
 The domain state contains campaign identity/status, versions, research release, fixed amount and
-horizon, current month, integer cash, whole-share holdings, current simulated market, benchmark,
-contributions, immutable move records and rating.
+horizon, current month, integer cash, whole-share holdings, current simulated market, precomputed
+portfolio-independent regime schedule, benchmark, contributions, immutable move records and rating.
 
 The public projection intentionally omits seed, hidden reference and private evaluation internals.
 

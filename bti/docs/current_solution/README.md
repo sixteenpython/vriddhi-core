@@ -30,6 +30,7 @@ and tries to beat the simulated Nifty benchmark over a fixed 24–60 month campa
 8. [CURRENT_SCOPE_AND_ANDROID_HANDOFF.md](CURRENT_SCOPE_AND_ANDROID_HANDOFF.md) — implemented/deferred matrix and conditions for mobile replication.
 9. [CODEBASE_TRACEABILITY.md](CODEBASE_TRACEABILITY.md) — source-file ownership and change-impact guide.
 10. [CALIBRATED_SYNTHETIC_MARKET.md](CALIBRATED_SYNTHETIC_MARKET.md) — realism, coherence and market-data provenance boundary.
+11. [RATED_GAMEPLAY.md](RATED_GAMEPLAY.md) — two-screen loop, permanent moves, repeat, chase and historical review.
 
 ## Canonical principles
 
@@ -42,12 +43,15 @@ and tries to beat the simulated Nifty benchmark over a fixed 24–60 month campa
 - Hidden Vriddhi/reference intelligence never reaches the browser.
 - All gameplay data except listed-company names and tickers is generated for the simulation.
 - Every playable financial surface must visibly say **SIMULATION MODE**.
+- The launched web surface contains only Market Monitor and Rated Game Board during an active campaign.
 - The web experience is the product reference for Android; Android must not fork the rules.
 
 ## Current release evidence
 
-The release has been verified to create a campaign, build a portfolio directly from the 50-security
-Market Monitor, reconcile the same draft in the Order Workbench, execute and score the complete
-move, advance to Month 2, and expose the resulting held position back in the market table. The
-configurable cockpit, full-screen OHLC explorer, ticker research, adaptive lesson and interactive
-puzzle were also exercised in-browser. The simulation boundary remains visible throughout.
+The release has been verified through two committed moves: create a campaign, build directly from
+the 50-security Market Monitor, review and permanently execute on the Rated Game Board, receive a
+position evaluation and outcome, advance the market, repeat the prior instruction exactly, block an
+under-deployed repeat, correct and execute it, then rewind the Nifty/player chase and complete move
+analysis to Move 1 without changing the live state. The simulation boundary remains visible
+throughout. Puzzles, lessons, rankings, profiles and standalone Newswire are intentionally absent
+from this gameplay-only web release.

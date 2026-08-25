@@ -6,11 +6,13 @@ import {
   type Campaign,
   type Market,
   type MoveResult,
+  type MoveReview,
   type Stock,
   type Trade,
 } from "./api";
-import { MarketTerminal, NewsTerminal, PortfolioWorkbench } from "./Terminal";
+import { MarketTerminal } from "./Terminal";
 import { StockResearch } from "./StockResearch";
+import { GameBoard } from "./GameBoard";
 
 type View =
   | "home"
@@ -54,25 +56,10 @@ const impact = (t: Trade, m: Market | null) => {
   return (s?.close_paise || 0) * t.shares * (t.side === "SELL" ? 1 : -1);
 };
 const SIM = "SIMULATION MODE";
-const NAV: [View, string, string][] = [
-  ["home", "⌂", "Home"],
-  ["market", "▥", "Market"],
-  ["portfolio", "◫", "Portfolio"],
-  ["progress", "⌁", "Progress"],
-  ["puzzles", "◇", "Puzzles"],
-  ["lessons", "▤", "Lessons"],
-  ["leaderboard", "♜", "Leagues"],
-  ["news", "◉", "Events"],
-];
+const NAV: [View, string, string][] = [["home", "⌂", "Home"]];
 const TERMINAL_NAV: [View, string, string][] = [
-  ["home", "⌂", "Overview"],
   ["market", "▥", "Market Monitor"],
-  ["portfolio", "◫", "Order Workbench"],
-  ["progress", "⌁", "Performance"],
-  ["puzzles", "◇", "Scenario Lab"],
-  ["lessons", "▤", "Research Academy"],
-  ["leaderboard", "♜", "Analyst Rankings"],
-  ["news", "◉", "Newswire"],
+  ["review", "◫", "Game Board"],
 ];
 
 function Badge() {
@@ -191,7 +178,14 @@ function Shell({
           {navigation.map(([id, icon, label]) => (
             <button
               key={id}
-              className={view === id ? "active" : ""}
+              className={
+                view === id ||
+                (id === "market" && ["stock", "news"].includes(view)) ||
+                (id === "review" &&
+                  ["result", "progress", "portfolio"].includes(view))
+                  ? "active"
+                  : ""
+              }
               onClick={() => setView(id)}
             >
               <span>{icon}</span>
@@ -201,7 +195,7 @@ function Shell({
         </nav>
         <div className="rail-foot">
           <Badge />
-          <button onClick={() => setView("profile")}>
+          <div className="player-identity">
             <span className="avatar">AT</span>
             <span>
               <b>{terminalMode ? "Arjun · Strategy Desk" : "Arjun Trader"}</b>
@@ -209,7 +203,7 @@ function Shell({
                 {terminalMode ? "Decision rating 1450" : "Rating 1450"}
               </small>
             </span>
-          </button>
+          </div>
         </div>
       </aside>
       <main>
@@ -259,9 +253,6 @@ function Home({
                 START A CAMPAIGN <b>→</b>
               </button>
             )}
-            <button className="secondary" onClick={() => setView("puzzles")}>
-              TRY A PUZZLE
-            </button>
           </div>
         </div>
         <div className="orb">
@@ -310,30 +301,21 @@ function Home({
           </div>
         </div>
       )}
-      <div className="dashboard-grid">
-        <button className="feature-card" onClick={() => setView("progress")}>
-          <span className="feature-icon green">⌁</span>
-          <b>Campaign intelligence</b>
+      <div className="dashboard-grid gameplay-only-grid">
+        <div className="feature-card">
+          <span className="feature-icon green">▥</span>
+          <b>Market Monitor</b>
           <p>
-            See performance, decision quality and where your edge comes from.
+            Read the simulated market and construct one complete monthly move.
           </p>
-          <strong>Open analysis →</strong>
-        </button>
-        <button className="feature-card" onClick={() => setView("puzzles")}>
-          <span className="feature-icon purple">◇</span>
-          <b>Daily puzzle</b>
+        </div>
+        <div className="feature-card">
+          <span className="feature-icon purple">◫</span>
+          <b>Rated Game Board</b>
           <p>
-            A concentrated portfolio meets a sudden rate shock. Find the
-            resilient move.
+            Commit permanently, chase Nifty and study every move in your record.
           </p>
-          <strong>Solve puzzle →</strong>
-        </button>
-        <button className="feature-card" onClick={() => setView("lessons")}>
-          <span className="feature-icon amber">▤</span>
-          <b>Skill lab</b>
-          <p>Short lessons adapt to the mistakes you actually make.</p>
-          <strong>Continue lesson →</strong>
-        </button>
+        </div>
       </div>
     </section>
   );
@@ -1352,6 +1334,7 @@ export default function App() {
     [stock, setStock] = useState<Stock | null>(null),
     [trades, setTrades] = useState<Trade[]>([]),
     [result, setResult] = useState<MoveResult | null>(null),
+    [reviewData, setReviewData] = useState<MoveReview | null>(null),
     [busy, setBusy] = useState(true),
     [error, setError] = useState("");
   useEffect(() => {
@@ -1377,6 +1360,8 @@ export default function App() {
       setCampaign(c);
       setMarket(await api.market(c.campaign_id));
       setTrades([]);
+      setResult(null);
+      setReviewData(null);
       setView("market");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not create campaign");
@@ -1403,9 +1388,10 @@ export default function App() {
       );
       setCampaign(x.campaign);
       setResult(x.result);
+      setReviewData(null);
       setMarket(await api.market(x.campaign.campaign_id));
       setTrades([]);
-      setView("result");
+      setView("review");
     } catch (e) {
       if (e instanceof APIRequestError && e.code === "SESSION_RESET") {
         setCampaign(null);
@@ -1418,6 +1404,23 @@ export default function App() {
     } finally {
       setBusy(false);
     }
+  };
+  const reviewMove = async (move: number) => {
+    if (!campaign) return;
+    setBusy(true);
+    try {
+      setReviewData(await api.reviewMove(campaign.campaign_id, move));
+      setView("review");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Move history unavailable");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const continueGame = () => {
+    setResult(null);
+    setReviewData(null);
+    setView("market");
   };
   const content = useMemo(() => {
     if (busy && !campaign)
@@ -1448,8 +1451,11 @@ export default function App() {
           market={market}
           campaign={campaign}
           select={select}
-          buildMove={() => setView("portfolio")}
-          openNews={() => setView("news")}
+          buildMove={() => {
+            setResult(null);
+            setReviewData(null);
+            setView("review");
+          }}
           trades={trades}
           setTrades={setTrades}
         />
@@ -1462,45 +1468,31 @@ export default function App() {
           campaign={campaign}
           add={add}
           back={() => setView("market")}
-          openWorkbench={() => setView("portfolio")}
-        />
-      );
-    if (view === "portfolio" && campaign && market)
-      return (
-        <PortfolioWorkbench
-          campaign={campaign}
-          market={market}
-          trades={trades}
-          setTrades={setTrades}
-          review={() => setView("review")}
-          backToMarket={() => setView("market")}
+          openWorkbench={() => setView("market")}
         />
       );
     if (view === "review" && campaign && market)
       return (
-        <Review
+        <GameBoard
           campaign={campaign}
           market={market}
           trades={trades}
+          result={result}
+          reviewData={reviewData}
           execute={execute}
           busy={busy}
-          setView={setView}
+          editMove={() => setView("market")}
+          continueGame={continueGame}
+          reviewMove={reviewMove}
+          returnLive={() => setReviewData(null)}
         />
       );
     if (view === "result" && result && campaign)
       return <Result result={result} campaign={campaign} setView={setView} />;
     if (view === "progress" && campaign)
       return <Progress campaign={campaign} />;
-    if (view === "news" && campaign && market)
-      return (
-        <NewsTerminal
-          campaign={campaign}
-          market={market}
-          backToMarket={() => setView("market")}
-        />
-      );
     return <Explore view={view} setView={setView} campaign={campaign} />;
-  }, [view, campaign, market, stock, trades, result, busy, error]);
+  }, [view, campaign, market, stock, trades, result, reviewData, busy, error]);
   return (
     <Shell view={view} setView={setView} campaign={campaign}>
       {error && campaign && (
