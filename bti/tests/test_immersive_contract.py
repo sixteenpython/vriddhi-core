@@ -140,3 +140,25 @@ def test_frontend_keeps_simulation_boundary_visible() -> None:
     assert "SIMULATION MODE" in app
     assert "The stocks are real. The market you are about to play in is not." in app
     assert "not a live quote or investment recommendation" in app
+
+
+def test_research_and_market_analysis_surfaces_remain_first_class() -> None:
+    terminal = (WEB / "src" / "Terminal.tsx").read_text(encoding="utf-8")
+    research = (WEB / "src" / "StockResearch.tsx").read_text(encoding="utf-8")
+
+    for phrase in (
+        "Minimum forecast",
+        "Maximum PEG",
+        "TOP GAINERS",
+        "TOP LOSERS",
+        "MONTHLY MOVERS",
+    ):
+        assert phrase in terminal
+    for phrase in (
+        "SIMULATED OHLC",
+        "FORECAST TERM STRUCTURE",
+        "VALUATION · QUALITY · RISK MATRIX",
+        "NEWS & CATALYST MONITOR",
+        "SIMULATION MODE",
+    ):
+        assert phrase in research

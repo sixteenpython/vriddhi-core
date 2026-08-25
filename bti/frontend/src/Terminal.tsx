@@ -13,6 +13,28 @@ type PortfolioProps = BaseProps & {
   review: () => void;
   backToMarket: () => void;
 };
+type SortKey =
+  | "ticker"
+  | "price"
+  | "change"
+  | "pe"
+  | "pb"
+  | "peg"
+  | "sharpe"
+  | "volatility"
+  | "drawdown"
+  | "var"
+  | "forecast";
+type ColumnFilters = {
+  sector: string;
+  peMax: string;
+  pbMax: string;
+  pegMax: string;
+  sharpeMin: string;
+  volatilityMax: string;
+  drawdownMax: string;
+  forecastMin: string;
+};
 
 const rupees = (paise: number, compact = false) => {
   const value = paise / 100;
@@ -117,9 +139,22 @@ export function MarketTerminal({
 }: MarketProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("ALL");
-  const [sort, setSort] = useState<"ticker" | "forecast" | "sharpe" | "peg">(
-    "ticker",
+  const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>(
+    {
+      key: "ticker",
+      direction: "asc",
+    },
   );
+  const [columns, setColumns] = useState<ColumnFilters>({
+    sector: "ALL",
+    peMax: "",
+    pbMax: "",
+    pegMax: "",
+    sharpeMin: "",
+    volatilityMax: "",
+    drawdownMax: "",
+    forecastMin: "",
+  });
   const analytics = useMemo(() => {
     const advances = market.stocks.filter((stock) => change(stock) > 0).length;
     const declines = market.stocks.filter((stock) => change(stock) < 0).length;
@@ -163,6 +198,43 @@ export function MarketTerminal({
       ranked,
     };
   }, [market]);
+  const sectors = [
+    ...new Set(market.stocks.map((stock) => stock.sector)),
+  ].sort();
+  const numberPass = (value: number, raw: string, mode: "min" | "max") =>
+    raw === "" ||
+    (mode === "min" ? value >= Number(raw) : value <= Number(raw));
+  const sortValue = (stock: Stock, key: SortKey): number | string => {
+    if (key === "ticker") return stock.ticker;
+    if (key === "price") return stock.close_paise;
+    if (key === "change") return change(stock);
+    if (key === "volatility") return stock.volatility_pct;
+    if (key === "drawdown") return stock.drawdown_pct;
+    if (key === "var") return stock.var_95_pct;
+    if (key === "forecast") return stock.forecast_pct;
+    return stock[key];
+  };
+  const chooseSort = (key: SortKey) =>
+    setSort((current) => ({
+      key,
+      direction:
+        current.key === key && current.direction === "desc" ? "asc" : "desc",
+    }));
+  const sortMark = (key: SortKey) =>
+    sort.key === key ? (sort.direction === "asc" ? "▲" : "▼") : "↕";
+  const updateColumn = (key: keyof ColumnFilters, value: string) =>
+    setColumns((current) => ({ ...current, [key]: value }));
+  const clearColumns = () =>
+    setColumns({
+      sector: "ALL",
+      peMax: "",
+      pbMax: "",
+      pegMax: "",
+      sharpeMin: "",
+      volatilityMax: "",
+      drawdownMax: "",
+      forecastMin: "",
+    });
   const visible = [...market.stocks]
     .filter((stock) =>
       `${stock.ticker} ${stock.sector}`
@@ -177,12 +249,34 @@ export function MarketTerminal({
       if (filter === "HELD") return Boolean(campaign.holdings[stock.ticker]);
       return true;
     })
+    .filter(
+      (stock) =>
+        (columns.sector === "ALL" || stock.sector === columns.sector) &&
+        numberPass(stock.pe, columns.peMax, "max") &&
+        numberPass(stock.pb, columns.pbMax, "max") &&
+        numberPass(stock.peg, columns.pegMax, "max") &&
+        numberPass(stock.sharpe, columns.sharpeMin, "min") &&
+        numberPass(stock.volatility_pct, columns.volatilityMax, "max") &&
+        numberPass(Math.abs(stock.drawdown_pct), columns.drawdownMax, "max") &&
+        numberPass(stock.forecast_pct, columns.forecastMin, "min"),
+    )
     .sort((a, b) => {
-      if (sort === "forecast") return b.forecast_pct - a.forecast_pct;
-      if (sort === "sharpe") return b.sharpe - a.sharpe;
-      if (sort === "peg") return (a.peg || 999) - (b.peg || 999);
-      return a.ticker.localeCompare(b.ticker);
+      const left = sortValue(a, sort.key);
+      const right = sortValue(b, sort.key);
+      const comparison =
+        typeof left === "string"
+          ? left.localeCompare(String(right))
+          : left - Number(right);
+      return sort.direction === "asc" ? comparison : -comparison;
     });
+  const gainers = [...market.stocks]
+    .filter((stock) => change(stock) > 0)
+    .sort((a, b) => change(b) - change(a))
+    .slice(0, 5);
+  const losers = [...market.stocks]
+    .filter((stock) => change(stock) < 0)
+    .sort((a, b) => change(a) - change(b))
+    .slice(0, 5);
   const tape = [
     ["NIFTY 50", "24,812.45", "0.73", [98, 101, 99, 103, 104, 108, 107, 112]],
     [
@@ -287,31 +381,127 @@ export function MarketTerminal({
                 </button>
               ))}
             </div>
-            <select
-              value={sort}
-              onChange={(event) => setSort(event.target.value as typeof sort)}
-              aria-label="Sort market"
-            >
-              <option value="ticker">SORT: TICKER</option>
-              <option value="forecast">SORT: FORECAST</option>
-              <option value="sharpe">SORT: SHARPE</option>
-              <option value="peg">SORT: PEG</option>
-            </select>
+            <span className="filter-status">
+              {visible.length}/{market.stocks.length} ROWS · SORT{" "}
+              {sort.key.toUpperCase()} {sort.direction === "asc" ? "▲" : "▼"}
+            </span>
+            <button className="clear-filters" onClick={clearColumns}>
+              CLEAR COLUMN FILTERS
+            </button>
           </div>
           <div className="pro-table">
             <div className="pro-row pro-head">
-              <span>SECURITY</span>
-              <span>LAST</span>
-              <span>SIM Δ</span>
+              <button onClick={() => chooseSort("ticker")}>
+                SECURITY {sortMark("ticker")}
+              </button>
+              <button onClick={() => chooseSort("price")}>
+                LAST {sortMark("price")}
+              </button>
+              <button onClick={() => chooseSort("change")}>
+                SIM Δ {sortMark("change")}
+              </button>
               <span>INTRAMONTH</span>
-              <span>PE</span>
-              <span>PB</span>
-              <span>PEG</span>
-              <span>SHARPE</span>
-              <span>VOL</span>
-              <span>DD</span>
-              <span>VaR 95</span>
-              <span>SIM 12M</span>
+              <button onClick={() => chooseSort("pe")}>
+                PE {sortMark("pe")}
+              </button>
+              <button onClick={() => chooseSort("pb")}>
+                PB {sortMark("pb")}
+              </button>
+              <button onClick={() => chooseSort("peg")}>
+                PEG {sortMark("peg")}
+              </button>
+              <button onClick={() => chooseSort("sharpe")}>
+                SHARPE {sortMark("sharpe")}
+              </button>
+              <button onClick={() => chooseSort("volatility")}>
+                VOL {sortMark("volatility")}
+              </button>
+              <button onClick={() => chooseSort("drawdown")}>
+                DD {sortMark("drawdown")}
+              </button>
+              <button onClick={() => chooseSort("var")}>
+                VaR 95 {sortMark("var")}
+              </button>
+              <button onClick={() => chooseSort("forecast")}>
+                SIM 12M {sortMark("forecast")}
+              </button>
+            </div>
+            <div className="pro-row pro-filter-row">
+              <select
+                value={columns.sector}
+                onChange={(event) => updateColumn("sector", event.target.value)}
+                aria-label="Filter sector"
+              >
+                <option>ALL</option>
+                {sectors.map((sector) => (
+                  <option key={sector}>{sector}</option>
+                ))}
+              </select>
+              <span />
+              <span />
+              <small>
+                CLICK HEADERS
+                <br />
+                TO SORT
+              </small>
+              <input
+                value={columns.peMax}
+                onChange={(event) => updateColumn("peMax", event.target.value)}
+                placeholder="≤ max"
+                inputMode="decimal"
+                aria-label="Maximum PE"
+              />
+              <input
+                value={columns.pbMax}
+                onChange={(event) => updateColumn("pbMax", event.target.value)}
+                placeholder="≤ max"
+                inputMode="decimal"
+                aria-label="Maximum PB"
+              />
+              <input
+                value={columns.pegMax}
+                onChange={(event) => updateColumn("pegMax", event.target.value)}
+                placeholder="≤ max"
+                inputMode="decimal"
+                aria-label="Maximum PEG"
+              />
+              <input
+                value={columns.sharpeMin}
+                onChange={(event) =>
+                  updateColumn("sharpeMin", event.target.value)
+                }
+                placeholder="≥ min"
+                inputMode="decimal"
+                aria-label="Minimum Sharpe"
+              />
+              <input
+                value={columns.volatilityMax}
+                onChange={(event) =>
+                  updateColumn("volatilityMax", event.target.value)
+                }
+                placeholder="≤ max"
+                inputMode="decimal"
+                aria-label="Maximum volatility"
+              />
+              <input
+                value={columns.drawdownMax}
+                onChange={(event) =>
+                  updateColumn("drawdownMax", event.target.value)
+                }
+                placeholder="≤ abs"
+                inputMode="decimal"
+                aria-label="Maximum drawdown"
+              />
+              <span />
+              <input
+                value={columns.forecastMin}
+                onChange={(event) =>
+                  updateColumn("forecastMin", event.target.value)
+                }
+                placeholder="≥ min"
+                inputMode="decimal"
+                aria-label="Minimum forecast"
+              />
             </div>
             {visible.map((stock) => {
               const move = change(stock);
@@ -362,6 +552,15 @@ export function MarketTerminal({
                 </button>
               );
             })}
+            {!visible.length && (
+              <div className="market-empty">
+                <b>NO SECURITIES MATCH THESE FILTERS</b>
+                <span>
+                  Clear one or more column conditions to restore the decision
+                  universe.
+                </span>
+              </div>
+            )}
           </div>
         </div>
         <aside className="terminal-side">
@@ -403,6 +602,42 @@ export function MarketTerminal({
                 <strong>+{stock.forecast_pct.toFixed(1)}%</strong>
               </button>
             ))}
+          </div>
+          <div className="terminal-panel movers-monitor">
+            <div className="panel-label">
+              <span>MONTHLY MOVERS</span>
+              <small>TOP 5 EACH</small>
+            </div>
+            <div className="movers-columns">
+              <div>
+                <b>GAINERS</b>
+                {gainers.length === 0 && <small>Awaiting first move</small>}
+                {gainers.map((stock, index) => (
+                  <button key={stock.ticker} onClick={() => select(stock)}>
+                    <span>
+                      {index + 1}. {stock.ticker}
+                    </span>
+                    <strong className="positive">
+                      {signed(change(stock))}
+                    </strong>
+                  </button>
+                ))}
+              </div>
+              <div>
+                <b>LOSERS</b>
+                {losers.length === 0 && <small>Awaiting first move</small>}
+                {losers.map((stock, index) => (
+                  <button key={stock.ticker} onClick={() => select(stock)}>
+                    <span>
+                      {index + 1}. {stock.ticker}
+                    </span>
+                    <strong className={change(stock) < 0 ? "negative" : ""}>
+                      {signed(change(stock))}
+                    </strong>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="terminal-panel event-monitor">
             <div className="panel-label">
@@ -902,6 +1137,14 @@ export function NewsTerminal({
   const movers = [...market.stocks]
     .sort((a, b) => Math.abs(change(b)) - Math.abs(change(a)))
     .slice(0, 6);
+  const gainers = [...market.stocks]
+    .filter((stock) => change(stock) > 0)
+    .sort((a, b) => change(b) - change(a))
+    .slice(0, 8);
+  const losers = [...market.stocks]
+    .filter((stock) => change(stock) < 0)
+    .sort((a, b) => change(a) - change(b))
+    .slice(0, 8);
   return (
     <section className="terminal-page news-terminal">
       <div className="terminal-commandbar">
@@ -936,6 +1179,56 @@ export function NewsTerminal({
         <button>EARNINGS</button>
         <button>SECTORS</button>
         <span>ALL CONTENT IS GENERATED FOR THIS SIMULATION</span>
+      </div>
+      <div className="news-movers-board">
+        <div className="terminal-panel">
+          <div className="panel-label">
+            <span>TOP GAINERS · THIS SIMULATED MONTH</span>
+            <small>RANKED BY OPEN-TO-LAST</small>
+          </div>
+          {gainers.length === 0 && (
+            <p className="movers-empty">
+              No positive moves yet in this campaign month.
+            </p>
+          )}
+          {gainers.map((stock, index) => (
+            <div className="news-mover-row" key={stock.ticker}>
+              <b>{String(index + 1).padStart(2, "0")}</b>
+              <span>
+                {stock.ticker}
+                <small>{stock.sector}</small>
+              </span>
+              <MiniChart values={stock.history_paise} tone="green" />
+              <em>{rupees(stock.close_paise)}</em>
+              <strong className="positive">{signed(change(stock))}</strong>
+            </div>
+          ))}
+        </div>
+        <div className="terminal-panel">
+          <div className="panel-label">
+            <span>TOP LOSERS · THIS SIMULATED MONTH</span>
+            <small>RANKED BY OPEN-TO-LAST</small>
+          </div>
+          {losers.length === 0 && (
+            <p className="movers-empty">
+              No negative moves yet in this campaign month.
+            </p>
+          )}
+          {losers.map((stock, index) => (
+            <div className="news-mover-row" key={stock.ticker}>
+              <b>{String(index + 1).padStart(2, "0")}</b>
+              <span>
+                {stock.ticker}
+                <small>{stock.sector}</small>
+              </span>
+              <MiniChart values={stock.history_paise} tone="red" />
+              <em>{rupees(stock.close_paise)}</em>
+              <strong className={change(stock) < 0 ? "negative" : ""}>
+                {signed(change(stock))}
+              </strong>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="newsroom-grid">
         <main className="newsroom-main">

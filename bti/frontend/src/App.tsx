@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   api,
+  APIRequestError,
   ensureSession,
   type Campaign,
   type Market,
@@ -9,6 +10,7 @@ import {
   type Trade,
 } from "./api";
 import { MarketTerminal, NewsTerminal, PortfolioWorkbench } from "./Terminal";
+import { StockResearch } from "./StockResearch";
 
 type View =
   | "home"
@@ -1333,6 +1335,13 @@ export default function App() {
       setTrades([]);
       setView("result");
     } catch (e) {
+      if (e instanceof APIRequestError && e.code === "SESSION_RESET") {
+        setCampaign(null);
+        setMarket(null);
+        setStock(null);
+        setTrades([]);
+        setView("home");
+      }
       setError(e instanceof Error ? e.message : "Move failed");
     } finally {
       setBusy(false);
@@ -1371,13 +1380,15 @@ export default function App() {
           openNews={() => setView("news")}
         />
       );
-    if (view === "stock" && stock && market)
+    if (view === "stock" && stock && market && campaign)
       return (
-        <StockDetail
+        <StockResearch
           stock={stock}
           market={market}
+          campaign={campaign}
           add={add}
-          setView={setView}
+          back={() => setView("market")}
+          openWorkbench={() => setView("portfolio")}
         />
       );
     if (view === "portfolio" && campaign && market)

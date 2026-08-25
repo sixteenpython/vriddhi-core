@@ -20,6 +20,8 @@ export type Campaign = {
 export type Stock = {
   ticker: string;
   sector: string;
+  overall_rank: number;
+  historical_cagr_pct: number;
   open_paise: number;
   high_paise: number;
   low_paise: number;
@@ -34,6 +36,18 @@ export type Stock = {
   var_95_pct: number;
   expected_shortfall_95_pct: number;
   history_paise: number[];
+  ohlc_history: Array<{
+    month: number;
+    open_paise: number;
+    high_paise: number;
+    low_paise: number;
+    close_paise: number;
+  }>;
+  forecast_curve: Array<{
+    months: number;
+    annualized_pct: number;
+    cumulative_pct: number;
+  }>;
 };
 export type Market = {
   label: string;
@@ -65,7 +79,42 @@ export type MoveResult = {
 };
 
 const TOKEN = "bti_access_token";
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export class APIRequestError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public status: number,
+  ) {
+    super(message);
+  }
+}
+let renewal: Promise<void> | null = null;
+async function createSession() {
+  if (!renewal) {
+    renewal = (async () => {
+      const response = await fetch("/api/v1/showcase/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+      });
+      const payload = await response.json();
+      if (!response.ok)
+        throw new APIRequestError(
+          payload?.error?.message || "Could not start a showcase session.",
+          payload?.error?.code || "SESSION_START_FAILED",
+          response.status,
+        );
+      localStorage.setItem(TOKEN, payload.data.access_token);
+    })().finally(() => {
+      renewal = null;
+    });
+  }
+  await renewal;
+}
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  allowRecovery = true,
+): Promise<T> {
   const token = localStorage.getItem(TOKEN);
   const response = await fetch(path, {
     ...init,
@@ -76,11 +125,26 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     },
   });
   const payload = await response.json();
-  if (!response.ok)
-    throw new Error(
+  if (!response.ok) {
+    if (response.status === 401 && allowRecovery) {
+      localStorage.removeItem(TOKEN);
+      await createSession();
+      const mutatingMove = path.includes("/moves") && init.method === "POST";
+      if (mutatingMove)
+        throw new APIRequestError(
+          "The anonymous showcase restarted during a deployment. Start a fresh campaign before submitting another move.",
+          "SESSION_RESET",
+          401,
+        );
+      return request<T>(path, init, false);
+    }
+    throw new APIRequestError(
       payload?.error?.message ||
         "The game server could not complete that request.",
+      payload?.error?.code || "REQUEST_FAILED",
+      response.status,
     );
+  }
   return payload.data as T;
 }
 export async function ensureSession() {
@@ -92,11 +156,7 @@ export async function ensureSession() {
       localStorage.removeItem(TOKEN);
     }
   }
-  const data = await request<{ access_token: string }>(
-    "/api/v1/showcase/session",
-    { method: "POST" },
-  );
-  localStorage.setItem(TOKEN, data.access_token);
+  await createSession();
 }
 const withCurrentContribution = (campaign: Campaign): Campaign => ({
   ...campaign,

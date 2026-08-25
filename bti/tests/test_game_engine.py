@@ -79,6 +79,16 @@ def test_public_payload_never_exposes_private_oracle() -> None:
     assert game.market_view()["label"] == "SIMULATED MARKET"
 
 
+def test_public_stock_research_projection_is_rich_and_chartable() -> None:
+    game = BTIGame.create(25_000, 36, "research-projection")
+    stock = game.market_view()["stocks"][0]
+    assert stock["overall_rank"] > 0
+    assert isinstance(stock["historical_cagr_pct"], float)
+    assert len(stock["ohlc_history"]) >= 12
+    assert stock["ohlc_history"][-1]["close_paise"] == stock["close_paise"]
+    assert [point["months"] for point in stock["forecast_curve"]] == [12, 24, 36, 48, 60]
+
+
 @pytest.mark.parametrize("horizon", [24, 36, 48, 60])
 def test_complete_campaign_smoke(horizon: int) -> None:
     game = BTIGame.create(10_000, horizon, f"smoke-{horizon}")

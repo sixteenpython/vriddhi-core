@@ -15,6 +15,33 @@ def _rng(seed: str, *parts: object) -> random.Random:
     return random.Random(int.from_bytes(digest[:8], "big"))
 
 
+def _simulated_lookback(
+    ticker: str, price: int, annual_vol: float, horizon: int
+) -> list[dict[str, int]]:
+    """Create a deterministic pre-campaign OHLC context ending at the opening quote."""
+    rng = _rng("lookback", ticker, horizon)
+    closes = [price]
+    for _ in range(17):
+        reverse_return = max(-0.12, min(0.12, rng.gauss(0.006, annual_vol / math.sqrt(12))))
+        closes.insert(0, max(100, round(closes[0] / (1 + reverse_return))))
+    candles: list[dict[str, int]] = []
+    for index, close in enumerate(closes):
+        opening = closes[index - 1] if index else close
+        spread = abs(rng.gauss(0, annual_vol / math.sqrt(252)))
+        high = max(opening, close, round(max(opening, close) * (1 + spread)))
+        low = max(100, min(opening, close, round(min(opening, close) * (1 - spread))))
+        candles.append(
+            {
+                "month": index - len(closes) + 1,
+                "open_paise": opening,
+                "high_paise": high,
+                "low_paise": low,
+                "close_paise": close,
+            }
+        )
+    return candles
+
+
 def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str, Any]:
     market = {}
     for ticker, stock in stocks.items():
@@ -23,9 +50,12 @@ def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str,
         vol = min(
             55.0, max(12.0, 13.0 + abs(float(stock["Risk_Adjusted_Return"]) - forecast) * 0.65)
         )
+        lookback = _simulated_lookback(ticker, price, vol / 100, horizon)
         market[ticker] = {
             "ticker": ticker,
             "sector": stock["sector"],
+            "overall_rank": int(stock["Overall_Rank"]),
+            "historical_cagr_pct": float(stock["Avg_Historical_CAGR"]),
             "price_paise": price,
             "open_paise": price,
             "high_paise": price,
@@ -42,7 +72,16 @@ def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str,
             "expected_shortfall_95_pct": 2.063 * vol / math.sqrt(12),
             "peak_paise": price,
             "returns": [],
-            "history_paise": [price],
+            "history_paise": [item["close_paise"] for item in lookback],
+            "ohlc_history": lookback,
+            "forecast_curve": [
+                {
+                    "months": months,
+                    "annualized_pct": float(stock[f"Forecast_{months}M"]),
+                    "cumulative_pct": float(stock[f"Expected_Returns_{months}M"]),
+                }
+                for months in (12, 24, 36, 48, 60)
+            ],
         }
     return market
 
@@ -88,6 +127,16 @@ def advance_market(market: dict[str, Any], seed: str, month: int) -> tuple[dict[
                 "close_paise": close,
                 "returns": returns,
                 "history_paise": [*previous["history_paise"], close][-61:],
+                "ohlc_history": [
+                    *previous.get("ohlc_history", []),
+                    {
+                        "month": month,
+                        "open_paise": opening,
+                        "high_paise": high,
+                        "low_paise": low,
+                        "close_paise": close,
+                    },
+                ][-61:],
                 "peak_paise": peak,
                 "pe": max(1.0, previous["pe"] * (1 + ret)),
                 "pb": max(0.1, previous["pb"] * (1 + ret)),
@@ -98,6 +147,22 @@ def advance_market(market: dict[str, Any], seed: str, month: int) -> tuple[dict[
                 "drawdown_pct": drawdown,
                 "var_95_pct": 1.645 * realised_vol / math.sqrt(12) * 100,
                 "expected_shortfall_95_pct": 2.063 * realised_vol / math.sqrt(12) * 100,
+                "forecast_curve": [
+                    {
+                        "months": point["months"],
+                        "annualized_pct": max(
+                            -12.0,
+                            min(35.0, point["annualized_pct"] * 0.99 + ret * 18),
+                        ),
+                        "cumulative_pct": (
+                            (1 + max(-0.95, point["annualized_pct"] * 0.99 + ret * 18) / 100)
+                            ** (point["months"] / 12)
+                            - 1
+                        )
+                        * 100,
+                    }
+                    for point in previous.get("forecast_curve", [])
+                ],
             }
         )
         updated[ticker] = item
@@ -108,6 +173,8 @@ def public_market(market: dict[str, Any], month: int, data_through: str) -> dict
     fields = {
         "ticker",
         "sector",
+        "overall_rank",
+        "historical_cagr_pct",
         "open_paise",
         "high_paise",
         "low_paise",
@@ -122,6 +189,8 @@ def public_market(market: dict[str, Any], month: int, data_through: str) -> dict
         "var_95_pct",
         "expected_shortfall_95_pct",
         "history_paise",
+        "ohlc_history",
+        "forecast_curve",
     }
     visible = [
         {k: round(v, 4) if isinstance(v, float) else v for k, v in item.items() if k in fields}
