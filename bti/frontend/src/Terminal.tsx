@@ -121,7 +121,8 @@ export function MarketTerminal({
     "ticker",
   );
   const analytics = useMemo(() => {
-    const advances = market.stocks.filter((stock) => change(stock) >= 0).length;
+    const advances = market.stocks.filter((stock) => change(stock) > 0).length;
+    const declines = market.stocks.filter((stock) => change(stock) < 0).length;
     const sectors = Object.entries(
       market.stocks.reduce<Record<string, Stock[]>>((groups, stock) => {
         (groups[stock.sector] ||= []).push(stock);
@@ -148,7 +149,7 @@ export function MarketTerminal({
     );
     return {
       advances,
-      declines: market.stocks.length - advances,
+      declines,
       medianPeg: median(
         market.stocks.map((stock) => stock.peg).filter((peg) => peg > 0),
       ),
@@ -183,17 +184,17 @@ export function MarketTerminal({
       return a.ticker.localeCompare(b.ticker);
     });
   const tape = [
-    ["NIFTY 50", "24,812.45", "+0.73", [98, 101, 99, 103, 104, 108, 107, 112]],
+    ["NIFTY 50", "24,812.45", "0.73", [98, 101, 99, 103, 104, 108, 107, 112]],
     [
       "BANK NIFTY",
       "55,240.10",
-      "+0.42",
+      "0.42",
       [101, 99, 102, 106, 105, 108, 110, 111],
     ],
     ["INDIA VIX", "13.82", "-2.18", [110, 108, 111, 105, 103, 101, 99, 97]],
-    ["USD / INR", "83.74", "+0.06", [99, 100, 100, 101, 100, 102, 102, 103]],
+    ["USD / INR", "83.74", "0.06", [99, 100, 100, 101, 100, 102, 102, 103]],
     ["BRENT", "$81.20", "-0.91", [112, 109, 110, 105, 107, 102, 101, 99]],
-    ["GOLD", "₹72,430", "+0.31", [100, 101, 103, 102, 105, 104, 106, 108]],
+    ["GOLD", "₹72,430", "0.31", [100, 101, 103, 102, 105, 104, 106, 108]],
   ] as const;
   return (
     <section className="terminal-page">
