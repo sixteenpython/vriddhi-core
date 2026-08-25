@@ -84,7 +84,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return payload.data as T;
 }
 export async function ensureSession() {
-  if (localStorage.getItem(TOKEN)) return;
+  if (localStorage.getItem(TOKEN)) {
+    try {
+      await request<Campaign[]>("/api/v1/campaigns");
+      return;
+    } catch {
+      localStorage.removeItem(TOKEN);
+    }
+  }
   const data = await request<{ access_token: string }>(
     "/api/v1/showcase/session",
     { method: "POST" },

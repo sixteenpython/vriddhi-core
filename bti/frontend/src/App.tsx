@@ -1354,7 +1354,8 @@ export default function App() {
           <h1>The game engine is offline.</h1>
           <p>{error}</p>
           <code>
-            Start the BTI backend on port 8765, then reload this page.
+            Reload the page. If this persists, the simulation service is
+            restarting.
           </code>
         </div>
       );
