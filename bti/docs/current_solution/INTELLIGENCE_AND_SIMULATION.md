@@ -25,6 +25,9 @@ For each security, the engine constructs an initial generated market containing:
 - volatility and Sharpe;
 - running drawdown;
 - 95% VaR and expected shortfall.
+- 252 daily OHLC candles, activity index, momentum and RSI;
+- beta, ROE, earnings growth, profit margin, leverage and dividend yield;
+- bounded sentiment derived from the generated market state.
 
 Real ticker identities are retained. The displayed numbers are gameplay data and are explicitly
 labelled simulated.
@@ -73,7 +76,7 @@ decision can get lucky. BTI explains both without confusing them.
 
 ## Deterministic forward market
 
-`bti-forward-2026-08-v1` derives an independent pseudo-random stream from the campaign seed, month,
+`bti-calibrated-synthetic-2026-08-v2` derives an independent pseudo-random stream from the campaign seed, month,
 sector and ticker. Each monthly return combines:
 
 - a common market shock;
@@ -86,11 +89,17 @@ Returns are capped to control unusable scenario extremes. The engine then update
 history, PE, PB, PEG, forecast, realised volatility, Sharpe, drawdown, VaR and expected shortfall.
 The simulated Nifty uses the common factor with its own drift and volatility assumptions.
 
-At campaign creation the public projection also builds an 18-period deterministic pre-campaign
-OHLC lookback from the opening quote and artifact volatility. It exposes a 12/24/36/48/60-month
+At campaign creation the public projection builds a 252-trading-day deterministic pre-campaign
+OHLC lookback from the opening quote and artifact volatility. Each campaign month adds 21 daily
+candles that bridge exactly to the authoritative simulated close. It exposes a 12/24/36/48/60-month
 forecast term structure derived from the governed Vriddhi columns. These are generated research
 surfaces for charting—not historical/live exchange observations—and contain no hidden reference
 weights or future realised prices.
+
+BTI deliberately does not copy, slightly perturb and conceal an identifiable historical trading
+day. Realism comes from calibrated relationships, coherent accounting and reproducible factor
+behaviour—not from relabelling delayed market facts as fictional. See
+[CALIBRATED_SYNTHETIC_MARKET.md](CALIBRATED_SYNTHETIC_MARKET.md).
 
 Identical seed, release, horizon and inputs produce identical results. The simulator cannot inspect
 the player's portfolio and therefore cannot reward or punish a chosen stock.

@@ -27,8 +27,8 @@ architecture language, public/private boundaries and persistent simulation discl
 
 ### Frontend tests and build
 
-The frontend runs TypeScript type-checking, Vitest economics/session-recovery tests and a production
-Vite build. The release baseline passed 4 frontend tests and 23 Python tests.
+The frontend runs TypeScript type-checking, Vitest economics/session-recovery/draft-portfolio tests
+and a production Vite build. The release baseline passed 6 frontend tests and 23 Python tests.
 
 ## Manual live smoke test used for this baseline
 
@@ -37,14 +37,17 @@ Vite build. The release baseline passed 4 frontend tests and 23 Python tests.
 3. Verify automatic anonymous-session recovery.
 4. Start a 36-move campaign.
 5. Confirm professional contextual navigation.
-6. Confirm 50 securities load with public metrics and multi-column sort/filter controls.
+6. Confirm 50 securities load with public metrics, multi-column sort/filter controls and direct
+   portfolio construction.
 7. Open a security and verify OHLC, forecast, ratios, generated catalysts and peer comparison.
 8. Stage a whole-share order and confirm quantity, price and `+` control never collide.
 9. Review and commit the move; verify the score reveal and advance to the next month.
 10. Confirm Market Monitor and Newswire show directionally correct gainers and losers.
 11. Confirm opening breadth shows `0 : 0` when every security is flat.
 12. Confirm `+0.73%` renders once, not `++0.73%`.
-13. Confirm simulation markers remain visible on every research/execution surface.
+13. Confirm the configurable cockpit layout persists and the expanded OHLC explorer renders data.
+14. Confirm Month 2 shows Month 1 holdings, EXIT/HOLD semantics and net draft reconciliation.
+15. Confirm simulation markers remain visible on every research/execution surface.
 
 ## Local runbook
 

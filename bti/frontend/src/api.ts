@@ -35,6 +35,16 @@ export type Stock = {
   drawdown_pct: number;
   var_95_pct: number;
   expected_shortfall_95_pct: number;
+  volume_index: number;
+  sentiment_score: number;
+  momentum_90d_pct: number;
+  rsi_14: number;
+  beta: number;
+  roe_pct: number;
+  earnings_growth_pct: number;
+  profit_margin_pct: number;
+  debt_to_equity: number;
+  dividend_yield_pct: number;
   history_paise: number[];
   ohlc_history: Array<{
     month: number;

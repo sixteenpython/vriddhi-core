@@ -1,11 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Campaign, Market, Stock, Trade } from "./api";
+import {
+  buildDraftPortfolio,
+  draftDeltaFor,
+  normalizeTrades,
+  setDraftDelta,
+} from "./portfolioDraft";
+import { IntelligenceDeck, PortfolioRibbon } from "./Cockpit";
 
 type BaseProps = { market: Market; campaign: Campaign };
 type MarketProps = BaseProps & {
   select: (stock: Stock) => void;
   buildMove: () => void;
   openNews: () => void;
+  trades: Trade[];
+  setTrades: (trades: Trade[]) => void;
 };
 type PortfolioProps = BaseProps & {
   trades: Trade[];
@@ -136,6 +145,8 @@ export function MarketTerminal({
   select,
   buildMove,
   openNews,
+  trades,
+  setTrades,
 }: MarketProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("ALL");
@@ -269,27 +280,18 @@ export function MarketTerminal({
           : left - Number(right);
       return sort.direction === "asc" ? comparison : -comparison;
     });
-  const gainers = [...market.stocks]
-    .filter((stock) => change(stock) > 0)
-    .sort((a, b) => change(b) - change(a))
-    .slice(0, 5);
-  const losers = [...market.stocks]
-    .filter((stock) => change(stock) < 0)
-    .sort((a, b) => change(a) - change(b))
-    .slice(0, 5);
-  const tape = [
-    ["NIFTY 50", "24,812.45", "0.73", [98, 101, 99, 103, 104, 108, 107, 112]],
-    [
-      "BANK NIFTY",
-      "55,240.10",
-      "0.42",
-      [101, 99, 102, 106, 105, 108, 110, 111],
-    ],
-    ["INDIA VIX", "13.82", "-2.18", [110, 108, 111, 105, 103, 101, 99, 97]],
-    ["USD / INR", "83.74", "0.06", [99, 100, 100, 101, 100, 102, 102, 103]],
-    ["BRENT", "$81.20", "-0.91", [112, 109, 110, 105, 107, 102, 101, 99]],
-    ["GOLD", "₹72,430", "0.31", [100, 101, 103, 102, 105, 104, 106, 108]],
-  ] as const;
+  const draft = buildDraftPortfolio(campaign, market, trades);
+  const adjustDraft = (ticker: string, increment: number) => {
+    const held = campaign.holdings[ticker] || 0;
+    setTrades(
+      setDraftDelta(
+        trades,
+        ticker,
+        draftDeltaFor(trades, ticker) + increment,
+        held,
+      ),
+    );
+  };
   return (
     <section className="terminal-page">
       <div className="terminal-commandbar">
@@ -305,60 +307,13 @@ export function MarketTerminal({
           OPEN ORDER WORKBENCH <b>F9</b>
         </button>
       </div>
-      <div className="market-tape">
-        {tape.map(([name, value, move, history]) => (
-          <div className="tape-quote" key={name}>
-            <span>
-              {name} <small>SIM</small>
-            </span>
-            <b>{value}</b>
-            <strong className={Number(move) >= 0 ? "positive" : "negative"}>
-              {Number(move) >= 0 ? "+" : ""}
-              {move}%
-            </strong>
-            <MiniChart
-              values={[...history]}
-              tone={Number(move) >= 0 ? "green" : "red"}
-            />
-          </div>
-        ))}
-      </div>
-      <div className="terminal-kpis">
-        <div>
-          <span>MARKET BREADTH</span>
-          <b>
-            {analytics.advances} : {analytics.declines}
-          </b>
-          <small>ADV / DEC</small>
-        </div>
-        <div>
-          <span>MEDIAN PEG</span>
-          <b>{analytics.medianPeg.toFixed(2)}</b>
-          <small>PRICE / GROWTH</small>
-        </div>
-        <div>
-          <span>MEAN FORECAST</span>
-          <b className="positive">+{analytics.meanForecast.toFixed(1)}%</b>
-          <small>SIM 12M</small>
-        </div>
-        <div>
-          <span>CROSS-SECTION VOL</span>
-          <b>{analytics.meanVolatility.toFixed(1)}%</b>
-          <small>ANNUALISED</small>
-        </div>
-        <div>
-          <span>PORTFOLIO CASH</span>
-          <b>{rupees(campaign.cash_paise)}</b>
-          <small>AVAILABLE</small>
-        </div>
-        <div>
-          <span>ALPHA TO DATE</span>
-          <b className={campaign.alpha_pct >= 0 ? "positive" : "negative"}>
-            {signed(campaign.alpha_pct)}
-          </b>
-          <small>VS NIFTY 50</small>
-        </div>
-      </div>
+      <PortfolioRibbon
+        campaign={campaign}
+        draft={draft}
+        trades={trades}
+        openWorkbench={buildMove}
+      />
+      <IntelligenceDeck market={market} openNews={openNews} />
       <div className="terminal-grid">
         <div className="terminal-main">
           <div className="terminal-toolbar">
@@ -400,6 +355,7 @@ export function MarketTerminal({
               <button onClick={() => chooseSort("change")}>
                 SIM Δ {sortMark("change")}
               </button>
+              <span>POSITION / DRAFT</span>
               <span>INTRAMONTH</span>
               <button onClick={() => chooseSort("pe")}>
                 PE {sortMark("pe")}
@@ -437,6 +393,7 @@ export function MarketTerminal({
                   <option key={sector}>{sector}</option>
                 ))}
               </select>
+              <span />
               <span />
               <span />
               <small>
@@ -505,28 +462,92 @@ export function MarketTerminal({
             </div>
             {visible.map((stock) => {
               const move = change(stock);
+              const held = campaign.holdings[stock.ticker] || 0;
+              const delta = draftDeltaFor(trades, stock.ticker);
+              const projected = held + delta;
               return (
-                <button
-                  className="pro-row"
-                  key={stock.ticker}
-                  onClick={() => select(stock)}
-                >
-                  <span className="pro-security">
+                <div className="pro-row" key={stock.ticker}>
+                  <button
+                    className="pro-security security-open"
+                    onClick={() => select(stock)}
+                  >
                     <i>{stock.ticker.slice(0, 2)}</i>
                     <span>
                       <b>{stock.ticker}</b>
                       <small>
                         {stock.sector}
-                        {campaign.holdings[stock.ticker]
-                          ? ` · HELD ${campaign.holdings[stock.ticker]}`
-                          : ""}
+                        {held ? ` · HELD ${held}` : " · NOT HELD"}
                       </small>
                     </span>
-                  </span>
+                  </button>
                   <strong>{rupees(stock.close_paise)}</strong>
                   <strong className={move >= 0 ? "positive" : "negative"}>
                     {signed(move)}
                   </strong>
+                  <div
+                    className="inline-position"
+                    aria-label={`${stock.ticker} portfolio position`}
+                  >
+                    <span>
+                      <small>HELD</small>
+                      <b>{held}</b>
+                    </span>
+                    <button
+                      onClick={() => adjustDraft(stock.ticker, -1)}
+                      disabled={projected <= 0}
+                    >
+                      −
+                    </button>
+                    <input
+                      aria-label={`${stock.ticker} draft share change`}
+                      className={
+                        delta > 0 ? "positive" : delta < 0 ? "negative" : ""
+                      }
+                      value={delta}
+                      inputMode="numeric"
+                      onChange={(event) =>
+                        setTrades(
+                          setDraftDelta(
+                            trades,
+                            stock.ticker,
+                            Number(event.target.value) || 0,
+                            held,
+                          ),
+                        )
+                      }
+                    />
+                    <button onClick={() => adjustDraft(stock.ticker, 1)}>
+                      +
+                    </button>
+                    <span>
+                      <small>AFTER</small>
+                      <b>{projected}</b>
+                    </span>
+                    {held > 0 && projected > 0 && (
+                      <button
+                        className="exit-position"
+                        onClick={() =>
+                          setTrades(
+                            setDraftDelta(trades, stock.ticker, -held, held),
+                          )
+                        }
+                      >
+                        EXIT
+                      </button>
+                    )}
+                    {delta !== 0 && (
+                      <button
+                        className="hold-position"
+                        onClick={() =>
+                          setTrades(
+                            setDraftDelta(trades, stock.ticker, 0, held),
+                          )
+                        }
+                      >
+                        HOLD
+                      </button>
+                    )}
+                  </div>
                   <MiniChart
                     values={stock.history_paise}
                     tone={move >= 0 ? "green" : "red"}
@@ -549,7 +570,7 @@ export function MarketTerminal({
                   <strong className="positive">
                     +{stock.forecast_pct.toFixed(1)}%
                   </strong>
-                </button>
+                </div>
               );
             })}
             {!visible.length && (
@@ -564,26 +585,44 @@ export function MarketTerminal({
           </div>
         </div>
         <aside className="terminal-side">
-          <div className="terminal-panel sector-monitor">
+          <div className="terminal-panel draft-tray">
             <div className="panel-label">
-              <span>SECTOR MONITOR</span>
-              <small>SIM FLOW</small>
+              <span>LIVE MOVE TRAY</span>
+              <small>{trades.length} NET ORDERS</small>
             </div>
-            {analytics.sectors.map((sector) => (
-              <button key={sector.sector}>
-                <span>{sector.sector}</span>
-                <i>
-                  <b
-                    style={{
-                      width: `${Math.min(100, Math.max(8, sector.forecast * 4.5))}%`,
-                    }}
-                  />
-                </i>
-                <strong className={sector.move >= 0 ? "positive" : "negative"}>
-                  {signed(sector.move)}
-                </strong>
-              </button>
+            {trades.map((trade) => (
+              <div key={trade.ticker}>
+                <b className={trade.side === "BUY" ? "positive" : "negative"}>
+                  {trade.side}
+                </b>
+                <span>
+                  {trade.shares} {trade.ticker}
+                </span>
+                <button
+                  onClick={() =>
+                    setTrades(
+                      setDraftDelta(
+                        trades,
+                        trade.ticker,
+                        0,
+                        campaign.holdings[trade.ticker] || 0,
+                      ),
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </div>
             ))}
+            {!trades.length && (
+              <p>
+                Use − / + in the market table to construct this month’s
+                portfolio decision.
+              </p>
+            )}
+            <button className="tray-review" onClick={buildMove}>
+              RECONCILE IN WORKBENCH →
+            </button>
           </div>
           <div className="terminal-panel opportunity-monitor">
             <div className="panel-label">
@@ -603,55 +642,56 @@ export function MarketTerminal({
               </button>
             ))}
           </div>
-          <div className="terminal-panel movers-monitor">
+          <div className="terminal-panel portfolio-xray">
             <div className="panel-label">
-              <span>MONTHLY MOVERS</span>
-              <small>TOP 5 EACH</small>
+              <span>PORTFOLIO X-RAY</span>
+              <small>PROJECTED</small>
             </div>
-            <div className="movers-columns">
-              <div>
-                <b>GAINERS</b>
-                {gainers.length === 0 && <small>Awaiting first move</small>}
-                {gainers.map((stock, index) => (
-                  <button key={stock.ticker} onClick={() => select(stock)}>
-                    <span>
-                      {index + 1}. {stock.ticker}
-                    </span>
-                    <strong className="positive">
-                      {signed(change(stock))}
-                    </strong>
-                  </button>
-                ))}
+            <div className="xray-grid">
+              <span>
+                PE <b>{draft.weighted.pe.toFixed(1)}</b>
+              </span>
+              <span>
+                PEG <b>{draft.weighted.peg.toFixed(2)}</b>
+              </span>
+              <span>
+                SHARPE <b>{draft.weighted.sharpe.toFixed(2)}</b>
+              </span>
+              <span>
+                SIM 12M{" "}
+                <b className="positive">{signed(draft.weighted.forecast)}</b>
+              </span>
+              <span>
+                VOL <b>{draft.weighted.volatility.toFixed(1)}%</b>
+              </span>
+              <span>
+                TOP WEIGHT{" "}
+                <b
+                  className={
+                    draft.concentrationPct > 25 ? "negative" : "positive"
+                  }
+                >
+                  {draft.concentrationPct.toFixed(1)}%
+                </b>
+              </span>
+            </div>
+            {draft.sectors.slice(0, 5).map(([sector, value]) => (
+              <div className="xray-sector" key={sector}>
+                <span>{sector}</span>
+                <i>
+                  <b
+                    style={{
+                      width: `${draft.investedPaise ? (value / draft.investedPaise) * 100 : 0}%`,
+                    }}
+                  />
+                </i>
+                <strong>
+                  {draft.investedPaise
+                    ? ((value / draft.investedPaise) * 100).toFixed(1)
+                    : "0.0"}
+                  %
+                </strong>
               </div>
-              <div>
-                <b>LOSERS</b>
-                {losers.length === 0 && <small>Awaiting first move</small>}
-                {losers.map((stock, index) => (
-                  <button key={stock.ticker} onClick={() => select(stock)}>
-                    <span>
-                      {index + 1}. {stock.ticker}
-                    </span>
-                    <strong className={change(stock) < 0 ? "negative" : ""}>
-                      {signed(change(stock))}
-                    </strong>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="terminal-panel event-monitor">
-            <div className="panel-label">
-              <span>NEWSWIRE</span>
-              <button onClick={openNews}>ALL →</button>
-            </div>
-            {stories.slice(0, 3).map((story) => (
-              <button key={story.title} onClick={openNews}>
-                <small>
-                  {story.age} · {story.tag}
-                </small>
-                <b>{story.title}</b>
-                <span>{story.impact}</span>
-              </button>
             ))}
           </div>
         </aside>
@@ -680,70 +720,54 @@ export function PortfolioWorkbench({
     market.stocks.find((stock) => stock.close_paise <= campaign.cash_paise)
       ?.ticker || market.stocks[0].ticker,
   );
-  const cash =
-    campaign.cash_paise +
-    trades.reduce((sum, trade) => {
-      const stock = market.stocks.find((item) => item.ticker === trade.ticker)!;
-      return (
-        sum +
-        stock.close_paise * trade.shares * (trade.side === "SELL" ? 1 : -1)
-      );
-    }, 0);
-  const deployment = Math.max(0, (1 - cash / campaign.cash_paise) * 100);
-  const afterHoldings = { ...campaign.holdings };
-  trades.forEach((trade) => {
-    afterHoldings[trade.ticker] = Math.max(
-      0,
-      (afterHoldings[trade.ticker] || 0) +
-        trade.shares * (trade.side === "BUY" ? 1 : -1),
-    );
-  });
-  const positions = Object.entries(afterHoldings)
-    .map(([ticker, shares]) => {
-      const stock = market.stocks.find((item) => item.ticker === ticker)!;
-      return { stock, shares, value: shares * stock.close_paise };
-    })
-    .filter((position) => position.shares > 0);
-  const invested = positions.reduce((sum, position) => sum + position.value, 0);
-  const sectors = Object.entries(
-    positions.reduce<Record<string, number>>((all, position) => {
-      all[position.stock.sector] =
-        (all[position.stock.sector] || 0) + position.value;
-      return all;
-    }, {}),
-  ).sort((a, b) => b[1] - a[1]);
+  const draft = buildDraftPortfolio(campaign, market, trades);
+  const cash = draft.cashAfterPaise;
+  const deployment = draft.deploymentPct;
+  const positions = draft.positions.map((position) => ({
+    stock: position.stock,
+    shares: position.projectedShares,
+    value: position.valuePaise,
+  }));
+  const invested = draft.investedPaise;
+  const sectors = draft.sectors;
   const weighted = (
     field: keyof Pick<
       Stock,
       "pe" | "peg" | "sharpe" | "forecast_pct" | "volatility_pct"
     >,
   ) =>
-    invested
-      ? positions.reduce(
-          (sum, position) =>
-            sum + Number(position.stock[field]) * position.value,
-          0,
-        ) / invested
-      : 0;
-  const concentration = invested
-    ? Math.max(
-        0,
-        ...positions.map((position) => (position.value / invested) * 100),
-      )
-    : 0;
+    ({
+      pe: draft.weighted.pe,
+      peg: draft.weighted.peg,
+      sharpe: draft.weighted.sharpe,
+      forecast_pct: draft.weighted.forecast,
+      volatility_pct: draft.weighted.volatility,
+    })[field];
+  const concentration = draft.concentrationPct;
   const update = (index: number, field: keyof Trade, value: string) =>
     setTrades(
-      trades.map((trade, row) =>
-        row === index
-          ? {
-              ...trade,
-              [field]: field === "shares" ? Math.max(0, Number(value)) : value,
-            }
-          : trade,
+      normalizeTrades(
+        trades.map((trade, row) =>
+          row === index
+            ? {
+                ...trade,
+                [field]:
+                  field === "shares" ? Math.max(0, Number(value)) : value,
+              }
+            : trade,
+        ),
+        campaign.holdings,
       ),
     );
   const addOrder = () =>
-    setTrades([...trades, { side: "BUY", ticker: ticket, shares: 1 }]);
+    setTrades(
+      setDraftDelta(
+        trades,
+        ticket,
+        draftDeltaFor(trades, ticket) + 1,
+        campaign.holdings[ticket] || 0,
+      ),
+    );
   return (
     <section className="terminal-page workbench-page">
       <div className="terminal-commandbar">
@@ -762,8 +786,8 @@ export function PortfolioWorkbench({
       <div className="workbench-kpis">
         <div>
           <span>BUYING POWER</span>
-          <b>{rupees(campaign.cash_paise)}</b>
-          <small>CONTRIBUTION + CASH</small>
+          <b>{rupees(draft.buyingPowerPaise)}</b>
+          <small>CONTRIBUTION + SELL PROCEEDS</small>
         </div>
         <div>
           <span>ORDERS</span>
@@ -1145,6 +1169,33 @@ export function NewsTerminal({
     .filter((stock) => change(stock) < 0)
     .sort((a, b) => change(a) - change(b))
     .slice(0, 8);
+  const lead = movers[0];
+  const riskLead = [...market.stocks].sort(
+    (a, b) =>
+      b.volume_index + b.volatility_pct - (a.volume_index + a.volatility_pct),
+  )[0];
+  const sentiment =
+    market.stocks.reduce((sum, stock) => sum + stock.sentiment_score, 0) /
+    market.stocks.length;
+  const contextualStories = [
+    {
+      tag: "PRICE DISCOVERY",
+      title: `${lead.ticker} becomes the month’s strongest attention signal`,
+      body: `${signed(change(lead))} price movement, ${lead.volume_index.toFixed(0)} volume index and ${lead.sentiment_score.toFixed(0)}/100 sentiment make this material—but not automatically investable.`,
+      impact: `${lead.ticker} · ${lead.sector}`,
+      tone: change(lead) >= 0 ? "green" : "red",
+      age: "SIM NOW",
+    },
+    {
+      tag: "RISK DESK",
+      title: `${riskLead.ticker} volatility and activity demand position-size discipline`,
+      body: `The security carries ${riskLead.volatility_pct.toFixed(1)}% annualised volatility, ${riskLead.var_95_pct.toFixed(1)}% VaR and a ${riskLead.volume_index.toFixed(0)} activity index in this generated information set.`,
+      impact: `${riskLead.ticker} · ${riskLead.sector}`,
+      tone: "amber",
+      age: "SIM 08:31",
+    },
+    ...stories.slice(1, 3),
+  ];
   return (
     <section className="terminal-page news-terminal">
       <div className="terminal-commandbar">
@@ -1241,13 +1292,13 @@ export function NewsTerminal({
             <div>
               <small>MACRO · SIM 08:42 · 6 MIN READ</small>
               <h1>
-                Rates stay unchanged. The real contest shifts to earnings
-                quality.
+                Market sentiment sits at {sentiment.toFixed(0)}/100. The real
+                contest remains evidence quality.
               </h1>
               <p>
-                The simulated policy committee keeps borrowing conditions
-                stable. Financials retain support, but valuation discipline
-                decides which balance sheets deserve capital.
+                Price, volume, fundamentals and risk are moving together inside
+                this calibrated synthetic market. The strongest headline is a
+                signal to investigate—not a direction to trade.
               </p>
               <div className="story-tags">
                 <span>HDFCBANK</span>
@@ -1258,7 +1309,7 @@ export function NewsTerminal({
             </div>
           </article>
           <div className="story-columns">
-            {stories.slice(1, 5).map((story) => (
+            {contextualStories.map((story) => (
               <article key={story.title}>
                 <div className={`story-art mini ${story.tone}`}>
                   <span>{story.tag}</span>
@@ -1284,7 +1335,7 @@ export function NewsTerminal({
               <small>SIM NOW</small>
             </div>
             <div className="pulse-score">
-              <b>64</b>
+              <b>{sentiment.toFixed(0)}</b>
               <span>
                 SELECTIVE
                 <br />

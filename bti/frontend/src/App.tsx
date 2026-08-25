@@ -1065,10 +1065,15 @@ const lessons = [
 function Explore({
   view,
   setView,
+  campaign,
 }: {
   view: View;
   setView: (v: View) => void;
+  campaign: Campaign | null;
 }) {
+  const [puzzleAnswer, setPuzzleAnswer] = useState("");
+  const [puzzleSubmitted, setPuzzleSubmitted] = useState(false);
+  const [activeLesson, setActiveLesson] = useState<number | null>(null);
   if (view === "puzzles")
     return (
       <section className="page">
@@ -1095,11 +1100,42 @@ function Explore({
               <Metric label="YOUR CASH" value="₹1,00,000" />
             </div>
             <div className="puzzle-choice">
-              <button>BUY THE DIP</button>
-              <button>REBALANCE</button>
-              <button>HOLD CASH</button>
+              {["BUY THE DIP", "REBALANCE", "HOLD CASH"].map((answer) => (
+                <button
+                  className={puzzleAnswer === answer ? "selected" : ""}
+                  onClick={() => {
+                    setPuzzleAnswer(answer);
+                    setPuzzleSubmitted(false);
+                  }}
+                  key={answer}
+                >
+                  {answer}
+                </button>
+              ))}
             </div>
-            <button className="primary full">SOLVE PUZZLE →</button>
+            <button
+              className="primary full"
+              disabled={!puzzleAnswer}
+              onClick={() => setPuzzleSubmitted(true)}
+            >
+              SOLVE PUZZLE →
+            </button>
+            {puzzleSubmitted && (
+              <div
+                className={`puzzle-verdict ${puzzleAnswer === "REBALANCE" ? "correct" : "review"}`}
+              >
+                <b>
+                  {puzzleAnswer === "REBALANCE"
+                    ? "EXCELLENT · 92"
+                    : "INACCURACY · 54"}
+                </b>
+                <p>
+                  {puzzleAnswer === "REBALANCE"
+                    ? "Rebalancing responds to deteriorating fundamentals while preserving exposure to the genuinely undervalued security. It improves the portfolio rather than treating every decline as a bargain."
+                    : "The choice reacts to the market headline but does not separate valuation opportunity from fundamental deterioration. Re-open the risk and valuation evidence before deciding."}
+                </p>
+              </div>
+            )}
           </div>
           <div className="panel">
             <h3>Why puzzles matter</h3>
@@ -1126,10 +1162,23 @@ function Explore({
           <span className="eyebrow">SKILL LAB</span>
           <h1>Learn from the moves you make.</h1>
           <p>Short lessons, recommended from your actual decision history.</p>
+          {campaign?.last_result && (
+            <div className="adaptive-recommendation">
+              <b>RECOMMENDED FROM MOVE {campaign.last_result.move}</b>
+              <span>
+                {campaign.last_result.decision_quality.improve[0] ||
+                  "Strengthen portfolio construction discipline."}
+              </span>
+            </div>
+          )}
         </div>
         <div className="lesson-list">
           {lessons.map((x, i) => (
-            <button className="lesson" key={x[0]}>
+            <button
+              className={`lesson ${activeLesson === i ? "active" : ""}`}
+              key={x[0]}
+              onClick={() => setActiveLesson(activeLesson === i ? null : i)}
+            >
               <span className={`lesson-icon n${i}`}>▤</span>
               <span>
                 <b>{x[0]}</b>
@@ -1145,6 +1194,29 @@ function Explore({
             </button>
           ))}
         </div>
+        {activeLesson !== null && (
+          <div className="panel lesson-workspace">
+            <span className="eyebrow">
+              INTERACTIVE LESSON · {lessons[activeLesson][1]}
+            </span>
+            <h2>{lessons[activeLesson][0]}</h2>
+            <p>
+              {activeLesson === 0
+                ? "PE tells you how much the market asks for each rupee of earnings. PB compares price with accounting net worth. PEG tests whether the price paid is proportionate to expected growth. None is a verdict alone: compare the company with its sector, quality, balance sheet and portfolio role."
+                : activeLesson === 1
+                  ? "Sharpe measures excess return per unit of volatility. A higher value can indicate more efficient risk-taking, but unstable history, changing regimes and concentrated exposures still matter."
+                  : activeLesson === 2
+                    ? "Drawdown measures the fall from a previous peak. Risk management asks whether the portfolio can survive that path—not merely whether the final forecast is attractive."
+                    : "Diversification is about independent economic drivers, not the number of ticker symbols. Holdings in different sectors can still respond to the same macro shock."}
+            </p>
+            <button
+              className="primary"
+              onClick={() => setView(campaign ? "market" : "home")}
+            >
+              {campaign ? "OPEN MARKET DESK →" : "START A CAMPAIGN →"}
+            </button>
+          </div>
+        )}
       </section>
     );
   if (view === "leaderboard")
@@ -1378,6 +1450,8 @@ export default function App() {
           select={select}
           buildMove={() => setView("portfolio")}
           openNews={() => setView("news")}
+          trades={trades}
+          setTrades={setTrades}
         />
       );
     if (view === "stock" && stock && market && campaign)
@@ -1425,7 +1499,7 @@ export default function App() {
           backToMarket={() => setView("market")}
         />
       );
-    return <Explore view={view} setView={setView} />;
+    return <Explore view={view} setView={setView} campaign={campaign} />;
   }, [view, campaign, market, stock, trades, result, busy, error]);
   return (
     <Shell view={view} setView={setView} campaign={campaign}>

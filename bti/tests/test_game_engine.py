@@ -84,9 +84,13 @@ def test_public_stock_research_projection_is_rich_and_chartable() -> None:
     stock = game.market_view()["stocks"][0]
     assert stock["overall_rank"] > 0
     assert isinstance(stock["historical_cagr_pct"], float)
-    assert len(stock["ohlc_history"]) >= 12
+    assert len(stock["ohlc_history"]) == 252
     assert stock["ohlc_history"][-1]["close_paise"] == stock["close_paise"]
     assert [point["months"] for point in stock["forecast_curve"]] == [12, 24, 36, 48, 60]
+    assert 0 <= stock["rsi_14"] <= 100
+    assert 0 <= stock["sentiment_score"] <= 100
+    assert stock["volume_index"] > 0
+    assert stock["roe_pct"] == pytest.approx(stock["pb"] / stock["pe"] * 100, rel=1e-2)
 
 
 @pytest.mark.parametrize("horizon", [24, 36, 48, 60])

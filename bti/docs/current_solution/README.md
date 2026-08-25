@@ -29,6 +29,7 @@ and tries to beat the simulated Nifty benchmark over a fixed 24–60 month campa
 7. [TESTING_DEPLOYMENT_AND_OPERATIONS.md](TESTING_DEPLOYMENT_AND_OPERATIONS.md) — automated gates, Docker/Render release and runbooks.
 8. [CURRENT_SCOPE_AND_ANDROID_HANDOFF.md](CURRENT_SCOPE_AND_ANDROID_HANDOFF.md) — implemented/deferred matrix and conditions for mobile replication.
 9. [CODEBASE_TRACEABILITY.md](CODEBASE_TRACEABILITY.md) — source-file ownership and change-impact guide.
+10. [CALIBRATED_SYNTHETIC_MARKET.md](CALIBRATED_SYNTHETIC_MARKET.md) — realism, coherence and market-data provenance boundary.
 
 ## Canonical principles
 
@@ -45,8 +46,8 @@ and tries to beat the simulated Nifty benchmark over a fixed 24–60 month campa
 
 ## Current release evidence
 
-The release has been verified to create a fresh 36-move campaign, recover an expired anonymous
-session, analyse the 50-security universe with column filters, open a chart-rich stock workstation,
-construct/review/commit a whole-share move, reveal its score, advance the simulated market and show
-directionally correct monthly movers. Opening breadth remains `0 : 0` before the first move and the
-simulation boundary remains visible throughout.
+The release has been verified to create a campaign, build a portfolio directly from the 50-security
+Market Monitor, reconcile the same draft in the Order Workbench, execute and score the complete
+move, advance to Month 2, and expose the resulting held position back in the market table. The
+configurable cockpit, full-screen OHLC explorer, ticker research, adaptive lesson and interactive
+puzzle were also exercised in-browser. The simulation boundary remains visible throughout.

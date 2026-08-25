@@ -14,6 +14,8 @@
 | `bti/frontend/src/api.ts` | typed client and session recovery | all browser/server integration |
 | `bti/frontend/src/economics.ts` | display-only draft economics | pre-trade estimates, never canonical accounting |
 | `bti/frontend/src/App.tsx` | shell, campaign flow and non-terminal views | navigation and end-to-end UX |
+| `bti/frontend/src/Cockpit.tsx` | configurable market tiles, charts and portfolio ribbon | primary research cockpit and saved desk layout |
+| `bti/frontend/src/portfolioDraft.ts` | reversible client-side order netting and projected portfolio | Market Monitor/Workbench reconciliation |
 | `bti/frontend/src/Terminal.tsx` | market terminal, OMS and newsroom | immersive decision surfaces |
 | `bti/frontend/src/StockResearch.tsx` | ticker OHLC, forecasts, ratios, catalysts and peers | security-level research UX |
 | `bti/frontend/src/styles.css` | full responsive visual system | product look, density and accessibility |

@@ -43,11 +43,20 @@ The market surface is a dense, terminal-style information environment containing
 - sector monitor;
 - public-signal quant radar;
 - generated newswire summaries.
+- a sticky, portfolio-aware construction ribbon showing buying power, net orders, deployment,
+  residual cash, projected positions/sectors and top-weight concentration;
+- inline share-delta controls, HOLD and EXIT actions, and projected post-move holdings for every
+  security;
+- a configurable intelligence deck with fundamental, technical, quantitative and sentiment
+  presets; tiles can be hidden, widened, reordered and restored;
+- full-screen generated OHLC exploration over 30D/90D/6M/1Y windows and daily/weekly/monthly views,
+  with volume, crosshair values and explicit simulation provenance.
 
-Selecting a security opens a dedicated research workstation with an 18-period generated OHLC
+Selecting a security opens a dedicated research workstation with a 252-trading-day generated OHLC
 candlestick chart, five-horizon forecast curve, public rank, valuation/risk matrix, relevant
-generated catalysts, sector peers and explicit portfolio questions. The public board never marks
-the hidden best move.
+generated catalysts, sector peers and explicit portfolio questions. Fundamental, technical and
+sentiment signals include ROE, earnings growth, margin, leverage, yield, beta, RSI, momentum,
+activity and sentiment. The public board never marks the hidden best move.
 
 ## Newswire
 
@@ -81,8 +90,10 @@ and repurchase the same security unnecessarily.
 ## Analysis and learning surfaces
 
 The release includes move-result analysis, campaign progress, puzzles, lessons, rankings/profile
-shells and final-result concepts. Their product depth is still being expanded through current user
-testing. No screen should claim live social, brokerage or real-news functionality.
+shells and final-result concepts. Puzzles now accept and score an explicit decision; lessons expose
+expandable teaching content and surface the player's most recent improvement opportunity. Their
+catalogue depth is still being expanded. No screen should claim live social, brokerage or real-news
+functionality.
 
 ## Responsive principle
 

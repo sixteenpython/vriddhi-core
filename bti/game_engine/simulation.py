@@ -7,7 +7,7 @@ import math
 import random
 from typing import Any
 
-SIMULATION_VERSION = "bti-forward-2026-08-v1"
+SIMULATION_VERSION = "bti-calibrated-synthetic-2026-08-v2"
 
 
 def _rng(seed: str, *parts: object) -> random.Random:
@@ -18,16 +18,16 @@ def _rng(seed: str, *parts: object) -> random.Random:
 def _simulated_lookback(
     ticker: str, price: int, annual_vol: float, horizon: int
 ) -> list[dict[str, int]]:
-    """Create a deterministic pre-campaign OHLC context ending at the opening quote."""
+    """Create 252 deterministic daily candles ending at the opening quote."""
     rng = _rng("lookback", ticker, horizon)
     closes = [price]
-    for _ in range(17):
-        reverse_return = max(-0.12, min(0.12, rng.gauss(0.006, annual_vol / math.sqrt(12))))
+    for _ in range(251):
+        reverse_return = max(-0.06, min(0.06, rng.gauss(0.00035, annual_vol / math.sqrt(252))))
         closes.insert(0, max(100, round(closes[0] / (1 + reverse_return))))
     candles: list[dict[str, int]] = []
     for index, close in enumerate(closes):
         opening = closes[index - 1] if index else close
-        spread = abs(rng.gauss(0, annual_vol / math.sqrt(252)))
+        spread = abs(rng.gauss(0, annual_vol / math.sqrt(252))) * 0.65
         high = max(opening, close, round(max(opening, close) * (1 + spread)))
         low = max(100, min(opening, close, round(min(opening, close) * (1 - spread))))
         candles.append(
@@ -42,6 +42,56 @@ def _simulated_lookback(
     return candles
 
 
+def _simulated_month_candles(
+    ticker: str,
+    opening: int,
+    close: int,
+    annual_vol: float,
+    seed: str,
+    month: int,
+) -> list[dict[str, int]]:
+    """Bridge an investment month with 21 reproducible daily OHLC candles."""
+    rng = _rng(seed, "daily", month, ticker)
+    raw_logs = [rng.gauss(0, annual_vol / math.sqrt(252)) for _ in range(21)]
+    target_log = math.log(max(close, 100) / max(opening, 100))
+    adjustment = (target_log - sum(raw_logs)) / len(raw_logs)
+    candles: list[dict[str, int]] = []
+    prior = opening
+    for index, raw_log in enumerate(raw_logs, start=1):
+        day_close = (
+            close if index == 21 else max(100, round(prior * math.exp(raw_log + adjustment)))
+        )
+        spread = abs(rng.gauss(0, annual_vol / math.sqrt(252))) * 0.55
+        candles.append(
+            {
+                "month": month * 100 + index,
+                "open_paise": prior,
+                "high_paise": max(prior, day_close, round(max(prior, day_close) * (1 + spread))),
+                "low_paise": max(
+                    100,
+                    min(prior, day_close, round(min(prior, day_close) * (1 - spread))),
+                ),
+                "close_paise": day_close,
+            }
+        )
+        prior = day_close
+    return candles
+
+
+def _rsi(closes: list[int], window: int = 14) -> float:
+    changes = [
+        current - prior for prior, current in zip(closes, closes[1:], strict=False)
+    ][-window:]
+    if not changes:
+        return 50.0
+    gains = sum(max(change, 0) for change in changes) / len(changes)
+    losses = sum(max(-change, 0) for change in changes) / len(changes)
+    if losses == 0:
+        return 100.0
+    relative_strength = gains / losses
+    return 100 - 100 / (1 + relative_strength)
+
+
 def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str, Any]:
     market = {}
     for ticker, stock in stocks.items():
@@ -51,6 +101,11 @@ def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str,
             55.0, max(12.0, 13.0 + abs(float(stock["Risk_Adjusted_Return"]) - forecast) * 0.65)
         )
         lookback = _simulated_lookback(ticker, price, vol / 100, horizon)
+        closes = [item["close_paise"] for item in lookback]
+        peg = float(stock["PEG_Ratio"])
+        pe = float(stock["PE_Ratio"])
+        pb = float(stock["PB_Ratio"])
+        fundamentals_rng = _rng("fundamentals", ticker, horizon)
         market[ticker] = {
             "ticker": ticker,
             "sector": stock["sector"],
@@ -61,9 +116,9 @@ def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str,
             "high_paise": price,
             "low_paise": price,
             "close_paise": price,
-            "pe": float(stock["PE_Ratio"]),
-            "pb": float(stock["PB_Ratio"]),
-            "peg": float(stock["PEG_Ratio"]),
+            "pe": pe,
+            "pb": pb,
+            "peg": peg,
             "forecast_pct": forecast,
             "volatility_pct": vol,
             "sharpe": float(stock["Risk_Adjusted_Return"]) / max(vol, 1.0),
@@ -72,8 +127,20 @@ def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str,
             "expected_shortfall_95_pct": 2.063 * vol / math.sqrt(12),
             "peak_paise": price,
             "returns": [],
-            "history_paise": [item["close_paise"] for item in lookback],
+            "history_paise": closes,
             "ohlc_history": lookback,
+            "volume_index": round(fundamentals_rng.uniform(82, 118), 2),
+            "sentiment_score": round(max(5, min(95, 50 + forecast * 1.15 - vol * 0.25)), 2),
+            "momentum_90d_pct": round((closes[-1] / closes[-63] - 1) * 100, 2),
+            "rsi_14": round(_rsi(closes), 2),
+            "beta": round(max(0.3, min(2.2, vol / 18 + fundamentals_rng.uniform(-0.2, 0.2))), 2),
+            "roe_pct": round(max(0, min(45, pb / max(pe, 1) * 100)), 2),
+            "earnings_growth_pct": round(
+                max(-15, min(55, pe / peg if peg > 0.05 else forecast)), 2
+            ),
+            "profit_margin_pct": round(fundamentals_rng.uniform(8, 31), 2),
+            "debt_to_equity": round(fundamentals_rng.uniform(0.05, 1.65), 2),
+            "dividend_yield_pct": round(fundamentals_rng.uniform(0.2, 5.8), 2),
             "forecast_curve": [
                 {
                     "months": months,
@@ -118,6 +185,12 @@ def advance_market(market: dict[str, Any], seed: str, month: int) -> tuple[dict[
         )
         peak = max(previous["peak_paise"], close)
         drawdown = max(previous["drawdown_pct"], (peak - close) / peak * 100)
+        daily_candles = _simulated_month_candles(ticker, opening, close, annual_vol, seed, month)
+        combined_candles = [
+            *previous.get("ohlc_history", []),
+            *daily_candles,
+        ][-1260:]
+        combined_closes = [candle["close_paise"] for candle in combined_candles]
         item.update(
             {
                 "price_paise": close,
@@ -126,17 +199,28 @@ def advance_market(market: dict[str, Any], seed: str, month: int) -> tuple[dict[
                 "low_paise": low,
                 "close_paise": close,
                 "returns": returns,
-                "history_paise": [*previous["history_paise"], close][-61:],
-                "ohlc_history": [
-                    *previous.get("ohlc_history", []),
-                    {
-                        "month": month,
-                        "open_paise": opening,
-                        "high_paise": high,
-                        "low_paise": low,
-                        "close_paise": close,
-                    },
-                ][-61:],
+                "history_paise": combined_closes,
+                "ohlc_history": combined_candles,
+                "volume_index": max(
+                    35.0,
+                    min(320.0, previous.get("volume_index", 100) * 0.72 + 28 + abs(ret) * 520),
+                ),
+                "sentiment_score": max(
+                    2.0,
+                    min(
+                        98.0,
+                        previous.get("sentiment_score", 50) * 0.68
+                        + 16
+                        + ret * 145
+                        + previous["forecast_pct"] * 0.42,
+                    ),
+                ),
+                "momentum_90d_pct": (combined_closes[-1] / combined_closes[-63] - 1) * 100,
+                "rsi_14": _rsi(combined_closes),
+                "earnings_growth_pct": max(
+                    -20.0,
+                    min(60.0, previous.get("earnings_growth_pct", 10) * 0.96 + ret * 22),
+                ),
                 "peak_paise": peak,
                 "pe": max(1.0, previous["pe"] * (1 + ret)),
                 "pb": max(0.1, previous["pb"] * (1 + ret)),
@@ -191,11 +275,39 @@ def public_market(market: dict[str, Any], month: int, data_through: str) -> dict
         "history_paise",
         "ohlc_history",
         "forecast_curve",
+        "volume_index",
+        "sentiment_score",
+        "momentum_90d_pct",
+        "rsi_14",
+        "beta",
+        "roe_pct",
+        "earnings_growth_pct",
+        "profit_margin_pct",
+        "debt_to_equity",
+        "dividend_yield_pct",
     }
     visible = [
         {k: round(v, 4) if isinstance(v, float) else v for k, v in item.items() if k in fields}
         for item in market.values()
     ]
+    for item in visible:
+        history = item.get("history_paise", [item["close_paise"]])
+        item.setdefault("volume_index", 100.0)
+        item.setdefault("sentiment_score", 50.0)
+        item.setdefault(
+            "momentum_90d_pct",
+            (history[-1] / history[max(0, len(history) - 63)] - 1) * 100,
+        )
+        item.setdefault("rsi_14", _rsi(history))
+        item.setdefault("beta", max(0.3, min(2.2, item["volatility_pct"] / 18)))
+        item.setdefault("roe_pct", max(0, min(45, item["pb"] / max(item["pe"], 1) * 100)))
+        item.setdefault(
+            "earnings_growth_pct",
+            max(-15, min(55, item["pe"] / item["peg"] if item["peg"] > 0.05 else 0)),
+        )
+        item.setdefault("profit_margin_pct", 15.0)
+        item.setdefault("debt_to_equity", 0.65)
+        item.setdefault("dividend_yield_pct", 1.8)
     advancing = sum(item["close_paise"] >= item["open_paise"] for item in visible)
     value_watch = min(visible, key=lambda item: item["peg"])
     risk_watch = max(visible, key=lambda item: item["expected_shortfall_95_pct"])

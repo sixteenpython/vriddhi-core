@@ -299,7 +299,7 @@ export function StockResearch({
           <div className="terminal-panel research-chart-panel">
             <div className="panel-label">
               <span>SIMULATED OHLC · GENERATED LOOKBACK</span>
-              <small>{stock.ohlc_history.length} PERIODS</small>
+              <small>{stock.ohlc_history.length} SIMULATED TRADING DAYS</small>
             </div>
             <Candles stock={stock} />
           </div>
@@ -362,6 +362,86 @@ export function StockResearch({
               </div>
             </div>
           </div>
+          <div className="terminal-panel fundamental-lab">
+            <div className="panel-label">
+              <span>FUNDAMENTAL · TECHNICAL · SENTIMENT SIGNALS</span>
+              <small>CALIBRATED SYNTHETIC COMPANY STATE</small>
+            </div>
+            <div className="ratio-grid signal-ratio-grid">
+              <div>
+                <span>ROE</span>
+                <b>{stock.roe_pct.toFixed(1)}%</b>
+                <small>PB ÷ PE consistency</small>
+              </div>
+              <div>
+                <span>EARNINGS GROWTH</span>
+                <b
+                  className={
+                    stock.earnings_growth_pct >= 0 ? "positive" : "negative"
+                  }
+                >
+                  {signed(stock.earnings_growth_pct)}
+                </b>
+                <small>current expectation</small>
+              </div>
+              <div>
+                <span>PROFIT MARGIN</span>
+                <b>{stock.profit_margin_pct.toFixed(1)}%</b>
+                <small>operating resilience</small>
+              </div>
+              <div>
+                <span>DEBT / EQUITY</span>
+                <b>{stock.debt_to_equity.toFixed(2)}</b>
+                <small>balance-sheet load</small>
+              </div>
+              <div>
+                <span>DIVIDEND YIELD</span>
+                <b>{stock.dividend_yield_pct.toFixed(2)}%</b>
+                <small>simulated cash return</small>
+              </div>
+              <div>
+                <span>BETA</span>
+                <b>{stock.beta.toFixed(2)}</b>
+                <small>market sensitivity</small>
+              </div>
+              <div>
+                <span>RSI 14</span>
+                <b
+                  className={
+                    stock.rsi_14 > 70
+                      ? "negative"
+                      : stock.rsi_14 < 30
+                        ? "positive"
+                        : ""
+                  }
+                >
+                  {stock.rsi_14.toFixed(1)}
+                </b>
+                <small>momentum temperature</small>
+              </div>
+              <div>
+                <span>90D MOMENTUM</span>
+                <b
+                  className={
+                    stock.momentum_90d_pct >= 0 ? "positive" : "negative"
+                  }
+                >
+                  {signed(stock.momentum_90d_pct)}
+                </b>
+                <small>not a prediction</small>
+              </div>
+              <div>
+                <span>VOLUME INDEX</span>
+                <b>{stock.volume_index.toFixed(0)}</b>
+                <small>100 = normal activity</small>
+              </div>
+              <div>
+                <span>SENTIMENT</span>
+                <b>{stock.sentiment_score.toFixed(0)} / 100</b>
+                <small>event-weighted signal</small>
+              </div>
+            </div>
+          </div>
           <div className="terminal-panel security-news">
             <div className="panel-label">
               <span>{stock.ticker} NEWS & CATALYST MONITOR</span>
@@ -377,7 +457,9 @@ export function StockResearch({
                 <p>
                   At PEG {stock.peg.toFixed(2)}, the market asks the company to
                   convert its {signed(stock.forecast_pct)} annualised outlook
-                  into durable delivery.
+                  and {signed(stock.earnings_growth_pct)} earnings expectation
+                  into durable delivery. Sentiment is{" "}
+                  {stock.sentiment_score.toFixed(0)}/100.
                 </p>
               </article>
               <article>

@@ -144,6 +144,7 @@ def test_frontend_keeps_simulation_boundary_visible() -> None:
 
 def test_research_and_market_analysis_surfaces_remain_first_class() -> None:
     terminal = (WEB / "src" / "Terminal.tsx").read_text(encoding="utf-8")
+    cockpit = (WEB / "src" / "Cockpit.tsx").read_text(encoding="utf-8")
     research = (WEB / "src" / "StockResearch.tsx").read_text(encoding="utf-8")
 
     for phrase in (
@@ -153,7 +154,7 @@ def test_research_and_market_analysis_surfaces_remain_first_class() -> None:
         "TOP LOSERS",
         "MONTHLY MOVERS",
     ):
-        assert phrase in terminal
+        assert phrase in terminal or phrase in cockpit
     for phrase in (
         "SIMULATED OHLC",
         "FORECAST TERM STRUCTURE",
