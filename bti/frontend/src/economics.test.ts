@@ -11,9 +11,15 @@ describe("campaign economics", () => {
   });
 
   it("reconciles whole-share sell-first and buy-second execution", () => {
-    expect(executionCash(100_000, [
-      { side: "SELL", ticker: "TEST", shares: 2 },
-      { side: "BUY", ticker: "TEST", shares: 5 },
-    ], [stock])).toBe(25_000);
+    expect(
+      executionCash(
+        100_000,
+        [
+          { side: "SELL", ticker: "TEST", shares: 2 },
+          { side: "BUY", ticker: "TEST", shares: 5 },
+        ],
+        [stock],
+      ),
+    ).toBe(25_000);
   });
 });
