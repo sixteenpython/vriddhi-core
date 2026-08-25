@@ -1,5 +1,7 @@
 # Python
 __pycache__/
+node_modules/
+bti/frontend/dist/
 *.py[cod]
 *$py.class
 *.so

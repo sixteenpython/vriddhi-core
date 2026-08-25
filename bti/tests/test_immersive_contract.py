@@ -1,0 +1,142 @@
+"""Guardrails for the immersive client while it is built incrementally.
+
+The tests deliberately run before the React or HTTP adapter exists. Once those files appear, the
+conditional checks become active without weakening the current deterministic engine contract.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from bti.game_engine import BTIGame
+
+ROOT = Path(__file__).resolve().parents[2]
+DOCS = ROOT / "bti" / "docs"
+WEB = ROOT / "bti" / "frontend"
+
+PRIVATE_KEY_FRAGMENTS = {
+    "coefficient",
+    "efficient_frontier",
+    "feature_weight",
+    "future",
+    "optimum",
+    "optimizer",
+    "reference",
+    "scenario_seed",
+    "target_weight",
+}
+
+
+def _keys(value: Any) -> set[str]:
+    found: set[str] = set()
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            found.add(str(key).lower())
+            found.update(_keys(nested))
+    elif isinstance(value, list):
+        for nested in value:
+            found.update(_keys(nested))
+    return found
+
+
+def test_immersive_blueprint_is_complete_and_unambiguous() -> None:
+    architecture = (DOCS / "IMMERSIVE_WEB_ARCHITECTURE.md").read_text(encoding="utf-8")
+    ux = (DOCS / "IMMERSIVE_WEB_UX.md").read_text(encoding="utf-8")
+    release = (DOCS / "IMMERSIVE_WEB_RELEASE.md").read_text(encoding="utf-8")
+    architecture = " ".join(architecture.split())
+    ux = " ".join(ux.split())
+    release = " ".join(release.split())
+
+    for phrase in (
+        "React + TypeScript",
+        "single Python ASGI process",
+        "/api/v1/campaigns/{id}/moves",
+        "Idempotency-Key",
+        "Public/private intelligence boundary",
+    ):
+        assert phrase in architecture
+    for phrase in (
+        "ORIENT -> INVESTIGATE -> CONSTRUCT -> COMMIT -> REVEAL -> LEARN -> CONTINUE",
+        "Move analysis — Stockfish moment",
+        "WCAG 2.2 AA",
+        "Complete ten-minute acceptance test",
+        "Decision quality and market luck",
+        "SIMULATION MODE",
+        "The stocks are real. The market you are about to play in is not.",
+    ):
+        assert phrase in ux
+    for phrase in (
+        "one Python service",
+        "Streamlit is not part of the target runtime",
+        "CI gates",
+        "Investor-showcase release checklist",
+        "Definition of done",
+    ):
+        assert phrase in release
+
+
+def test_current_public_game_projections_do_not_leak_hidden_intelligence() -> None:
+    game = BTIGame.create(
+        monthly_amount_rupees=25_000,
+        horizon_months=24,
+        seed="immersive-contract",
+        repository_root=ROOT,
+        campaign_id="CONTRACTCHECK0001",
+    )
+    payload = {"campaign": game.public_state(), "market": game.market_view()}
+    public_keys = _keys(payload)
+    leaked = {
+        key
+        for key in public_keys
+        if any(fragment in key for fragment in PRIVATE_KEY_FRAGMENTS)
+    }
+    assert not leaked, f"Public projection leaked server-private keys: {sorted(leaked)}"
+    assert json.dumps(payload)
+    assert payload["market"]["label"] == "SIMULATED MARKET"
+
+
+def test_frontend_contract_activates_when_react_scaffold_is_added() -> None:
+    """Do not require an unbuilt client, but reject a malformed scaffold the moment one appears."""
+    package_file = WEB / "package.json"
+    source_dir = WEB / "src"
+    if not package_file.exists() and not source_dir.exists():
+        return
+
+    assert package_file.is_file(), "A React source tree requires bti/frontend/package.json"
+    assert source_dir.is_dir(), "bti/frontend/package.json requires bti/frontend/src"
+    package = json.loads(package_file.read_text(encoding="utf-8"))
+    scripts = package.get("scripts", {})
+    assert {"build", "test"} <= set(scripts)
+    dependencies = {
+        **package.get("dependencies", {}),
+        **package.get("devDependencies", {}),
+    }
+    assert "react" in dependencies
+    assert "typescript" in dependencies
+
+    forbidden_runtime = "streamlit"
+    for source in source_dir.rglob("*"):
+        if source.suffix.lower() in {".ts", ".tsx", ".js", ".jsx"}:
+            assert forbidden_runtime not in source.read_text(encoding="utf-8").lower()
+
+
+def test_asgi_contract_activates_when_server_scaffold_is_added() -> None:
+    server = ROOT / "bti" / "server"
+    application = server / "app.py"
+    if not application.exists():
+        return
+
+    assert application.is_file()
+    source = application.read_text(encoding="utf-8").lower()
+    assert "/api/v1" in source
+    assert "dist" in source, "The Python service must serve the compiled React dist"
+    assert "streamlit" not in source
+
+
+def test_frontend_keeps_simulation_boundary_visible() -> None:
+    app = (WEB / "src" / "App.tsx").read_text(encoding="utf-8")
+    assert "SIMULATION MODE" in app
+    assert "The stocks are real. The market you are about to play in is not." in app
+    assert "not a live quote or investment recommendation" in app

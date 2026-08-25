@@ -12,13 +12,24 @@ at historical dates.
 See [`docs/BTI_REUSE_ASSESSMENT.md`](docs/BTI_REUSE_ASSESSMENT.md) and
 [`docs/BTI_IMPLEMENTATION_PLAN.md`](docs/BTI_IMPLEMENTATION_PLAN.md).
 
-## Run the playable showcase
+## Run the immersive web game
 
 From the repository root:
 
 ```powershell
-.\.venv\Scripts\streamlit.exe run bti_web_app.py
+cd bti\frontend
+pnpm install
+pnpm build
+cd ..\..
+.\.venv\Scripts\python.exe -m bti.server
 ```
+
+Open `http://127.0.0.1:8000`. The production React bundle and the deterministic Python game API
+are served by one ASGI process. Streamlit is not part of the BTI runtime.
+
+Every playable financial surface is explicitly marked **SIMULATION MODE**. Real security names and
+tickers appear inside a generated market; gameplay prices, metrics, forecasts, events and outcomes
+are not live information or investment recommendations.
 
 Campaign state is saved under an unguessable campaign code for resume on the same deployment and can
 also be downloaded as a deterministic JSON record. Shared identity, durable external persistence and

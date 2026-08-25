@@ -2,7 +2,7 @@
 
 ## Playable now
 
-- desktop-first Streamlit experience with anonymous showcase identity;
+- immersive React/TypeScript game experience with anonymous showcase identity;
 - 24/36/48/60-move campaigns and ₹10,000–₹1,00,000 monthly capital choices;
 - read-only use of the promoted Vriddhi knowledge asset and horizon bundles;
 - independent seeded market simulation with evolving OHLC, valuation, forecast and risk evidence;
@@ -13,13 +13,15 @@
 - equivalent-good move scoring with six chess-style classifications;
 - separate decision-quality and market-outcome explanations;
 - benchmark, portfolio, rating and final money-weighted results;
-- campaign-code resume, downloadable deterministic record, 12 puzzles and 8 lessons.
+- durable same-browser resume through an authenticated ASGI API, 12 puzzles and 8 lessons;
+- persistent simulation labelling across onboarding, market, move and analysis surfaces;
+- API-first architecture ready for a later Android client without changing game intelligence.
 
 ## Intentionally not claimed yet
 
 - Google authentication or shared user accounts;
 - durable external database, multi-instance concurrency or cross-device history;
-- HTTP/mobile API, Android application, AAB or Play Store release;
+- Android application, AAB or Play Store release;
 - real historical replay, real-time quotes or real news;
 - calibrated multi-user rating pools, public leaderboard, leagues or tournaments.
 

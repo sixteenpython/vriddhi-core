@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: beat-the-index
+    runtime: docker
+    dockerfilePath: ./bti/Dockerfile
+    healthCheckPath: /api/v1/health
+    plan: free
+    autoDeployTrigger: commit
+    envVars:
+      - key: BTI_SAVE_DIR
+        value: /tmp/bti-saves
