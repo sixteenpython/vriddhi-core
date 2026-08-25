@@ -32,7 +32,7 @@ test = [
 include = ["*.py"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "bti/tests"]
 addopts = "-ra"
 markers = [
   "app: headless Streamlit integration tests",

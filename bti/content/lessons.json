@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0",
+  "content_version": "2026.08.25",
+  "lessons": [
+    {
+      "id": "lesson-pe-growth",
+      "title": "PE: price versus profit",
+      "skill": "valuation",
+      "duration_minutes": 3,
+      "plain_english": "PE is roughly how many rupees investors pay for one rupee of annual profit. A high PE means large expectations are already in the price; a low PE may be cheap or may reflect a weakening business.",
+      "decision_rule": "Compare PE with growth quality, forecast resilience and peers. Never treat low PE as sufficient evidence by itself.",
+      "example": "A PE of 12 with shrinking profits can be less attractive than a PE of 20 with durable, well-priced growth.",
+      "check_question": "Why can the lowest-PE stock still be a weak choice?",
+      "check_answer": "Its earnings or business quality may be deteriorating, making the apparent cheapness a value trap."
+    },
+    {
+      "id": "lesson-peg",
+      "title": "PEG: what you pay for growth",
+      "skill": "valuation",
+      "duration_minutes": 3,
+      "plain_english": "PEG relates a company's PE to its expected growth. Below 1 can signal attractively priced growth, around 1 can be reasonable, and well above 1 suggests optimism is expensive.",
+      "decision_rule": "Use PEG as a comparison tool, then confirm that the growth forecast and business quality are credible.",
+      "example": "Two companies may grow at similar rates, but the one with a much lower PEG asks you to pay less for each unit of expected growth.",
+      "check_question": "Does PEG below 1 guarantee a good return?",
+      "check_answer": "No. It is useful evidence, but forecasts can fail and business risk still matters."
+    },
+    {
+      "id": "lesson-sharpe",
+      "title": "Sharpe: return earned efficiently",
+      "skill": "risk_adjusted_return",
+      "duration_minutes": 4,
+      "plain_english": "Sharpe asks how much return a portfolio earned for the bumpiness it endured. Higher is generally better when calculations use comparable periods and assumptions.",
+      "decision_rule": "Do not chase a little extra expected return when it requires a disproportionate increase in risk.",
+      "example": "An 18% return with moderate volatility may represent better decision quality than 21% with extreme volatility.",
+      "check_question": "What does a higher Sharpe ratio reward?",
+      "check_answer": "More excess return per unit of measured volatility."
+    },
+    {
+      "id": "lesson-drawdown",
+      "title": "Drawdown: the fall you must survive",
+      "skill": "downside_risk",
+      "duration_minutes": 3,
+      "plain_english": "Maximum drawdown is the worst fall from a previous high. It shows the loss an investor would have had to endure before recovery.",
+      "decision_rule": "Compare end returns with the depth and duration of losses along the way.",
+      "example": "After a 50% fall, a portfolio needs a 100% gain merely to return to its old peak.",
+      "check_question": "Why is a deep drawdown especially costly?",
+      "check_answer": "Recovery requires a proportionally larger gain and may test the investor's ability to remain invested."
+    },
+    {
+      "id": "lesson-diversification",
+      "title": "Diversification: different risks, not just more names",
+      "skill": "diversification",
+      "duration_minutes": 4,
+      "plain_english": "Diversification reduces dependence on one company, sector or economic force. Owning many highly correlated stocks may still amount to one concentrated bet.",
+      "decision_rule": "Check weights, sectors and shared risk drivers—not merely ticker count.",
+      "example": "Ten lenders may respond similarly to a credit shock, while a smaller set spanning distinct drivers may diversify better.",
+      "check_question": "Why can twelve stocks still be concentrated?",
+      "check_answer": "They may share the same sector or economic exposure and therefore fall together."
+    },
+    {
+      "id": "lesson-rebalancing",
+      "title": "Rebalancing: restore each holding's role",
+      "skill": "rebalancing",
+      "duration_minutes": 4,
+      "plain_english": "Rebalancing changes holdings when prices, forecasts, risk or portfolio weights change. A trim need not mean a company is bad; it can mean its role became too large.",
+      "decision_rule": "Sell first, then direct monthly capital and proceeds toward the strongest feasible whole-share portfolio.",
+      "example": "A winner at 40% of the portfolio can be trimmed to fund several attractive holdings and reduce one-company risk.",
+      "check_question": "Why might you trim a healthy company?",
+      "check_answer": "Its position may be too large or other opportunities may now improve the portfolio's return-risk balance."
+    },
+    {
+      "id": "lesson-var-es",
+      "title": "VaR and expected shortfall: look into the tail",
+      "skill": "downside_risk",
+      "duration_minutes": 5,
+      "plain_english": "VaR estimates a loss threshold for a chosen confidence level. Expected shortfall estimates the average loss in the worse cases beyond that threshold.",
+      "decision_rule": "Use both as scenario-aware risk estimates, never as guarantees or maximum-loss limits.",
+      "example": "A 95% monthly VaR of ₹18,000 means the model expects roughly one month in twenty to be worse; expected shortfall describes those worse months.",
+      "check_question": "What does VaR not tell you?",
+      "check_answer": "It does not cap the loss or fully describe how severe losses beyond the threshold can become."
+    },
+    {
+      "id": "lesson-process-outcome",
+      "title": "Good decision, bad month",
+      "skill": "process_over_outcome",
+      "duration_minutes": 4,
+      "plain_english": "Decision quality uses evidence available before the outcome. A disciplined portfolio can suffer a bad month; a reckless portfolio can get lucky.",
+      "decision_rule": "Judge the move first on valuation, expected return, downside and diversification; show the subsequent market outcome separately.",
+      "example": "A diversified portfolio may fall in a broad shock and still deserve an excellent process score.",
+      "check_question": "Why should one-month return not own the BTI score?",
+      "check_answer": "Because the return includes luck and information that was unknowable when the move was made."
+    }
+  ]
+}

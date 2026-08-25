@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0",
+  "content_version": "2026.08.25",
+  "puzzles": [
+    {
+      "id": "puzzle-market-shock-001",
+      "title": "The broad-market fall",
+      "difficulty": "beginner",
+      "skill": "process_over_outcome",
+      "scenario": "The Nifty falls 12% in one month. Your diversified holdings remain profitable and their forecasts are unchanged.",
+      "question": "Which response best protects a sound long-term process?",
+      "choices": ["Sell everything because the portfolio fell", "Review fundamentals and rebalance only where the evidence changed", "Move the entire portfolio into the previous month's winner"],
+      "correct_choice": 1,
+      "explanation": "A market fall is an outcome, not proof that every underlying decision became weak. Recheck the evidence before changing the portfolio.",
+      "lesson_id": "lesson-process-outcome"
+    },
+    {
+      "id": "puzzle-peg-001",
+      "title": "Growth at any price?",
+      "difficulty": "beginner",
+      "skill": "valuation",
+      "scenario": "Company A has strong expected growth but a PEG of 3.2. Company B has slightly lower growth, comparable quality and a PEG of 1.1.",
+      "question": "Which fact most strongly supports considering Company B?",
+      "choices": ["Its share price is lower", "Its growth appears available at a more reasonable valuation", "It must rise next month"],
+      "correct_choice": 1,
+      "explanation": "PEG relates the price paid to expected growth. It does not guarantee returns, but it helps distinguish attractive growth from expensive expectations.",
+      "lesson_id": "lesson-peg"
+    },
+    {
+      "id": "puzzle-concentration-001",
+      "title": "One winner becomes the portfolio",
+      "difficulty": "beginner",
+      "skill": "concentration",
+      "scenario": "A successful holding has grown to 46% of your portfolio while several strong opportunities remain available.",
+      "question": "What is the main portfolio risk?",
+      "choices": ["The portfolio owns too many sectors", "One company's setback can dominate the entire result", "The holding's past gain will automatically reverse"],
+      "correct_choice": 1,
+      "explanation": "A strong company can still create a weak portfolio when its weight makes one outcome disproportionately important.",
+      "lesson_id": "lesson-diversification"
+    },
+    {
+      "id": "puzzle-sharpe-001",
+      "title": "Smooth versus spectacular",
+      "difficulty": "intermediate",
+      "skill": "risk_adjusted_return",
+      "scenario": "Portfolio A returned 18% with 12% volatility. Portfolio B returned 21% with 29% volatility. Their other evidence is similar.",
+      "question": "Which portfolio has the clearer risk-adjusted case?",
+      "choices": ["Portfolio A", "Portfolio B", "They are identical because both made money"],
+      "correct_choice": 0,
+      "explanation": "The extra return in Portfolio B came with much more instability. Sharpe-style reasoning rewards return earned efficiently, not return alone.",
+      "lesson_id": "lesson-sharpe"
+    },
+    {
+      "id": "puzzle-drawdown-001",
+      "title": "The hidden cost of recovery",
+      "difficulty": "intermediate",
+      "skill": "drawdown",
+      "scenario": "Two portfolios have similar annual returns. Portfolio A's worst peak-to-trough fall is 14%; Portfolio B's is 39%.",
+      "question": "Why does Portfolio A deserve serious consideration?",
+      "choices": ["It is guaranteed to outperform", "It required a shallower loss and less recovery to regain its peak", "Drawdown matters only to traders"],
+      "correct_choice": 1,
+      "explanation": "Large losses require disproportionately larger gains to recover. Drawdown measures the difficult journey hidden by an end return.",
+      "lesson_id": "lesson-drawdown"
+    },
+    {
+      "id": "puzzle-value-trap-001",
+      "title": "Cheap for a reason",
+      "difficulty": "intermediate",
+      "skill": "fundamentals",
+      "scenario": "A stock's PE has fallen sharply, but its profit forecast, balance-sheet quality and risk-adjusted return have all deteriorated.",
+      "question": "What is the strongest interpretation?",
+      "choices": ["A lower PE always makes it a bargain", "The stock may be a value trap and needs evidence of business resilience", "Buy because the market is wrong"],
+      "correct_choice": 1,
+      "explanation": "A low valuation is useful only when the earnings and business supporting it remain credible.",
+      "lesson_id": "lesson-pe-growth"
+    },
+    {
+      "id": "puzzle-correlation-001",
+      "title": "Twelve names, one bet",
+      "difficulty": "advanced",
+      "skill": "diversification",
+      "scenario": "Your portfolio owns twelve stocks, but nine depend heavily on the same commodity cycle.",
+      "question": "Is this portfolio well diversified?",
+      "choices": ["Yes, because it has twelve tickers", "No, because common economic exposure can make the holdings fall together", "Yes, if every holding has a low PE"],
+      "correct_choice": 1,
+      "explanation": "Ticker count is not enough. Useful diversification comes from exposures that do not all respond to the same risk.",
+      "lesson_id": "lesson-diversification"
+    },
+    {
+      "id": "puzzle-rebalance-001",
+      "title": "Good company, smaller role",
+      "difficulty": "intermediate",
+      "skill": "rebalancing",
+      "scenario": "A holding remains healthy, but its weight and valuation have risen while other holdings now offer better risk-adjusted upside.",
+      "question": "Which move best reflects disciplined rebalancing?",
+      "choices": ["Hold forever because the company is healthy", "Trim the position without treating it as a failed investment", "Sell every profitable holding"],
+      "correct_choice": 1,
+      "explanation": "A trim changes the role of a sound holding when the portfolio can use capital more efficiently elsewhere.",
+      "lesson_id": "lesson-rebalancing"
+    },
+    {
+      "id": "puzzle-var-001",
+      "title": "A normal bad month",
+      "difficulty": "advanced",
+      "skill": "downside_risk",
+      "scenario": "A one-month 95% VaR estimate is ₹18,000 for a ₹5 lakh portfolio.",
+      "question": "What does this estimate most nearly mean?",
+      "choices": ["The portfolio cannot lose more than ₹18,000", "In the model, about 5% of months may be worse than a ₹18,000 loss", "The portfolio will lose exactly ₹18,000 next month"],
+      "correct_choice": 1,
+      "explanation": "VaR is a model threshold, not a maximum-loss guarantee. Tail losses beyond it remain possible.",
+      "lesson_id": "lesson-var-es"
+    },
+    {
+      "id": "puzzle-cash-001",
+      "title": "The expensive share",
+      "difficulty": "advanced",
+      "skill": "whole_share_execution",
+      "scenario": "Your best theoretical allocation requires half a share of a ₹8,000 stock, but BTI permits whole shares only and your monthly contribution is ₹10,000.",
+      "question": "What should the evaluator compare you against?",
+      "choices": ["An impossible fractional portfolio", "The best feasible whole-share portfolio for your actual cash and holdings", "The ₹1 lakh campaign's portfolio"],
+      "correct_choice": 1,
+      "explanation": "A fair benchmark respects the player's actual constraints. Skill is measured against the best feasible opportunity, not an unattainable answer.",
+      "lesson_id": "lesson-rebalancing"
+    },
+    {
+      "id": "puzzle-equivalent-001",
+      "title": "Different weights, equally strong",
+      "difficulty": "advanced",
+      "skill": "equivalent_good_moves",
+      "scenario": "Your portfolio differs from the hidden reference weights but has nearly identical expected return, downside risk, valuation quality and diversification.",
+      "question": "How should BTI classify it?",
+      "choices": ["Blunder, because weights differ", "Within the excellent-equivalence band", "Best only if next month rises"],
+      "correct_choice": 1,
+      "explanation": "Portfolio problems can have several near-optimal solutions. BTI scores opportunity loss, not obedience to one exact weight vector.",
+      "lesson_id": "lesson-process-outcome"
+    },
+    {
+      "id": "puzzle-forecast-001",
+      "title": "A forecast is not a fact",
+      "difficulty": "intermediate",
+      "skill": "forecast_uncertainty",
+      "scenario": "A stock has the highest forecast return but also the widest uncertainty range and a severe historical drawdown.",
+      "question": "What is the disciplined response?",
+      "choices": ["Allocate everything to the highest forecast", "Size it only after considering uncertainty and portfolio downside", "Ignore all forecasts permanently"],
+      "correct_choice": 1,
+      "explanation": "A forecast is one input. Position size should reflect both its potential and how uncertain or damaging the downside could be.",
+      "lesson_id": "lesson-var-es"
+    }
+  ]
+}
