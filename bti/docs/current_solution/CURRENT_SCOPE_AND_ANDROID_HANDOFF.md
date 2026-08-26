@@ -17,6 +17,11 @@
 - Campaign state, latest result and historical-review APIs.
 - Dedicated Supabase PostgreSQL persistence with a JSON fallback for local development.
 - Installable portrait-first PWA with branded icon, splash metadata and service-worker shell cache.
+- Dedicated mobile Market decision feed and Game story; mobile no longer renders a compressed
+  version of the desktop terminal grid.
+- Selectable Value, Quality, Quant, Technical, News and Held research lenses with complete security
+  research available through progressive disclosure.
+- Persistent mobile move dock, full-screen Portfolio X-Ray sheet and three-destination bottom navigation.
 - Collapsible desktop navigation and a mobile drawer so the workstation retains maximum analysis space.
 - Docker build, Render auto-deployment and health/storage endpoint.
 - Simulation and private-oracle contract tests.

@@ -156,7 +156,7 @@ def test_investor_preview_is_installable_and_mobile_first() -> None:
     assert {192, 512} <= {
         int(icon["sizes"].split("x", 1)[0]) for icon in manifest["icons"]
     }
-    assert "bti-investor-preview-v0.9.0" in service_worker
+    assert "bti-mobile-preview-v0.10.0" in service_worker
     assert "INSTALL BTI" in app
     assert 'railCollapsed ? ">>" : "<<"' in app
     assert "mobile-navigation-open" in styles
@@ -193,3 +193,38 @@ def test_research_and_market_analysis_surfaces_remain_first_class() -> None:
         "NO TAKEBACKS",
     ):
         assert phrase in game_board
+
+
+def test_mobile_uses_progressive_disclosure_not_a_compressed_terminal() -> None:
+    app = (WEB / "src" / "App.tsx").read_text(encoding="utf-8")
+    market = (WEB / "src" / "MobileMarket.tsx").read_text(encoding="utf-8")
+    game = (WEB / "src" / "MobileGameBoard.tsx").read_text(encoding="utf-8")
+    styles = (WEB / "src" / "styles.css").read_text(encoding="utf-8")
+
+    assert "useMobileViewport" in app
+    assert "MobileMarket" in app and "MobileGameBoard" in app
+    for phrase in (
+        "VALUE",
+        "QUALITY",
+        "QUANT",
+        "TECHNICAL",
+        "NEWS",
+        "MARKET PULSE",
+        "LIVE MOVE",
+        "PORTFOLIO",
+        "REPEAT LAST MOVE",
+    ):
+        assert phrase in market
+    for phrase in (
+        "RATED CAMPAIGN",
+        "EXECUTE PERMANENT MOVE",
+        "WHAT WORKED",
+        "NEXT EDGE",
+        "MOVE HISTORY",
+        "YOU BEAT THE INDEX",
+    ):
+        assert phrase in game
+    assert ".mobile-tabbar" in styles
+    assert ".mobile-stock-feed" in styles
+    assert ".mobile-move-sheet" in styles
+    assert ".mobile-chase-card" in styles

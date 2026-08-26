@@ -13,6 +13,8 @@ import {
 import { MarketTerminal } from "./Terminal";
 import { StockResearch } from "./StockResearch";
 import { GameBoard } from "./GameBoard";
+import { MobileGameBoard } from "./MobileGameBoard";
+import { MobileMarket } from "./MobileMarket";
 
 type View =
   | "home"
@@ -33,6 +35,19 @@ type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
+
+function useMobileViewport() {
+  const [mobile, setMobile] = useState(
+    () => window.matchMedia("(max-width: 760px)").matches,
+  );
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 760px)");
+    const update = () => setMobile(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return mobile;
+}
 const rupees = (p: number, compact = false) => {
   const v = p / 100;
   if (compact && v >= 1e7) return `₹${(v / 1e7).toFixed(2)}Cr`;
@@ -350,7 +365,7 @@ function Shell({
             Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
-          <small>BTI INVESTOR PREVIEW · v0.9.0</small>
+          <small>BTI MOBILE PREVIEW · v0.10.0</small>
           {installAvailable && (
             <button className="install-bti" onClick={installApp}>
               INSTALL BTI ↓
@@ -358,6 +373,27 @@ function Shell({
           )}
         </div>
         {children}
+        <nav className="mobile-tabbar" aria-label="BTI mobile navigation">
+          <button
+            className={["market", "stock"].includes(view) ? "active" : ""}
+            onClick={() => navigate(campaign ? "market" : "setup")}
+          >
+            <span>▥</span>
+            MARKET
+          </button>
+          <button
+            className={view === "review" ? "active" : ""}
+            disabled={!campaign}
+            onClick={() => navigate("review")}
+          >
+            <span>◫</span>
+            GAME
+          </button>
+          <button onClick={() => setMobileNavigation(true)}>
+            <span>☰</span>
+            CAMPAIGNS
+          </button>
+        </nav>
       </main>
     </div>
   );
@@ -1490,6 +1526,7 @@ function Explore({
 }
 
 export default function App() {
+  const isMobile = useMobileViewport();
   const [view, setView] = useState<View>("home"),
     [campaign, setCampaign] = useState<Campaign | null>(null),
     [campaigns, setCampaigns] = useState<Campaign[]>([]),
@@ -1707,7 +1744,20 @@ export default function App() {
     if (view === "home") return <Home campaign={campaign} setView={setView} />;
     if (view === "setup") return <Setup start={start} busy={busy} />;
     if (view === "market" && campaign && market)
-      return (
+      return isMobile ? (
+        <MobileMarket
+          market={market}
+          campaign={campaign}
+          select={select}
+          buildMove={() => {
+            setResult(null);
+            setReviewData(null);
+            setView("review");
+          }}
+          trades={trades}
+          setTrades={setTrades}
+        />
+      ) : (
         <MarketTerminal
           market={market}
           campaign={campaign}
@@ -1734,7 +1784,21 @@ export default function App() {
         />
       );
     if (view === "review" && campaign && market)
-      return (
+      return isMobile ? (
+        <MobileGameBoard
+          campaign={campaign}
+          market={market}
+          trades={trades}
+          result={result}
+          reviewData={reviewData}
+          execute={execute}
+          busy={busy}
+          editMove={() => setView("market")}
+          continueGame={continueGame}
+          reviewMove={reviewMove}
+          returnLive={() => setReviewData(null)}
+        />
+      ) : (
         <GameBoard
           campaign={campaign}
           market={market}
@@ -1765,6 +1829,7 @@ export default function App() {
     busy,
     launching,
     error,
+    isMobile,
   ]);
   return (
     <Shell

@@ -3,7 +3,7 @@
 ## Release identity
 
 - **Installed name:** BTI — Beat the Index
-- **Release:** BTI Investor Preview · v0.9.0
+- **Release:** BTI Mobile Preview · v0.10.0
 - **Production URL:** <https://beat-the-index.onrender.com/>
 - **Primary device:** Samsung M30s, current Chrome, portrait orientation
 - **Distribution:** installable web application; this release is not distributed through Google Play
@@ -26,18 +26,26 @@ only the application shell and brand assets; gameplay API requests remain networ
 
 ## Mobile information architecture
 
-The phone experience is a prioritised composition of the desktop product, not a separate lite game.
+The phone experience is a dedicated scroll-first composition of the desktop product, not a compressed
+analyst table and not a separate lite game. It preserves capability parity through progressive
+disclosure.
 
 - A compact header retains campaign identity, move number and the permanent simulation indicator.
 - Navigation becomes a drawer on small screens. On desktop, the `<<` control collapses the rail and
   the corresponding `>>` control restores it.
 - The campaign cockpit and table controls remain sticky where practical.
-- Each market-table row becomes a compact research-and-order card containing identity, price,
-  simulated move, draft controls, intramonth chart and the decisive valuation/risk signals.
-- The live move tray remains accessible at the bottom of the screen so a player can reconcile the
-  portfolio without losing research context.
-- The Game Board stacks execution, position evaluation, move feedback, chase graph and history into
-  one vertical decision narrative.
+- Market becomes a vertical decision feed with a campaign scorecard, market briefing, top
+  gainers/losers, generated headline and expandable 50-stock market-risk pulse.
+- `ALL`, `VALUE`, `QUALITY`, `QUANT`, `TECHNICAL`, `NEWS` and `HELD` lenses reorder the universe and
+  reveal the metrics relevant to the selected analytical style.
+- Each security is a compact research-and-order card with an intramonth chart, contextual metrics,
+  current/draft position and one-handed share controls. Tapping it opens the complete OHLC,
+  fundamental, quantitative, forecast and news dossier.
+- The live move dock remains fixed above bottom navigation. It opens a full-screen order sheet with
+  Portfolio X-Ray, sector allocation, capital deployment and cash reconciliation.
+- Game becomes an unfolding vertical match story: campaign score, cricket chase, execution sheet,
+  permanent-commit gate, Stockfish-like score reveal, feedback and immutable move history.
+- Market, Game and Campaigns form the permanent thumb-zone navigation.
 
 The persistent **SIMULATION MODE** boundary remains visible in browser and installed modes.
 
@@ -64,7 +72,7 @@ even though the database record remains. Google OAuth is a later account release
 ```json
 {
   "status": "ok",
-  "release": "0.9.0",
+  "release": "0.10.0",
   "storage": {
     "backend": "postgres",
     "durable": true,
