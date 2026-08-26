@@ -59,8 +59,14 @@ const rupees = (paise: number, compact = false) => {
 };
 const signed = (value: number, digits = 2) =>
   `${value >= 0 ? "+" : ""}${value.toFixed(digits)}%`;
-const change = (stock: Stock) =>
-  (stock.close_paise / stock.open_paise - 1) * 100;
+const change = (stock: Stock) => {
+  const currentMonth = (stock.close_paise / stock.open_paise - 1) * 100;
+  if (Math.abs(currentMonth) > 0.0001) return currentMonth;
+  const history = stock.history_paise;
+  const trailingMonth =
+    history[Math.max(0, history.length - 22)] || stock.open_paise;
+  return (stock.close_paise / trailingMonth - 1) * 100;
+};
 const median = (values: number[]) => {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;

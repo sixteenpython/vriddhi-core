@@ -1713,7 +1713,7 @@ header h2 {
   scrollbar-color: #5e7380 #d9dde0;
 }
 .table-scroll-spacer {
-  width: 1390px;
+  width: 1460px;
   height: 1px;
 }
 .pro-row {
@@ -1820,7 +1820,8 @@ header h2 {
   min-width: 220px;
   max-width: 520px;
   resize: horizontal;
-  overflow: auto;
+  height: calc(clamp(560px, 72vh, 920px) + 80px);
+  overflow: hidden;
   direction: rtl;
   border-left: 2px solid #27404c;
   padding-left: 6px;
@@ -1840,14 +1841,14 @@ header h2 {
   border-bottom: 1px solid #1c303b;
   color: #83a2b2;
   font:
-    800 8px ui-monospace,
+    800 10px ui-monospace,
     Consolas,
     monospace;
   letter-spacing: 0.12em;
 }
 .panel-label small {
   color: #4be47a;
-  font-size: 7px;
+  font-size: 8px;
 }
 .panel-label button {
   border: 0;
@@ -3322,7 +3323,7 @@ header h2 {
   background: #071118;
   color: #668593;
   font:
-    800 7px ui-monospace,
+    800 9px ui-monospace,
     Consolas,
     monospace;
   letter-spacing: 0.08em;
@@ -3337,7 +3338,7 @@ header h2 {
   background: #08151d;
   color: #8da4ae;
   font:
-    800 7px ui-monospace,
+    800 8px ui-monospace,
     Consolas,
     monospace;
   cursor: pointer;
@@ -3396,19 +3397,19 @@ header h2 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 27px;
+  min-height: 32px;
   padding-left: 8px;
   border-bottom: 1px solid #1b3039;
   color: #7795a3;
   font:
-    800 7px ui-monospace,
+    800 9px ui-monospace,
     Consolas,
     monospace;
   letter-spacing: 0.1em;
 }
 .intelligence-tile > header button {
-  width: 27px;
-  height: 27px;
+  width: 32px;
+  height: 32px;
   border: 0;
   border-left: 1px solid #1b3039;
   background: transparent;
@@ -3424,7 +3425,7 @@ header h2 {
 .pulse-quote span {
   color: #7693a0;
   font:
-    700 7px ui-monospace,
+    700 8px ui-monospace,
     Consolas,
     monospace;
 }
@@ -3540,7 +3541,7 @@ header h2 {
   padding: 2px 0 6px;
   color: #d9e8ed;
   font:
-    900 7px ui-monospace,
+    900 9px ui-monospace,
     Consolas,
     monospace;
   letter-spacing: 0.1em;
@@ -3570,7 +3571,7 @@ header h2 {
   padding: 7px 8px 5px;
   color: #dce9ee;
   font:
-    900 7px ui-monospace,
+    900 9px ui-monospace,
     Consolas,
     monospace;
   letter-spacing: 0.1em;
@@ -3661,8 +3662,8 @@ header h2 {
 .flash-newswire {
   position: relative;
   flex: 1 1 auto;
-  min-height: 900px;
-  overflow: hidden;
+  min-height: 0;
+  overflow: auto;
   background:
     linear-gradient(180deg, rgba(21, 9, 35, 0.4), transparent 180px),
     repeating-linear-gradient(
@@ -3983,14 +3984,64 @@ header h2 {
     monospace;
 }
 .pro-table {
-  min-width: 1390px;
+  min-width: 1460px;
 }
 .pro-row {
-  grid-template-columns: minmax(150px, 1.3fr) 74px 62px 250px 110px repeat(
+  grid-template-columns: 190px 84px 72px 260px 130px repeat(
       8,
-      minmax(52px, 0.5fr)
+      minmax(70px, 1fr)
     );
   cursor: default;
+}
+.terminal-main {
+  height: clamp(560px, 72vh, 920px);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.pro-row.pro-head {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: 38px;
+  font-size: 10px;
+  background: #0d1a22;
+}
+.pro-filter-row {
+  position: sticky;
+  top: 38px;
+  z-index: 29;
+}
+.pro-row > :nth-child(1),
+.pro-row > :nth-child(2),
+.pro-row > :nth-child(3),
+.pro-row > :nth-child(4) {
+  position: sticky;
+  z-index: 8;
+  background: #061016;
+}
+.pro-row > :nth-child(1) {
+  left: 0;
+}
+.pro-row > :nth-child(2) {
+  left: 190px;
+}
+.pro-row > :nth-child(3) {
+  left: 274px;
+}
+.pro-row > :nth-child(4) {
+  left: 346px;
+  box-shadow: 3px 0 0 rgba(79, 115, 130, 0.45);
+}
+.pro-row.pro-head > :nth-child(-n + 4) {
+  z-index: 34;
+  background: #0d1a22;
+}
+.pro-filter-row > :nth-child(-n + 4) {
+  z-index: 33;
+  background: #08141b;
+}
+.pro-row:not(.pro-head):not(.pro-filter-row):hover > :nth-child(-n + 4) {
+  background: #0d2028;
 }
 .pro-row.pro-head > button {
   border: 0;
@@ -4764,14 +4815,22 @@ header h2 {
   .terminal-side,
   .game-board-side {
     width: auto;
+    height: auto;
     max-width: none;
     resize: none;
+    overflow: visible;
     direction: ltr;
     border-left: 0;
     padding-left: 0;
   }
 }
 @media (max-width: 760px) {
+  .pro-row > :nth-child(2),
+  .pro-row > :nth-child(3),
+  .pro-row > :nth-child(4) {
+    position: static;
+    box-shadow: none;
+  }
   .news-movers-board,
   .security-news-grid,
   .ratio-grid,
