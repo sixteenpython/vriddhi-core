@@ -5911,6 +5911,11 @@ header h2 {
   .mobile-tabbar {
     position: fixed;
     inset: auto 0 0 0;
+    /* Override the older responsive `.shell nav { height: 100% }` rule.
+       Without this, the tab bar becomes a full-screen layer on phone widths
+       and visually hides the otherwise healthy mobile application. */
+    width: 100%;
+    height: auto;
     z-index: 90;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -5922,6 +5927,7 @@ header h2 {
     backdrop-filter: blur(14px);
   }
   .mobile-tabbar button {
+    height: auto;
     display: grid;
     place-content: center;
     gap: 3px;
