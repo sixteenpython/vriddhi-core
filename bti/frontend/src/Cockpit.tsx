@@ -17,7 +17,7 @@ const TILE_LABELS: Record<TileId, string> = {
   sector: "SECTOR MONITOR",
   quant: "QUANT RISK",
   movers: "MONTHLY MOVERS",
-  news: "NEWS & SENTIMENT",
+  news: "TOP 5 GAINERS / LOSERS",
 };
 const DEFAULT_TILES: TileConfig[] = (Object.keys(TILE_LABELS) as TileId[]).map(
   (id) => ({ id, hidden: false, wide: id === "pulse" || id === "movers" }),
@@ -349,11 +349,11 @@ export function IntelligenceDeck({ market }: { market: Market }) {
   const gainers = [...market.stocks]
     .filter((stock) => move(stock) > 0)
     .sort((a, b) => move(b) - move(a))
-    .slice(0, 6);
+    .slice(0, 5);
   const losers = [...market.stocks]
     .filter((stock) => move(stock) < 0)
     .sort((a, b) => move(a) - move(b))
-    .slice(0, 6);
+    .slice(0, 5);
   const sectors = Object.entries(
     market.stocks.reduce<Record<string, Stock[]>>((result, stock) => {
       (result[stock.sector] ||= []).push(stock);
@@ -520,22 +520,25 @@ export function IntelligenceDeck({ market }: { market: Market }) {
         </div>
       );
     return (
-      <div className="tile-news">
-        <article>
-          <small>SIM NOW · {movers[0].sector.toUpperCase()}</small>
-          <b>
-            {movers[0].ticker} draws attention after {signed(move(movers[0]))}
-            with sentiment at {movers[0].sentiment_score.toFixed(0)}/100.
-          </b>
-        </article>
-        <article>
-          <small>SIM 08:18 · RISK DESK</small>
-          <b>
-            Volume, volatility and expectations—not headline tone alone—shape
-            this month’s signal.
-          </b>
-        </article>
-        <small>NEWS SIGNALS ARE EMBEDDED IN THIS MARKET DESK</small>
+      <div className="compact-movers-board">
+        <section>
+          <header>5 GAINERS</header>
+          {gainers.map((stock) => (
+            <div key={stock.ticker}>
+              <b>{stock.ticker}</b>
+              <strong className="positive">{signed(move(stock))}</strong>
+            </div>
+          ))}
+        </section>
+        <section>
+          <header>5 LOSERS</header>
+          {losers.map((stock) => (
+            <div key={stock.ticker}>
+              <b>{stock.ticker}</b>
+              <strong className="negative">{signed(move(stock))}</strong>
+            </div>
+          ))}
+        </section>
       </div>
     );
   };

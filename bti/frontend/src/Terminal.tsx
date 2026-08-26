@@ -817,27 +817,64 @@ export function MarketTerminal({
               </div>
             ))}
           </div>
-          <div className="terminal-panel attention-wire">
+          <div className="terminal-panel flash-newswire">
             <div className="panel-label">
-              <span>ATTENTION WIRE</span>
-              <small>SIMULATED · HIGH NOISE</small>
+              <span>
+                <i className="wire-live" /> BTI NEWSWIRE
+              </span>
+              <small>SIMULATED · LIVE DESK</small>
             </div>
-            {analytics.attention.slice(0, 6).map((stock, index) => (
-              <button key={stock.ticker} onClick={() => select(stock)}>
-                <span>
-                  <b>{stock.ticker}</b>
+            <div className="wire-ticker">
+              <span>BREAKING</span>
+              <b>
+                {analytics.gainers[0]?.ticker || "MARKET"} LEADS ·{" "}
+                {analytics.losers[0]?.ticker || "RISK"} LAGS · VOLATILITY{" "}
+                {analytics.meanVolatility.toFixed(1)}%
+              </b>
+            </div>
+            {stories.map((story, index) => (
+              <article
+                className={`wire-story macro ${story.tone}`}
+                key={story.title}
+              >
+                <div>
                   <small>
-                    {index === 0
-                      ? "MOST READ"
-                      : stock.sentiment_score >= 60
-                        ? "BULLISH BUZZ"
-                        : "RISK ALERT"}
+                    {story.age} · {story.tag}
                   </small>
-                </span>
+                  <em>{index === 0 ? "TOP STORY" : "MARKET DESK"}</em>
+                </div>
+                <h4>{story.title}</h4>
+                <p>{story.body}</p>
+                <strong>{story.impact}</strong>
+              </article>
+            ))}
+            {analytics.attention.slice(0, 18).map((stock, index) => (
+              <button key={stock.ticker} onClick={() => select(stock)}>
+                <div>
+                  <small>
+                    SIM {String(9 + Math.floor(index / 6)).padStart(2, "0")}:
+                    {String((index * 7) % 60).padStart(2, "0")} ·{" "}
+                    {stock.sector.toUpperCase()}
+                  </small>
+                  <em>
+                    {index < 3
+                      ? "TRENDING"
+                      : stock.sentiment_score >= 60
+                        ? "BULLISH"
+                        : "WATCH"}
+                  </em>
+                </div>
+                <h4>
+                  {change(stock) > 0
+                    ? `${stock.ticker} catches momentum screens after a ${signed(change(stock))} simulated move`
+                    : change(stock) < 0
+                      ? `${stock.ticker} enters the red as traders reassess the monthly setup`
+                      : `${stock.ticker} features on desk screens as valuation and growth signals diverge`}
+                </h4>
                 <p>
-                  {change(stock) >= 0
-                    ? `${stock.ticker} surges into trader watchlists as volume reaches ${stock.volume_index.toFixed(0)}.`
-                    : `${stock.ticker} slides as screens flag weakening simulated sentiment.`}
+                  Sentiment {stock.sentiment_score.toFixed(0)}/100 · volume{" "}
+                  {stock.volume_index.toFixed(0)} · PEG {stock.peg.toFixed(2)} ·
+                  Sharpe {stock.sharpe.toFixed(2)}
                 </p>
                 <strong
                   className={change(stock) >= 0 ? "positive" : "negative"}
@@ -846,37 +883,9 @@ export function MarketTerminal({
                 </strong>
               </button>
             ))}
-            <em>
-              ATTENTION IS NOT ALPHA · HEADLINES MAY DESCRIBE PRICE AFTER IT
-              MOVES
-            </em>
-          </div>
-          <div className="terminal-panel sentiment-board">
-            <div className="panel-label">
-              <span>SENTIMENT HEAT</span>
-              <small>CROWD SIGNAL</small>
-            </div>
-            {analytics.gainers.slice(0, 3).map((stock) => (
-              <div key={stock.ticker}>
-                <span>{stock.ticker}</span>
-                <i>
-                  <b style={{ width: `${stock.sentiment_score}%` }} />
-                </i>
-                <strong>{stock.sentiment_score.toFixed(0)}</strong>
-              </div>
-            ))}
-            {analytics.losers.slice(0, 2).map((stock) => (
-              <div key={stock.ticker}>
-                <span>{stock.ticker}</span>
-                <i>
-                  <b
-                    className="negative-bar"
-                    style={{ width: `${stock.sentiment_score}%` }}
-                  />
-                </i>
-                <strong>{stock.sentiment_score.toFixed(0)}</strong>
-              </div>
-            ))}
+            <footer>
+              ATTENTION IS NOT ALPHA · EVERY STORY AND PRICE IS SIMULATED
+            </footer>
           </div>
         </aside>
       </div>
