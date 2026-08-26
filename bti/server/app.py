@@ -125,7 +125,17 @@ def create_app(save_dir: str | Path | None = None,
             routes.append(Mount("/assets", StaticFiles(directory=assets), name="assets"))
 
         async def spa(_: Request) -> Response:
-            return FileResponse(frontend / "index.html")
+            # The HTML shell points at content-hashed assets and must be revalidated on
+            # every release. Caching it can strand users on an older JavaScript bundle
+            # even after Render has promoted the new container.
+            return FileResponse(
+                frontend / "index.html",
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                },
+            )
 
         async def missing_api(_: Request) -> Response:
             raise APIError(404, "ENDPOINT_NOT_FOUND", "API endpoint not found.")
