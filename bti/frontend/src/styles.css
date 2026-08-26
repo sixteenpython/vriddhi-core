@@ -1927,15 +1927,19 @@ header h2 {
   gap: 8px;
 }
 .terminal-side {
-  width: 290px;
+  width: clamp(290px, 18vw, 460px);
   min-width: 220px;
   max-width: 520px;
   resize: horizontal;
   height: calc(clamp(560px, 72vh, 920px) + 80px);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   direction: rtl;
   border-left: 2px solid #27404c;
   padding-left: 6px;
+  container-type: inline-size;
+  scrollbar-width: thin;
+  scrollbar-color: #38515d #071017;
 }
 .terminal-side > * {
   direction: ltr;
@@ -4047,13 +4051,14 @@ header h2 {
 }
 .compact-signal-dock {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 5px;
   margin-top: auto;
 }
 .dock-signal {
   min-width: 0;
-  height: 104px;
+  min-height: 112px;
+  height: auto;
   overflow: hidden;
 }
 .compact-signal-dock > button {
@@ -4068,7 +4073,7 @@ header h2 {
 }
 .dock-open {
   display: block;
-  margin: -12px 6px 0;
+  margin: 2px 7px 8px;
   color: #55e77d;
   font:
     800 5px ui-monospace,
@@ -4076,7 +4081,7 @@ header h2 {
     monospace;
 }
 .quant-clickable .dock-open {
-  margin-top: -14px;
+  margin-top: 2px;
 }
 .quant-modal-metrics {
   display: grid;
@@ -4132,12 +4137,14 @@ header h2 {
 }
 .dock-signal .terminal-spark {
   width: calc(100% - 12px);
-  height: 36px;
+  height: clamp(44px, 18cqi, 78px);
   margin: 6px;
 }
 .dock-signal.pulse > strong {
   display: block;
+  max-width: calc(100% - 14px);
   margin: -3px 7px 0;
+  overflow: hidden;
   color: #4ded7b;
   font:
     900 10px ui-monospace,
@@ -4147,7 +4154,8 @@ header h2 {
 .dock-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  height: 70px;
+  min-height: 70px;
+  height: auto;
 }
 .dock-metrics span {
   padding: 9px 6px;
@@ -4163,6 +4171,29 @@ header h2 {
   margin-top: 6px;
   color: #e1edf1;
   font-size: 10px;
+}
+@container (min-width: 390px) {
+  .compact-signal-dock {
+    grid-template-columns: 1fr 1fr;
+  }
+  .compact-signal-dock .pulse {
+    grid-column: 1 / -1;
+  }
+  .dock-signal .terminal-spark {
+    height: 68px;
+  }
+}
+@container (max-width: 250px) {
+  .dock-signal .panel-label {
+    font-size: 6px;
+  }
+  .dock-metrics {
+    grid-template-columns: 1fr;
+  }
+  .dock-metrics span {
+    padding: 6px;
+    border-bottom: 1px solid #182c35;
+  }
 }
 .dock-movers > div:last-child {
   display: grid;
@@ -4642,6 +4673,16 @@ header h2 {
   }
 }
 @media (max-width: 900px) {
+  .quant-modal-metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .quant-rank-table {
+    overflow-x: auto;
+  }
+  .quant-rank-table > header,
+  .quant-rank-table > div {
+    min-width: 720px;
+  }
   .desk-layout-bar {
     overflow-x: auto;
   }
