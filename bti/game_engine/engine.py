@@ -512,12 +512,16 @@ class BTIGame:
         result["final_result"] = self.final_result() if self.status == "COMPLETED" else None
         return result
 
-    def resign(self) -> dict[str, Any]:
+    def abort(self) -> dict[str, Any]:
         if self.status != "ACTIVE":
-            raise GameRuleError("Only an active campaign can be resigned")
-        self.state["status"] = "RESIGNED"
+            raise GameRuleError("Only an active campaign can be aborted")
+        self.state["status"] = "ABORTED"
         self.state["rating"] = max(600, self.state["rating"] - 35)
-        return {"status": "RESIGNED", "recorded_as": "LOSS", "rating": self.state["rating"]}
+        return {"status": "ABORTED", "recorded_as": "LOSS", "rating": self.state["rating"]}
+
+    def resign(self) -> dict[str, Any]:
+        """Backward-compatible alias for clients released before campaign history."""
+        return self.abort()
 
     def final_result(self) -> dict[str, Any]:
         portfolio = self.state["cash_paise"] + _value(self.state["holdings"], self.state["market"])

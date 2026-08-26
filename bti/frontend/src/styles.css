@@ -112,6 +112,117 @@ select:focus-visible {
 .shell nav button.active {
   box-shadow: inset 3px 0 var(--green);
 }
+.campaign-rail {
+  min-height: 0;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #1d2c36;
+  display: flex;
+  flex-direction: column;
+}
+.campaign-rail-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 8px 7px;
+  color: #6f8793;
+  font:
+    800 8px ui-monospace,
+    Consolas,
+    monospace;
+  letter-spacing: 0.13em;
+}
+.campaign-rail-title button,
+.new-campaign-rail {
+  border: 1px solid #29404b;
+  background: #09141a;
+  color: #53e77b;
+  cursor: pointer;
+}
+.campaign-rail-list {
+  display: grid;
+  gap: 3px;
+  max-height: 34vh;
+  overflow-y: auto;
+}
+.campaign-rail-list > div {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22px;
+  border-radius: 6px;
+}
+.campaign-rail-list > div.selected {
+  background: #112029;
+  box-shadow: inset 2px 0 #4ceb79;
+}
+.campaign-rail-list > div > button:first-child {
+  min-width: 0;
+  padding: 7px 7px 7px 10px;
+  border: 0;
+  background: transparent;
+  color: #afc0c7;
+  text-align: left;
+  cursor: pointer;
+}
+.campaign-rail-list span,
+.campaign-rail-list b,
+.campaign-rail-list small,
+.campaign-rail-list em {
+  display: block;
+}
+.campaign-rail-list b {
+  color: #e8f0f3;
+  font:
+    800 8px ui-monospace,
+    Consolas,
+    monospace;
+}
+.campaign-rail-list small {
+  margin-top: 2px;
+  color: #6d8995;
+  font-size: 7px;
+}
+.campaign-rail-list em {
+  margin-top: 4px;
+  color: #55e77c;
+  font:
+    800 6px ui-monospace,
+    Consolas,
+    monospace;
+}
+.campaign-rail-list .status-aborted,
+.campaign-rail-list .status-resigned {
+  color: #ff7782;
+}
+.campaign-rail-list .status-completed {
+  color: #c38bff;
+}
+.campaign-rail-list .abort-campaign {
+  width: 20px;
+  align-self: stretch;
+  border: 0;
+  background: transparent;
+  color: #7a919b;
+  cursor: pointer;
+}
+.campaign-rail-list .abort-campaign:hover {
+  color: #ff6875;
+  background: #2b1117;
+}
+.new-campaign-rail {
+  margin: 8px 3px 0;
+  padding: 7px;
+  font:
+    800 7px ui-monospace,
+    Consolas,
+    monospace;
+}
+.campaign-rail-list > p {
+  margin: 0;
+  padding: 8px;
+  color: #617985;
+  font-size: 8px;
+}
 .rail-foot {
   margin-top: auto;
   display: grid;
@@ -2466,6 +2577,12 @@ header h2 {
 }
 
 @media (max-width: 1200px) {
+  .market-information-row {
+    grid-template-columns: 1fr;
+  }
+  .headline-movers-panel {
+    margin-top: 0;
+  }
   .terminal-grid,
   .workbench-grid,
   .newsroom-grid {
@@ -2482,6 +2599,9 @@ header h2 {
   }
 }
 @media (max-width: 760px) {
+  .campaign-rail {
+    display: none;
+  }
   .terminal-page {
     padding: 7px 7px 65px;
   }
@@ -3674,11 +3794,90 @@ header h2 {
     #071017;
 }
 .market-newswire-stage {
-  min-height: 312px;
-  max-height: 36vh;
+  min-height: 260px;
+  max-height: 30vh;
   margin: 7px 0 8px;
   overflow: hidden;
   box-shadow: inset 0 0 34px rgba(91, 46, 121, 0.12);
+}
+.market-information-row {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(270px, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+.market-information-row .market-newswire-stage {
+  width: auto;
+}
+.headline-movers-panel {
+  min-width: 0;
+  margin: 7px 0 8px;
+  overflow: hidden;
+}
+.headline-movers-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.headline-movers-columns section:first-child {
+  border-right: 1px solid #203640;
+}
+.headline-movers-columns header {
+  padding: 7px;
+  border-bottom: 1px solid #203640;
+  color: #dce8ed;
+  font:
+    900 8px ui-monospace,
+    Consolas,
+    monospace;
+  letter-spacing: 0.1em;
+}
+.headline-movers-columns button {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  width: 100%;
+  padding: 5px 7px;
+  border: 0;
+  border-bottom: 1px solid #162a33;
+  background: transparent;
+  color: #e2edf1;
+  text-align: left;
+  cursor: pointer;
+}
+.headline-movers-columns button:hover {
+  background: #102029;
+}
+.headline-movers-columns button small {
+  grid-column: 1;
+  color: #67838f;
+  font-size: 6px;
+}
+.headline-movers-columns button em {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font:
+    900 7px ui-monospace,
+    Consolas,
+    monospace;
+}
+.headline-movers-columns button b {
+  min-width: 0;
+  overflow: hidden;
+  color: #e2edf1;
+  font:
+    900 8px ui-monospace,
+    Consolas,
+    monospace;
+  text-overflow: ellipsis;
+}
+.headline-movers-panel > p {
+  margin: 0;
+  padding: 7px;
+  color: #c58a42;
+  font:
+    700 6px/1.4 ui-monospace,
+    Consolas,
+    monospace;
 }
 .market-newswire-stage .wire-ticker {
   grid-template-columns: 72px 1fr;
@@ -3687,7 +3886,7 @@ header h2 {
 }
 .wire-columns {
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: start;
   max-height: 235px;
   padding-bottom: 24px;
@@ -3856,6 +4055,73 @@ header h2 {
   min-width: 0;
   height: 104px;
   overflow: hidden;
+}
+.compact-signal-dock > button {
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.compact-signal-dock > button:hover {
+  border-color: #4be879;
+  box-shadow: inset 0 0 24px rgba(75, 232, 121, 0.08);
+}
+.dock-open {
+  display: block;
+  margin: -12px 6px 0;
+  color: #55e77d;
+  font:
+    800 5px ui-monospace,
+    Consolas,
+    monospace;
+}
+.quant-clickable .dock-open {
+  margin-top: -14px;
+}
+.quant-modal-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  border-bottom: 1px solid #243b46;
+}
+.quant-modal-metrics div {
+  padding: 14px;
+  border-right: 1px solid #243b46;
+}
+.quant-modal-metrics span,
+.quant-modal-metrics b {
+  display: block;
+}
+.quant-modal-metrics span {
+  color: #7994a0;
+  font:
+    800 7px ui-monospace,
+    Consolas,
+    monospace;
+}
+.quant-modal-metrics b {
+  margin-top: 7px;
+  color: #edf5f7;
+  font:
+    900 16px ui-monospace,
+    Consolas,
+    monospace;
+}
+.quant-rank-table > header,
+.quant-rank-table > div {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(5, 1fr);
+  padding: 9px 15px;
+  border-bottom: 1px solid #172c35;
+  color: #a9bdc6;
+  font:
+    800 9px ui-monospace,
+    Consolas,
+    monospace;
+}
+.quant-rank-table > header {
+  color: #6f8c98;
+  background: #08141b;
+  font-size: 7px;
 }
 .dock-signal .panel-label {
   padding: 6px;
@@ -4866,6 +5132,52 @@ header h2 {
   color: #849da9;
   font-size: 9px;
   line-height: 1.5;
+}
+.research-range-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 7px 9px;
+  border-bottom: 1px solid #1b303a;
+  background: #071118;
+}
+.research-range-controls button {
+  min-width: 38px;
+  padding: 5px 7px;
+  border: 1px solid #263d47;
+  background: #08141b;
+  color: #8fa5ae;
+  font:
+    800 7px ui-monospace,
+    Consolas,
+    monospace;
+  cursor: pointer;
+}
+.research-range-controls button.active,
+.research-range-controls button:hover {
+  border-color: #4be777;
+  background: #0c2117;
+  color: #55ed80;
+}
+.research-range-controls span {
+  margin-left: auto;
+  color: #66828e;
+  font:
+    700 6px ui-monospace,
+    Consolas,
+    monospace;
+}
+.research-crosshair text {
+  fill: #e4f0f3;
+  font-size: 9px;
+}
+.research-crosshair rect {
+  fill: #101c24;
+  stroke: #4ce779;
+}
+.research-crosshair line {
+  stroke: #65d9ed;
+  stroke-dasharray: 4 3;
 }
 .signal-dial {
   display: flex;

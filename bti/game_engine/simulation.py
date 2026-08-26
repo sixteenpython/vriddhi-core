@@ -132,6 +132,13 @@ def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str,
         )
         lookback = _simulated_lookback(ticker, price, vol / 100, horizon)
         closes = [item["close_paise"] for item in lookback]
+        running_peak = closes[0]
+        historical_drawdown = 0.0
+        for close in closes:
+            running_peak = max(running_peak, close)
+            historical_drawdown = max(
+                historical_drawdown, (running_peak - close) / running_peak * 100
+            )
         peg = float(stock["PEG_Ratio"])
         pe = float(stock["PE_Ratio"])
         pb = float(stock["PB_Ratio"])
@@ -152,7 +159,7 @@ def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str,
             "forecast_pct": forecast,
             "volatility_pct": vol,
             "sharpe": float(stock["Risk_Adjusted_Return"]) / max(vol, 1.0),
-            "drawdown_pct": 0.0,
+            "drawdown_pct": round(historical_drawdown, 2),
             "var_95_pct": 1.645 * vol / math.sqrt(12),
             "expected_shortfall_95_pct": 2.063 * vol / math.sqrt(12),
             "peak_paise": price,

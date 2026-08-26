@@ -148,15 +148,86 @@ function Header({
     </header>
   );
 }
+function CampaignRail({
+  campaigns,
+  selected,
+  select,
+  create,
+  abort,
+}: {
+  campaigns: Campaign[];
+  selected: string | null;
+  select: (campaign: Campaign) => void;
+  create: () => void;
+  abort: (campaign: Campaign) => void;
+}) {
+  const ordered = [...campaigns].sort((a, b) => {
+    const rank = (status: string) =>
+      status === "ACTIVE" ? 0 : status === "COMPLETED" ? 1 : 2;
+    return (
+      rank(a.status) - rank(b.status) || b.moves_completed - a.moves_completed
+    );
+  });
+  return (
+    <div className="campaign-rail">
+      <div className="campaign-rail-title">
+        <span>CAMPAIGNS</span>
+        <button onClick={create}>＋</button>
+      </div>
+      <div className="campaign-rail-list">
+        {ordered.map((item) => (
+          <div
+            className={selected === item.campaign_id ? "selected" : ""}
+            key={item.campaign_id}
+          >
+            <button onClick={() => select(item)}>
+              <span>
+                <b>{item.campaign_id.slice(0, 8)}</b>
+                <small>
+                  M{item.current_move}/{item.horizon_months} · ₹
+                  {Math.round(item.monthly_amount_rupees / 1000)}K
+                </small>
+              </span>
+              <em className={`status-${item.status.toLowerCase()}`}>
+                {item.status === "RESIGNED" ? "ABORTED" : item.status}
+              </em>
+            </button>
+            {item.status === "ACTIVE" && (
+              <button
+                className="abort-campaign"
+                title="Abort campaign"
+                onClick={() => abort(item)}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+        {!ordered.length && <p>No campaigns yet.</p>}
+      </div>
+      <button className="new-campaign-rail" onClick={create}>
+        ＋ NEW CAMPAIGN
+      </button>
+    </div>
+  );
+}
 function Shell({
   view,
   setView,
   campaign,
+  campaigns,
+  selectCampaign,
+  newCampaign,
+  abortCampaign,
   children,
 }: {
   view: View;
   setView: (v: View) => void;
   campaign: Campaign | null;
+  campaigns: Campaign[];
+  selectCampaign: (campaign: Campaign) => void;
+  newCampaign: () => void;
+  abortCampaign: (campaign: Campaign) => void;
   children: React.ReactNode;
 }) {
   const terminalMode = [
@@ -193,6 +264,13 @@ function Shell({
             </button>
           ))}
         </nav>
+        <CampaignRail
+          campaigns={campaigns}
+          selected={campaign?.campaign_id || null}
+          select={selectCampaign}
+          create={newCampaign}
+          abort={abortCampaign}
+        />
         <div className="rail-foot">
           <Badge />
           <div className="player-identity">
@@ -213,7 +291,7 @@ function Shell({
             The stocks are real. The market you are about to play in is not.
           </b>
           <span>
-            Every price path and event is a deterministic simulation—
+            Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
         </div>
@@ -248,12 +326,14 @@ function Home({
               <button
                 className="primary"
                 onClick={() =>
-                  setView(campaign.status === "COMPLETED" ? "review" : "market")
+                  setView(campaign.status === "ACTIVE" ? "market" : "review")
                 }
               >
-                {campaign.status === "COMPLETED"
-                  ? "VIEW FINAL MATCH RESULT"
-                  : `PLAY MOVE ${campaign.current_move}`} {" "}
+                {campaign.status === "ACTIVE"
+                  ? `PLAY MOVE ${campaign.current_move}`
+                  : campaign.status === "COMPLETED"
+                    ? "VIEW FINAL MATCH RESULT"
+                    : "REVIEW ABORTED CAMPAIGN"}{" "}
                 <b>→</b>
               </button>
             ) : (
@@ -274,7 +354,11 @@ function Home({
           <div className="campaign-top">
             <div>
               <span className="eyebrow">
-                {campaign.status === "COMPLETED" ? "COMPLETED RATED CAMPAIGN" : "ACTIVE CAMPAIGN"}
+                {campaign.status === "ACTIVE"
+                  ? "ACTIVE CAMPAIGN"
+                  : campaign.status === "COMPLETED"
+                    ? "COMPLETED RATED CAMPAIGN"
+                    : "ABORTED RATED CAMPAIGN"}
               </span>
               <h3>
                 {rupees(campaign.monthly_amount_rupees * 100)} / month ·{" "}
@@ -331,7 +415,13 @@ function Home({
   );
 }
 
-function Setup({ start }: { start: (a: number, h: number) => void }) {
+function Setup({
+  start,
+  busy,
+}: {
+  start: (a: number, h: number) => void;
+  busy: boolean;
+}) {
   const [a, setA] = useState(50000),
     [h, setH] = useState(36);
   return (
@@ -381,11 +471,7 @@ function Setup({ start }: { start: (a: number, h: number) => void }) {
             value={rupees(a * h * 100, true)}
           />
           <Metric label="COMPLETE PORTFOLIO MOVES" value={String(h)} />
-          <Metric
-            label="MARKET"
-            value="DETERMINISTIC SIMULATION"
-            tone="positive"
-          />
+          <Metric label="MARKET" value="SIMULATION" tone="positive" />
         </div>
         <ul className="rules">
           <li>One complete allocation decision per investment month</li>
@@ -393,8 +479,12 @@ function Setup({ start }: { start: (a: number, h: number) => void }) {
           <li>Completed moves are immutable</li>
           <li>Decision quality is distinct from the next market outcome</li>
         </ul>
-        <button className="primary full" onClick={() => start(a, h)}>
-          BEGIN {h}-MOVE CAMPAIGN →
+        <button
+          className="primary full"
+          disabled={busy}
+          onClick={() => start(a, h)}
+        >
+          {busy ? "BUILDING MARKET…" : `BEGIN ${h}-MOVE CAMPAIGN →`}
         </button>
       </div>
     </section>
@@ -1340,21 +1430,26 @@ function Explore({
 export default function App() {
   const [view, setView] = useState<View>("home"),
     [campaign, setCampaign] = useState<Campaign | null>(null),
+    [campaigns, setCampaigns] = useState<Campaign[]>([]),
     [market, setMarket] = useState<Market | null>(null),
     [stock, setStock] = useState<Stock | null>(null),
     [trades, setTrades] = useState<Trade[]>([]),
     [result, setResult] = useState<MoveResult | null>(null),
     [reviewData, setReviewData] = useState<MoveReview | null>(null),
     [busy, setBusy] = useState(true),
+    [launching, setLaunching] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
     (async () => {
       try {
         await ensureSession();
         const cs = await api.campaigns();
+        setCampaigns(cs);
         if (cs[0]) {
-          setCampaign(cs[0]);
-          setMarket(await api.market(cs[0].campaign_id));
+          const preferred =
+            cs.find((item) => item.status === "ACTIVE") || cs[0];
+          setCampaign(preferred);
+          setMarket(await api.market(preferred.campaign_id));
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "BTI server unavailable");
@@ -1365,16 +1460,84 @@ export default function App() {
   }, []);
   const start = async (a: number, h: number) => {
     setBusy(true);
+    setLaunching(true);
+    setView("market");
     try {
       const c = await api.create(a, h);
       setCampaign(c);
-      setMarket(await api.market(c.campaign_id));
+      setCampaigns((current) => [c, ...current]);
+      setMarket(c.initial_market || (await api.market(c.campaign_id)));
       setTrades([]);
       setResult(null);
       setReviewData(null);
       setView("market");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not create campaign");
+    } finally {
+      setLaunching(false);
+      setBusy(false);
+    }
+  };
+  const selectCampaign = async (next: Campaign) => {
+    if (next.campaign_id === campaign?.campaign_id) return;
+    setBusy(true);
+    setError("");
+    try {
+      setCampaign(next);
+      setTrades([]);
+      setStock(null);
+      setResult(null);
+      setReviewData(null);
+      const nextMarket = await api.market(next.campaign_id);
+      setMarket(nextMarket);
+      if (next.status === "ACTIVE") {
+        setView("market");
+      } else if (next.moves_completed > 0) {
+        setReviewData(
+          await api.reviewMove(next.campaign_id, next.moves_completed),
+        );
+        setView("review");
+      } else {
+        setView("home");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Campaign unavailable");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const abortCampaign = async (target: Campaign) => {
+    if (
+      target.status !== "ACTIVE" ||
+      !window.confirm(
+        `Abort campaign ${target.campaign_id}? Rated moves remain available, but this campaign cannot be resumed.`,
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      const aborted = await api.abort(target.campaign_id);
+      setCampaigns((current) =>
+        current.map((item) =>
+          item.campaign_id === aborted.campaign_id ? aborted : item,
+        ),
+      );
+      if (campaign?.campaign_id === aborted.campaign_id) {
+        setCampaign(aborted);
+        setTrades([]);
+        if (aborted.moves_completed > 0) {
+          setReviewData(
+            await api.reviewMove(aborted.campaign_id, aborted.moves_completed),
+          );
+          setView("review");
+        } else {
+          setView("home");
+        }
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Campaign could not be aborted",
+      );
     } finally {
       setBusy(false);
     }
@@ -1397,6 +1560,11 @@ export default function App() {
         trades,
       );
       setCampaign(x.campaign);
+      setCampaigns((current) =>
+        current.map((item) =>
+          item.campaign_id === x.campaign.campaign_id ? x.campaign : item,
+        ),
+      );
       setResult(x.result);
       setReviewData(null);
       setMarket(await api.market(x.campaign.campaign_id));
@@ -1433,6 +1601,16 @@ export default function App() {
     setView("market");
   };
   const content = useMemo(() => {
+    if (launching)
+      return (
+        <div className="loading campaign-launching">
+          <i />
+          <b>Opening your simulated market desk…</b>
+          <span>
+            Generating the campaign once; no duplicate market request.
+          </span>
+        </div>
+      );
     if (busy && !campaign)
       return (
         <div className="loading">
@@ -1454,13 +1632,14 @@ export default function App() {
         </div>
       );
     if (view === "home") return <Home campaign={campaign} setView={setView} />;
-    if (view === "setup") return <Setup start={start} />;
+    if (view === "setup") return <Setup start={start} busy={busy} />;
     if (view === "market" && campaign && market)
       return (
         <MarketTerminal
           market={market}
           campaign={campaign}
           select={select}
+          openNews={() => setView("news")}
           buildMove={() => {
             setResult(null);
             setReviewData(null);
@@ -1502,9 +1681,28 @@ export default function App() {
     if (view === "progress" && campaign)
       return <Progress campaign={campaign} />;
     return <Explore view={view} setView={setView} campaign={campaign} />;
-  }, [view, campaign, market, stock, trades, result, reviewData, busy, error]);
+  }, [
+    view,
+    campaign,
+    market,
+    stock,
+    trades,
+    result,
+    reviewData,
+    busy,
+    launching,
+    error,
+  ]);
   return (
-    <Shell view={view} setView={setView} campaign={campaign}>
+    <Shell
+      view={view}
+      setView={setView}
+      campaign={campaign}
+      campaigns={campaigns}
+      selectCampaign={selectCampaign}
+      newCampaign={() => setView("setup")}
+      abortCampaign={abortCampaign}
+    >
       {error && campaign && (
         <div className="toast">
           {error}

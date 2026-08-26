@@ -92,6 +92,9 @@ def create_app(save_dir: str | Path | None = None,
     async def resign(request: Request) -> Response:
         return _ok(service.resign(owner(request), request.path_params["campaign_id"]))
 
+    async def abort(request: Request) -> Response:
+        return _ok(service.abort(owner(request), request.path_params["campaign_id"]))
+
     async def lessons(_: Request) -> Response:
         return _ok(service.content("lessons"))
 
@@ -115,6 +118,7 @@ def create_app(save_dir: str | Path | None = None,
             methods=["GET"],
         ),
         Route("/api/v1/campaigns/{campaign_id:str}/resign", resign, methods=["POST"]),
+        Route("/api/v1/campaigns/{campaign_id:str}/abort", abort, methods=["POST"]),
         Route("/api/v1/lessons", lessons, methods=["GET"]),
         Route("/api/v1/puzzles", puzzles, methods=["GET"]),
     ]

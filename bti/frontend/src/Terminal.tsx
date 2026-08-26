@@ -6,11 +6,12 @@ import {
   normalizeTrades,
   setDraftDelta,
 } from "./portfolioDraft";
-import { PortfolioRibbon } from "./Cockpit";
+import { PortfolioRibbon, SignalModal } from "./Cockpit";
 
 type BaseProps = { market: Market; campaign: Campaign };
 type MarketProps = BaseProps & {
   select: (stock: Stock) => void;
+  openNews: () => void;
   buildMove: () => void;
   trades: Trade[];
   setTrades: (trades: Trade[]) => void;
@@ -103,6 +104,98 @@ function MiniChart({
   );
 }
 
+function QuantRiskModal({
+  market,
+  close,
+}: {
+  market: Market;
+  close: () => void;
+}) {
+  const metrics = [
+    [
+      "CROSS-SECTION VOL",
+      median(market.stocks.map((stock) => stock.volatility_pct)),
+      "%",
+    ],
+    ["MEDIAN SHARPE", median(market.stocks.map((stock) => stock.sharpe)), ""],
+    [
+      "MEDIAN MAX DD",
+      median(market.stocks.map((stock) => stock.drawdown_pct)),
+      "%",
+    ],
+    [
+      "MEDIAN VaR 95",
+      median(market.stocks.map((stock) => stock.var_95_pct)),
+      "%",
+    ],
+    ["MEDIAN BETA", median(market.stocks.map((stock) => stock.beta)), ""],
+    [
+      "SHARPE > 1",
+      market.stocks.filter((stock) => stock.sharpe > 1).length,
+      " / 50",
+    ],
+  ] as const;
+  const ranked = [...market.stocks]
+    .sort((a, b) => b.sharpe - a.sharpe || a.var_95_pct - b.var_95_pct)
+    .slice(0, 10);
+  return (
+    <div
+      className="signal-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Quant risk monitor"
+    >
+      <div className="signal-modal-card quant-risk-modal">
+        <header>
+          <div>
+            <small>SIMULATED CROSS-SECTION</small>
+            <h2>QUANT RISK MONITOR</h2>
+          </div>
+          <button onClick={close}>CLOSE ×</button>
+        </header>
+        <div className="quant-modal-metrics">
+          {metrics.map(([label, value, suffix]) => (
+            <div key={label}>
+              <span>{label}</span>
+              <b>
+                {Number(value).toFixed(label === "SHARPE > 1" ? 0 : 2)}
+                {suffix}
+              </b>
+            </div>
+          ))}
+        </div>
+        <div className="quant-rank-table">
+          <header>
+            <span>SECURITY</span>
+            <span>SHARPE</span>
+            <span>VOL</span>
+            <span>MAX DD</span>
+            <span>VaR 95</span>
+            <span>BETA</span>
+          </header>
+          {ranked.map((stock) => (
+            <div key={stock.ticker}>
+              <b>{stock.ticker}</b>
+              <span>{stock.sharpe.toFixed(2)}</span>
+              <span>{stock.volatility_pct.toFixed(1)}%</span>
+              <span className="negative">{stock.drawdown_pct.toFixed(1)}%</span>
+              <span>{stock.var_95_pct.toFixed(1)}%</span>
+              <span>{stock.beta.toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+        <footer>
+          <span>
+            PUBLIC RISK SIGNALS · CLICK A SECURITY IN MARKET MONITOR FOR FULL
+            RESEARCH
+          </span>
+          <span>SIMULATION MODE</span>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
 const stories = [
   {
     tag: "MONETARY POLICY",
@@ -111,6 +204,7 @@ const stories = [
     impact: "Banks · NBFC · Realty",
     tone: "purple",
     age: "SIM 08:42",
+    ticker: null,
   },
   {
     tag: "ENERGY",
@@ -119,6 +213,7 @@ const stories = [
     impact: "BPCL · ONGC · RELIANCE",
     tone: "amber",
     age: "SIM 08:18",
+    ticker: "BPCL",
   },
   {
     tag: "EARNINGS",
@@ -127,6 +222,7 @@ const stories = [
     impact: "BEL · LT · ADANIPORTS",
     tone: "cyan",
     age: "SIM 07:55",
+    ticker: "BEL",
   },
   {
     tag: "GLOBAL TECH",
@@ -135,6 +231,7 @@ const stories = [
     impact: "TCS · INFY · HCLTECH",
     tone: "green",
     age: "SIM 07:31",
+    ticker: "TCS",
   },
   {
     tag: "CONSUMER",
@@ -143,6 +240,7 @@ const stories = [
     impact: "ITC · NESTLEIND · TITAN",
     tone: "red",
     age: "SIM 06:50",
+    ticker: "ITC",
   },
 ];
 
@@ -150,6 +248,7 @@ export function MarketTerminal({
   market,
   campaign,
   select,
+  openNews,
   buildMove,
   trades,
   setTrades,
@@ -157,6 +256,8 @@ export function MarketTerminal({
   const [query, setQuery] = useState("");
   const [repeatNotice, setRepeatNotice] = useState("");
   const [filter, setFilter] = useState("ALL");
+  const [expandedPulse, setExpandedPulse] = useState(false);
+  const [expandedQuant, setExpandedQuant] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>(
     {
       key: "ticker",
@@ -415,66 +516,106 @@ export function MarketTerminal({
         trades={trades}
         openWorkbench={buildMove}
       />
-      <div className="terminal-panel flash-newswire market-newswire-stage">
-        <div className="panel-label">
-          <span>
-            <i className="wire-live" /> BTI NEWSWIRE
-          </span>
-          <small>SIMULATED · LIVE MARKET DESK · ATTENTION IS NOT ALPHA</small>
+      <div className="market-information-row">
+        <div className="terminal-panel flash-newswire market-newswire-stage">
+          <div className="panel-label">
+            <span>
+              <i className="wire-live" /> BTI NEWSWIRE
+            </span>
+            <small>SIMULATED · LIVE MARKET DESK · ATTENTION IS NOT ALPHA</small>
+          </div>
+          <div className="wire-ticker">
+            <span>BREAKING</span>
+            <b>
+              {analytics.gainers[0]?.ticker || "MARKET"} LEADS ·{" "}
+              {analytics.losers[0]?.ticker || "RISK"} LAGS · VOLATILITY{" "}
+              {analytics.meanVolatility.toFixed(1)}% · ADV/DEC{" "}
+              {analytics.advances}/{analytics.declines}
+            </b>
+          </div>
+          <div className="wire-columns">
+            {stories.map((story, index) => (
+              <button
+                className={`wire-story macro ${story.tone}`}
+                key={story.title}
+                onClick={() => {
+                  const destination = story.ticker
+                    ? market.stocks.find((item) => item.ticker === story.ticker)
+                    : null;
+                  if (destination) select(destination);
+                  else openNews();
+                }}
+              >
+                <div>
+                  <small>
+                    {story.age} · {story.tag}
+                  </small>
+                  <em>{index === 0 ? "TOP STORY" : "MARKET DESK"}</em>
+                </div>
+                <h4>{story.title}</h4>
+                <p>{story.body}</p>
+                <strong>{story.impact}</strong>
+              </button>
+            ))}
+            {analytics.attention.slice(0, 12).map((stock, index) => (
+              <button key={stock.ticker} onClick={() => select(stock)}>
+                <div>
+                  <small>
+                    SIM {String(9 + Math.floor(index / 6)).padStart(2, "0")}:
+                    {String((index * 7) % 60).padStart(2, "0")} ·{" "}
+                    {stock.sector.toUpperCase()}
+                  </small>
+                  <em>{index < 3 ? "TRENDING" : "WATCH"}</em>
+                </div>
+                <h4>
+                  {change(stock) >= 0
+                    ? `${stock.ticker} catches screens after a ${signed(change(stock))} simulated move`
+                    : `${stock.ticker} enters the red as desks reassess the monthly setup`}
+                </h4>
+                <p>
+                  Sentiment {stock.sentiment_score.toFixed(0)}/100 · volume{" "}
+                  {stock.volume_index.toFixed(0)} · PEG {stock.peg.toFixed(2)} ·
+                  Sharpe {stock.sharpe.toFixed(2)}
+                </p>
+              </button>
+            ))}
+          </div>
+          <footer>
+            SIMULATION MODE · EVERY STORY, EVENT AND PRICE IS GENERATED FOR THE
+            GAME
+          </footer>
         </div>
-        <div className="wire-ticker">
-          <span>BREAKING</span>
-          <b>
-            {analytics.gainers[0]?.ticker || "MARKET"} LEADS ·{" "}
-            {analytics.losers[0]?.ticker || "RISK"} LAGS · VOLATILITY{" "}
-            {analytics.meanVolatility.toFixed(1)}% · ADV/DEC{" "}
-            {analytics.advances}/{analytics.declines}
-          </b>
+        <div className="terminal-panel headline-movers-panel">
+          <div className="panel-label">
+            <span>TOP 5 GAINERS / LOSERS</span>
+            <small>SIM MONTH</small>
+          </div>
+          <div className="headline-movers-columns">
+            <section>
+              <header>GAINERS</header>
+              {analytics.gainers.slice(0, 5).map((stock) => (
+                <button key={stock.ticker} onClick={() => select(stock)}>
+                  <b>{stock.ticker}</b>
+                  <small>{stock.sector}</small>
+                  <em className="positive">{signed(change(stock))}</em>
+                </button>
+              ))}
+            </section>
+            <section>
+              <header>LOSERS</header>
+              {analytics.losers.slice(0, 5).map((stock) => (
+                <button key={stock.ticker} onClick={() => select(stock)}>
+                  <b>{stock.ticker}</b>
+                  <small>{stock.sector}</small>
+                  <em className="negative">{signed(change(stock))}</em>
+                </button>
+              ))}
+            </section>
+          </div>
+          <p>
+            Momentum attracts attention. It does not establish decision quality.
+          </p>
         </div>
-        <div className="wire-columns">
-          {stories.map((story, index) => (
-            <article
-              className={`wire-story macro ${story.tone}`}
-              key={story.title}
-            >
-              <div>
-                <small>
-                  {story.age} · {story.tag}
-                </small>
-                <em>{index === 0 ? "TOP STORY" : "MARKET DESK"}</em>
-              </div>
-              <h4>{story.title}</h4>
-              <p>{story.body}</p>
-              <strong>{story.impact}</strong>
-            </article>
-          ))}
-          {analytics.attention.slice(0, 12).map((stock, index) => (
-            <button key={stock.ticker} onClick={() => select(stock)}>
-              <div>
-                <small>
-                  SIM {String(9 + Math.floor(index / 6)).padStart(2, "0")}:
-                  {String((index * 7) % 60).padStart(2, "0")} ·{" "}
-                  {stock.sector.toUpperCase()}
-                </small>
-                <em>{index < 3 ? "TRENDING" : "WATCH"}</em>
-              </div>
-              <h4>
-                {change(stock) >= 0
-                  ? `${stock.ticker} catches screens after a ${signed(change(stock))} simulated move`
-                  : `${stock.ticker} enters the red as desks reassess the monthly setup`}
-              </h4>
-              <p>
-                Sentiment {stock.sentiment_score.toFixed(0)}/100 · volume{" "}
-                {stock.volume_index.toFixed(0)} · PEG {stock.peg.toFixed(2)} ·
-                Sharpe {stock.sharpe.toFixed(2)}
-              </p>
-            </button>
-          ))}
-        </div>
-        <footer>
-          SIMULATION MODE · EVERY STORY, EVENT AND PRICE IS GENERATED FOR THE
-          GAME
-        </footer>
       </div>
       <div className="terminal-grid">
         <div className="terminal-main-shell">
@@ -897,7 +1038,10 @@ export function MarketTerminal({
             ))}
           </div>
           <div className="compact-signal-dock">
-            <section className="terminal-panel dock-signal pulse">
+            <button
+              className="terminal-panel dock-signal pulse"
+              onClick={() => setExpandedPulse(true)}
+            >
               <div className="panel-label">
                 <span>MARKET PULSE</span>
                 <small>SIM</small>
@@ -906,7 +1050,8 @@ export function MarketTerminal({
               <strong>
                 {signed((marketPulse.at(-1)! / marketPulse[0] - 1) * 100)}
               </strong>
-            </section>
+              <small className="dock-open">OPEN NIFTY OHLC ↗</small>
+            </button>
             <section className="terminal-panel dock-signal">
               <div className="panel-label">
                 <span>MARKET INTERNALS</span>
@@ -924,7 +1069,10 @@ export function MarketTerminal({
                 </span>
               </div>
             </section>
-            <section className="terminal-panel dock-signal">
+            <button
+              className="terminal-panel dock-signal quant-clickable"
+              onClick={() => setExpandedQuant(true)}
+            >
               <div className="panel-label">
                 <span>QUANT RISK</span>
                 <small>PUBLIC</small>
@@ -940,30 +1088,17 @@ export function MarketTerminal({
                   </b>
                 </span>
               </div>
-            </section>
-            <section className="terminal-panel dock-signal dock-movers">
-              <div className="panel-label">
-                <span>MONTHLY MOVERS</span>
-                <small>5 × 5</small>
-              </div>
-              <div>
-                {analytics.gainers.slice(0, 5).map((stock) => (
-                  <span key={stock.ticker}>
-                    <b>{stock.ticker}</b>
-                    <em className="positive">{signed(change(stock))}</em>
-                  </span>
-                ))}
-                {analytics.losers.slice(0, 5).map((stock) => (
-                  <span key={stock.ticker}>
-                    <b>{stock.ticker}</b>
-                    <em className="negative">{signed(change(stock))}</em>
-                  </span>
-                ))}
-              </div>
-            </section>
+              <small className="dock-open">OPEN RISK MONITOR ↗</small>
+            </button>
           </div>
         </aside>
       </div>
+      {expandedPulse && (
+        <SignalModal market={market} close={() => setExpandedPulse(false)} />
+      )}
+      {expandedQuant && (
+        <QuantRiskModal market={market} close={() => setExpandedQuant(false)} />
+      )}
       <div className="terminal-statusbar">
         <span>SIMULATION MODE · GENERATED MARKET FEED</span>
         <span>

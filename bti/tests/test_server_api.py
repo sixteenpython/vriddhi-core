@@ -69,6 +69,7 @@ def test_campaign_move_is_validated_committed_once_and_resumable(tmp_path):
     assert "reference" not in json.dumps(campaign).lower()
 
     market = request(app, "GET", f"/api/v1/campaigns/{campaign_id}/market", headers=auth)[1]["data"]
+    assert any(stock["drawdown_pct"] > 0 for stock in market["stocks"])
     cheapest = min(market["stocks"], key=lambda stock: stock["close_paise"])
     shares = 1_000_000 // cheapest["close_paise"]
     move = {"expected_month": 0,
@@ -120,6 +121,26 @@ def test_campaign_ownership_validation_and_resignation(tmp_path):
                                {}, owner_a)
     assert status == 200
     assert resigned["data"]["result"]["recorded_as"] == "LOSS"
+    assert resigned["data"]["campaign"]["status"] == "ABORTED"
+
+
+def test_multiple_campaigns_can_be_active_and_aborted_campaigns_remain_visible(tmp_path):
+    app, _, auth = setup(tmp_path)
+    first = request(app, "POST", "/api/v1/campaigns",
+                    {"monthly_amount_rupees": 10_000, "horizon_months": 24}, auth)[1]["data"]
+    second = request(app, "POST", "/api/v1/campaigns",
+                     {"monthly_amount_rupees": 50_000, "horizon_months": 60}, auth)[1]["data"]
+    assert first["initial_market"]["stocks"]
+    status, aborted = request(
+        app, "POST", f"/api/v1/campaigns/{first['campaign_id']}/abort", {}, auth
+    )
+    assert status == 200
+    assert aborted["data"]["campaign"]["status"] == "ABORTED"
+    campaigns = request(app, "GET", "/api/v1/campaigns", headers=auth)[1]["data"]
+    assert {campaign["status"] for campaign in campaigns} == {"ACTIVE", "ABORTED"}
+    assert {campaign["campaign_id"] for campaign in campaigns} == {
+        first["campaign_id"], second["campaign_id"]
+    }
 
 
 def test_explicit_validation_errors(tmp_path):

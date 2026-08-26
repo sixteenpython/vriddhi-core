@@ -25,6 +25,11 @@ Failures use a stable code and safe message; Python tracebacks are not returned 
 | GET | `/api/v1/campaigns/{id}/history` | immutable move summaries |
 | GET | `/api/v1/campaigns/{id}/history/{move}` | reconstructed move, market and chase state |
 | POST | `/api/v1/campaigns/{id}/resign` | explicit campaign resignation |
+| POST | `/api/v1/campaigns/{id}/abort` | permanently abort an active campaign while retaining history |
+
+Campaign creation includes `initial_market` in the creation response so the client can open the
+Market Monitor without issuing a redundant second market request. Campaign listing remains the
+canonical source for the active, completed and aborted campaign rail.
 | GET | `/api/v1/lessons` | governed lesson content |
 | GET | `/api/v1/puzzles` | governed puzzle content |
 

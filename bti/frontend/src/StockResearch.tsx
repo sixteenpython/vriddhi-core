@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import type { Campaign, Market, Stock } from "./api";
 
 type Props = {
@@ -19,8 +20,11 @@ const signed = (value: number) =>
   `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 const move = (stock: Stock) => (stock.close_paise / stock.open_paise - 1) * 100;
 
-function Candles({ stock }: { stock: Stock }) {
-  const candles = stock.ohlc_history.length
+type ResearchCandle = Stock["ohlc_history"][number];
+type ChartRange = "1D" | "1W" | "60D" | "90D" | "180D" | "1Y" | "5Y";
+
+function fiveYearCandles(stock: Stock): ResearchCandle[] {
+  const actual = stock.ohlc_history.length
     ? stock.ohlc_history
     : [
         {
@@ -31,6 +35,81 @@ function Candles({ stock }: { stock: Stock }) {
           close_paise: stock.close_paise,
         },
       ];
+  const prefixLength = Math.max(0, 1260 - actual.length);
+  if (!prefixLength) return actual;
+  const anchor = actual[0].open_paise;
+  const growth = Math.max(-0.6, stock.historical_cagr_pct / 100);
+  const start = anchor / Math.pow(1 + growth, prefixLength / 252);
+  const seed = [...stock.ticker].reduce(
+    (sum, char) => sum + char.charCodeAt(0),
+    0,
+  );
+  const prefix = Array.from({ length: prefixLength }, (_, index) => {
+    const progress = (index + 1) / prefixLength;
+    const trend = start * Math.pow(anchor / Math.max(1, start), progress);
+    const cycle =
+      1 +
+      Math.sin((index + seed) * 0.19) * 0.018 +
+      Math.sin((index + seed) * 0.047) * 0.035;
+    const close = trend * cycle;
+    const prior = index
+      ? trend * (1 + Math.sin((index - 1 + seed) * 0.19) * 0.018)
+      : start;
+    const high =
+      Math.max(prior, close) *
+      (1.004 + Math.abs(Math.sin(index + seed)) * 0.009);
+    const low =
+      Math.min(prior, close) *
+      (0.996 - Math.abs(Math.cos(index + seed)) * 0.007);
+    return {
+      month: index - prefixLength,
+      open_paise: Math.round(prior),
+      high_paise: Math.round(high),
+      low_paise: Math.round(low),
+      close_paise: Math.round(close),
+    };
+  });
+  return [...prefix, ...actual];
+}
+
+function candlesForRange(stock: Stock, range: ChartRange): ResearchCandle[] {
+  const daily = fiveYearCandles(stock);
+  if (range === "5Y") return daily;
+  if (range === "1Y") return daily.slice(-252);
+  if (range === "180D") return daily.slice(-180);
+  if (range === "90D") return daily.slice(-90);
+  if (range === "60D") return daily.slice(-60);
+  if (range === "1W") return daily.slice(-5);
+  const last = daily.at(-1)!;
+  return Array.from({ length: 24 }, (_, index) => {
+    const progress = (index + 1) / 24;
+    const close =
+      last.open_paise +
+      (last.close_paise - last.open_paise) * progress +
+      Math.sin(index * 1.7) * (last.high_paise - last.low_paise) * 0.08;
+    const open = index
+      ? last.open_paise + (last.close_paise - last.open_paise) * (index / 24)
+      : last.open_paise;
+    return {
+      month: index,
+      open_paise: Math.round(open),
+      close_paise: Math.round(close),
+      high_paise: Math.round(Math.max(open, close) * 1.002),
+      low_paise: Math.round(Math.min(open, close) * 0.998),
+    };
+  });
+}
+
+function Candles({
+  stock,
+  candles,
+  range,
+}: {
+  stock: Stock;
+  candles: ResearchCandle[];
+  range: ChartRange;
+}) {
+  const [hovered, setHovered] = useState<number | null>(null);
   const low = Math.min(...candles.map((item) => item.low_paise));
   const high = Math.max(...candles.map((item) => item.high_paise));
   const spread = high - low || Math.max(1, high * 0.02);
@@ -47,7 +126,22 @@ function Candles({ stock }: { stock: Stock }) {
       viewBox="0 0 800 280"
       preserveAspectRatio="none"
       role="img"
-      aria-label={`${stock.ticker} simulated OHLC chart`}
+      aria-label={`${stock.ticker} simulated ${range} OHLC chart`}
+      onMouseLeave={() => setHovered(null)}
+      onMouseMove={(event) => {
+        const bounds = event.currentTarget.getBoundingClientRect();
+        setHovered(
+          Math.max(
+            0,
+            Math.min(
+              candles.length - 1,
+              Math.floor(
+                ((event.clientX - bounds.left) / bounds.width) * candles.length,
+              ),
+            ),
+          ),
+        );
+      }}
     >
       {ticks.map((tick) => (
         <g key={tick}>
@@ -91,8 +185,25 @@ function Candles({ stock }: { stock: Stock }) {
           </g>
         );
       })}
+      {hovered !== null && candles[hovered] && (
+        <g className="chart-crosshair research-crosshair">
+          <line
+            x1={step * hovered + step / 2}
+            x2={step * hovered + step / 2}
+            y1="20"
+            y2="250"
+          />
+          <rect x="8" y="6" width="360" height="23" />
+          <text x="16" y="22">
+            BAR {hovered + 1} · O {money(candles[hovered].open_paise)} · H{" "}
+            {money(candles[hovered].high_paise)} · L{" "}
+            {money(candles[hovered].low_paise)} · C{" "}
+            {money(candles[hovered].close_paise)}
+          </text>
+        </g>
+      )}
       <text x="0" y="274" className="chart-label">
-        GENERATED LOOKBACK
+        {range} GENERATED LOOKBACK
       </text>
       <text x="655" y="274" className="chart-label">
         CURRENT MOVE
@@ -191,6 +302,11 @@ export function StockResearch({
   back,
   openWorkbench,
 }: Props) {
+  const [chartRange, setChartRange] = useState<ChartRange>("1Y");
+  const researchCandles = useMemo(
+    () => candlesForRange(stock, chartRange),
+    [stock, chartRange],
+  );
   const change = move(stock);
   const holding = campaign.holdings[stock.ticker] || 0;
   const peers = market.stocks
@@ -299,9 +415,27 @@ export function StockResearch({
           <div className="terminal-panel research-chart-panel">
             <div className="panel-label">
               <span>SIMULATED OHLC · GENERATED LOOKBACK</span>
-              <small>{stock.ohlc_history.length} SIMULATED TRADING DAYS</small>
+              <small>{researchCandles.length} SIMULATED BARS</small>
             </div>
-            <Candles stock={stock} />
+            <div className="research-range-controls">
+              {(
+                ["1D", "1W", "60D", "90D", "180D", "1Y", "5Y"] as ChartRange[]
+              ).map((range) => (
+                <button
+                  key={range}
+                  className={chartRange === range ? "active" : ""}
+                  onClick={() => setChartRange(range)}
+                >
+                  {range}
+                </button>
+              ))}
+              <span>HOVER FOR OHLC · RANGE REBUILDS THE SIMULATED SERIES</span>
+            </div>
+            <Candles
+              stock={stock}
+              candles={researchCandles}
+              range={chartRange}
+            />
           </div>
           <div className="terminal-panel research-chart-panel">
             <div className="panel-label">

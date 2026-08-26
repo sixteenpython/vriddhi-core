@@ -44,7 +44,7 @@ class BTIService:
         except GameRuleError as exc:
             raise APIError(422, "GAME_RULE_VIOLATION", str(exc)) from exc
         self.repo.create_campaign(owner, game.to_json())
-        return self._campaign(game)
+        return {**self._campaign(game), "initial_market": game.market_view()}
 
     def campaigns(self, owner: str) -> list[dict[str, Any]]:
         games = [self._load(item) for item in self.repo.list_campaigns(owner)]
@@ -114,16 +114,19 @@ class BTIService:
         except GameRuleError as exc:
             raise APIError(404, "MOVE_NOT_AVAILABLE", str(exc)) from exc
 
-    def resign(self, owner: str, campaign_id: str) -> dict[str, Any]:
+    def abort(self, owner: str, campaign_id: str) -> dict[str, Any]:
         def mutation(envelope: dict[str, Any]):
             game = self._load(envelope)
             try:
-                result = game.resign()
+                result = game.abort()
             except GameRuleError as exc:
                 raise APIError(409, "CAMPAIGN_NOT_ACTIVE", str(exc)) from exc
             envelope["game_json"] = game.to_json()
             return envelope, {"campaign": self._campaign(game), "result": result}
         return self.repo.mutate_campaign(owner, campaign_id, mutation)
+
+    def resign(self, owner: str, campaign_id: str) -> dict[str, Any]:
+        return self.abort(owner, campaign_id)
 
     def content(self, kind: str) -> dict[str, Any]:
         if kind not in {"lessons", "puzzles"}:

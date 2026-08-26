@@ -15,6 +15,10 @@ The player experience combines:
 
 ## Campaign contract
 
+Players may keep multiple rated campaigns active and switch between them from the campaign rail.
+An explicit abort is irreversible: it records the campaign as `ABORTED`, preserves every completed
+move for read-only analysis and does not permit a takeback or resumption.
+
 At campaign creation the player fixes two independent inputs:
 
 | Input | Allowed values |

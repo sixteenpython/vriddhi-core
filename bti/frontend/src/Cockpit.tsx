@@ -193,7 +193,13 @@ function SignalChart({ candles }: { candles: Candle[] }) {
   );
 }
 
-function SignalModal({ market, close }: { market: Market; close: () => void }) {
+export function SignalModal({
+  market,
+  close,
+}: {
+  market: Market;
+  close: () => void;
+}) {
   const [range, setRange] = useState(252);
   const [resolution, setResolution] = useState(1);
   const raw = useMemo(() => aggregateMarketCandles(market), [market]);

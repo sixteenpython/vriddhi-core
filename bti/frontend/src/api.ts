@@ -24,6 +24,7 @@ export type Campaign = {
   market_label: string;
   match_summary: MatchSummary;
   final_result: FinalResult | null;
+  initial_market?: Market;
 };
 export type MatchSummary = {
   move: number;
@@ -333,6 +334,13 @@ export const api = {
   market: (id: string) => request<Market>(`/api/v1/campaigns/${id}/market`),
   reviewMove: (id: string, move: number) =>
     request<MoveReview>(`/api/v1/campaigns/${id}/history/${move}`),
+  abort: async (id: string) => {
+    const response = await request<{ campaign: Campaign }>(
+      `/api/v1/campaigns/${id}/abort`,
+      { method: "POST", body: "{}" },
+    );
+    return withCurrentContribution(response.campaign);
+  },
   commit: async (id: string, expected_month: number, instructions: Trade[]) => {
     const response = await request<{ campaign: Campaign; result: MoveResult }>(
       `/api/v1/campaigns/${id}/moves`,
