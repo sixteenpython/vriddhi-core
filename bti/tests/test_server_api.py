@@ -52,7 +52,7 @@ def test_health_content_and_auth_boundary(tmp_path):
     app, _, auth = setup(tmp_path)
     status, health = request(app, "GET", "/api/v1/health")
     assert status == 200
-    assert health["data"]["release"] == "0.10.2"
+    assert health["data"]["release"] == "0.11.0"
     assert health["data"]["storage"] == {
         "backend": "json",
         "durable": False,

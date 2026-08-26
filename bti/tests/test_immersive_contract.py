@@ -156,7 +156,7 @@ def test_investor_preview_is_installable_and_mobile_first() -> None:
     assert {192, 512} <= {
         int(icon["sizes"].split("x", 1)[0]) for icon in manifest["icons"]
     }
-    assert "bti-mobile-preview-v0.10.2" in service_worker
+    assert "bti-mobile-preview-v0.11.0" in service_worker
     assert "INSTALL BTI" in app
     assert 'railCollapsed ? ">>" : "<<"' in app
     assert "mobile-navigation-open" in styles
@@ -200,6 +200,8 @@ def test_mobile_uses_progressive_disclosure_not_a_compressed_terminal() -> None:
     market = (WEB / "src" / "MobileMarket.tsx").read_text(encoding="utf-8")
     game = (WEB / "src" / "MobileGameBoard.tsx").read_text(encoding="utf-8")
     styles = (WEB / "src" / "styles.css").read_text(encoding="utf-8")
+    mobile_polish = (WEB / "src" / "mobile-polish.css").read_text(encoding="utf-8")
+    main = (WEB / "src" / "main.tsx").read_text(encoding="utf-8")
 
     assert "useMobileViewport" in app
     assert "MobileMarket" in app and "MobileGameBoard" in app
@@ -225,10 +227,12 @@ def test_mobile_uses_progressive_disclosure_not_a_compressed_terminal() -> None:
     ):
         assert phrase in game
     assert ".mobile-tabbar" in styles
-    mobile_breakpoint = styles.index("@media (max-width: 760px)")
-    mobile_tabbar_start = styles.index(".mobile-tabbar {", mobile_breakpoint)
-    mobile_tabbar_rule = styles[mobile_tabbar_start : mobile_tabbar_start + 700]
-    assert "height: auto !important" in mobile_tabbar_rule
+    assert 'import "./mobile-polish.css"' in main
+    assert "height: auto !important" in mobile_polish
+    assert ".mobile-match-card" in mobile_polish
+    assert ".mobile-game-hero" in mobile_polish
+    assert "font-size: 13px" in mobile_polish
+    assert "niftyTarget" in game
     assert ".mobile-stock-feed" in styles
     assert ".mobile-move-sheet" in styles
     assert ".mobile-chase-card" in styles

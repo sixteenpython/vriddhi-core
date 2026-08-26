@@ -14,6 +14,383 @@
   --red: #ff616d;
   --cyan: #50c8e8;
 }
+
+/* Mobile release hardening — phone hierarchy, legibility and collision safety. */
+@media (max-width: 760px) {
+  .shell > main {
+    overflow-x: hidden;
+  }
+  .shell > main > header {
+    height: 64px;
+    padding: 0 12px;
+  }
+  .shell > main > header h2 {
+    font-size: 13px;
+    line-height: 1.2;
+  }
+  .shell > main > header .sim-badge {
+    padding: 7px 9px;
+    font-size: 8px;
+  }
+  .shell > main > .simulation-strip {
+    display: grid;
+    height: auto !important;
+    min-height: 48px;
+    gap: 3px;
+    padding: 8px 12px;
+    font-size: 10px;
+    line-height: 1.3;
+  }
+  .shell > main > .simulation-strip span {
+    display: none;
+  }
+  .shell > main > .simulation-strip small {
+    margin: 0;
+    font-size: 9px;
+  }
+  .mobile-market-page,
+  .mobile-game-page {
+    padding: 12px 12px 118px;
+    font-size: 14px;
+  }
+  .mobile-match-card,
+  .mobile-game-hero {
+    position: static !important;
+    display: grid !important;
+    height: auto !important;
+    min-height: 0;
+    gap: 15px;
+    align-items: stretch;
+    padding: 20px 16px;
+  }
+  .mobile-match-card > div:first-child small,
+  .mobile-game-hero > small {
+    font-size: 10px;
+    line-height: 1.35;
+  }
+  .mobile-match-card h1,
+  .mobile-game-hero h1 {
+    margin: 0;
+    font-size: clamp(27px, 8.4vw, 34px);
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+  }
+  .mobile-match-card p {
+    margin: -5px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .mobile-match-numbers,
+  .mobile-game-hero > div {
+    gap: 7px;
+    margin-top: 0;
+  }
+  .mobile-match-numbers span,
+  .mobile-game-hero > div span {
+    gap: 6px;
+    padding: 11px 9px;
+  }
+  .mobile-match-numbers small,
+  .mobile-game-hero > div small {
+    font-size: 9px;
+  }
+  .mobile-match-numbers b,
+  .mobile-game-hero > div b {
+    font-size: 13px;
+  }
+  .mobile-market-brief,
+  .mobile-intelligence-card,
+  .mobile-movers,
+  .mobile-headline-card,
+  .mobile-stock-tools,
+  .mobile-stock-card,
+  .mobile-chase-card,
+  .mobile-execution-card,
+  .mobile-verdict-card,
+  .mobile-history-card,
+  .mobile-final-card {
+    margin-top: 12px;
+    border-radius: 15px;
+  }
+  .mobile-market-brief {
+    padding: 17px;
+  }
+  .mobile-market-brief > div,
+  .mobile-section-title {
+    font-size: 10px;
+  }
+  .mobile-market-brief h2 {
+    margin: 10px 0 7px;
+    font-size: 23px;
+    line-height: 1.12;
+  }
+  .mobile-market-brief p,
+  .mobile-headline-card p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .mobile-repeat-move {
+    min-height: 48px;
+    font-size: 10px;
+  }
+  .mobile-intelligence-card {
+    padding: 16px;
+  }
+  .mobile-intelligence-card small,
+  .mobile-intelligence-card > div b,
+  .mobile-intelligence-card > div strong {
+    font-size: 10px;
+  }
+  .mobile-intelligence-card .mobile-spark {
+    height: 62px;
+    margin: 8px 0 2px;
+  }
+  .mobile-intelligence-card > section span {
+    padding: 11px 9px;
+  }
+  .mobile-intelligence-card > section b {
+    font-size: 12px;
+  }
+  .mobile-intelligence-card > p {
+    font-size: 12px;
+  }
+  .mobile-movers {
+    padding: 15px 0 13px;
+  }
+  .mobile-section-title {
+    padding: 0 15px 11px;
+  }
+  .mobile-mover-strip {
+    gap: 9px;
+    padding-inline: 14px;
+  }
+  .mobile-mover-strip button {
+    flex-basis: 132px;
+    min-height: 92px;
+    gap: 6px;
+    padding: 12px;
+  }
+  .mobile-mover-strip small {
+    font-size: 9px;
+  }
+  .mobile-mover-strip b,
+  .mobile-mover-strip strong {
+    font-size: 13px;
+  }
+  .mobile-headline-card {
+    padding: 19px 17px;
+  }
+  .mobile-headline-card small {
+    font-size: 9px;
+    line-height: 1.35;
+  }
+  .mobile-headline-card h2 {
+    margin: 10px 0 8px;
+    font-size: 24px;
+    line-height: 1.12;
+  }
+  .mobile-stock-tools {
+    top: 64px;
+    padding: 12px;
+  }
+  .mobile-stock-tools label {
+    height: 48px;
+  }
+  .mobile-lenses button {
+    min-height: 38px;
+    padding-inline: 13px;
+    font-size: 10px;
+  }
+  .mobile-stock-tools > p {
+    font-size: 9px;
+    line-height: 1.5;
+  }
+  .mobile-stock-feed {
+    gap: 11px;
+    margin-top: 11px;
+  }
+  .mobile-stock-open {
+    padding: 15px;
+  }
+  .mobile-stock-open i {
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+  }
+  .mobile-stock-open b {
+    font-size: 14px;
+  }
+  .mobile-stock-open small {
+    font-size: 9px;
+  }
+  .mobile-stock-open strong {
+    font-size: 12px;
+  }
+  .mobile-chart-open {
+    height: 58px;
+    padding-inline: 15px;
+  }
+  .mobile-card-metrics small,
+  .mobile-position-stepper small {
+    font-size: 9px;
+  }
+  .mobile-card-metrics b,
+  .mobile-position-stepper b {
+    font-size: 12px;
+  }
+  .mobile-card-metrics span {
+    padding: 12px;
+  }
+  .mobile-position-stepper {
+    grid-template-columns: 46px 46px minmax(80px, 1fr) 46px auto;
+    padding: 12px;
+  }
+  .mobile-position-stepper > button {
+    min-width: 46px;
+    min-height: 46px;
+  }
+  .mobile-move-dock {
+    inset-inline: 10px;
+    min-height: 68px;
+    padding: 11px 15px;
+  }
+  .mobile-move-dock small {
+    font-size: 9px;
+  }
+  .mobile-move-dock b,
+  .mobile-move-dock strong {
+    font-size: 12px;
+  }
+  .mobile-tabbar {
+    min-height: calc(68px + env(safe-area-inset-bottom));
+  }
+  .mobile-tabbar button {
+    min-height: 58px;
+    font-size: 10px;
+  }
+  .mobile-tabbar button span {
+    font-size: 19px;
+  }
+  .mobile-chase-card {
+    padding: 16px 14px 11px;
+  }
+  .mobile-chase-card > div,
+  .mobile-chase-card footer {
+    font-size: 9px;
+  }
+  .mobile-chase-card svg {
+    height: 190px;
+    margin-top: 12px;
+  }
+  .mobile-chase-card .player-origin {
+    fill: #49ef77;
+    filter: drop-shadow(0 0 4px #49ef77);
+  }
+  .mobile-score-strip span,
+  .mobile-health-strip span,
+  .mobile-reconcile span,
+  .mobile-commit-summary span {
+    padding: 12px 9px;
+  }
+  .mobile-score-strip small,
+  .mobile-health-strip small,
+  .mobile-reconcile small,
+  .mobile-commit-summary small {
+    font-size: 8px;
+  }
+  .mobile-score-strip b,
+  .mobile-health-strip b,
+  .mobile-reconcile b,
+  .mobile-commit-summary b {
+    font-size: 11px;
+  }
+  .mobile-execution-card,
+  .mobile-verdict-card,
+  .mobile-history-card {
+    padding: 17px;
+  }
+  .mobile-execution-card header small,
+  .mobile-verdict-card > div:nth-child(2) small,
+  .mobile-verdict-card section small,
+  .mobile-history-card header,
+  .mobile-history-card header small {
+    font-size: 9px;
+  }
+  .mobile-execution-card header h2 {
+    font-size: 23px;
+  }
+  .mobile-board-empty,
+  .mobile-verdict-card > div:nth-child(2) p,
+  .mobile-verdict-card section p,
+  .mobile-history-card > p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .mobile-execution-row {
+    min-height: 60px;
+  }
+  .mobile-execution-row > b,
+  .mobile-execution-row small,
+  .mobile-execution-row em {
+    font-size: 9px;
+  }
+  .mobile-execution-row strong,
+  .mobile-history-card > button span {
+    font-size: 12px;
+  }
+  .mobile-history-card > button {
+    min-height: 62px;
+  }
+  .mobile-history-card > button b,
+  .mobile-history-card > button strong,
+  .mobile-history-card > button em,
+  .mobile-history-card > button small {
+    font-size: 9px;
+  }
+  .mobile-move-sheet {
+    padding: 19px 16px calc(22px + env(safe-area-inset-bottom));
+  }
+  .mobile-move-sheet header small,
+  .mobile-xray-title {
+    font-size: 9px;
+  }
+  .mobile-move-sheet header h2 {
+    font-size: 25px;
+  }
+  .mobile-sheet-orders > div {
+    min-height: 54px;
+    font-size: 11px;
+  }
+  .mobile-sector-list > div {
+    min-height: 32px;
+    font-size: 10px;
+  }
+  .page.narrow .title-block h1 {
+    font-size: 34px;
+    line-height: 1.05;
+  }
+  .page.narrow .title-block p,
+  .setup-panel label,
+  .setup-panel .rules {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .setup-panel .choice-grid button {
+    min-height: 52px;
+    font-size: 13px;
+  }
+  .setup-panel .choice-grid button small {
+    font-size: 10px;
+  }
+  .stock-research {
+    font-size: 13px;
+  }
+  .stock-research small,
+  .stock-research .terminal-label,
+  .stock-research .terminal-meta {
+    font-size: 9px;
+  }
+}
 * {
   box-sizing: border-box;
 }

@@ -32,7 +32,12 @@ const money = (paise: number, compact = false) => {
 };
 const signed = (value: number) =>
   `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
-const move = (stock: Stock) => (stock.close_paise / stock.open_paise - 1) * 100;
+const move = (stock: Stock) => {
+  const monthlyWindow = stock.history_paise.slice(-22);
+  const first = monthlyWindow[0] || stock.open_paise || 1;
+  const last = monthlyWindow.at(-1) || stock.close_paise;
+  return (last / first - 1) * 100;
+};
 
 function Sparkline({
   values,

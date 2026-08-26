@@ -3,7 +3,7 @@
 ## Release identity
 
 - **Installed name:** BTI — Beat the Index
-- **Release:** BTI Mobile Preview · v0.10.2
+- **Release:** BTI Mobile · v0.11.0
 - **Production URL:** <https://beat-the-index.onrender.com/>
 - **Primary device:** Samsung M30s, current Chrome, portrait orientation
 - **Distribution:** installable web application; this release is not distributed through Google Play
@@ -72,7 +72,7 @@ even though the database record remains. Google OAuth is a later account release
 ```json
 {
   "status": "ok",
-  "release": "0.10.2",
+  "release": "0.11.0",
   "storage": {
     "backend": "postgres",
     "durable": true,

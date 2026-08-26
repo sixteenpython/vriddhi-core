@@ -281,6 +281,7 @@ function Shell({
   const navigate = (next: View) => {
     setView(next);
     setMobileNavigation(false);
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
   return (
     <div
@@ -365,7 +366,7 @@ function Shell({
             Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
-          <small>BTI MOBILE PREVIEW · v0.10.2</small>
+          <small>BTI MOBILE · v0.11.0</small>
           {installAvailable && (
             <button className="install-bti" onClick={installApp}>
               INSTALL BTI ↓

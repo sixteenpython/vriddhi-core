@@ -31,22 +31,37 @@ function MobileChase({
   campaign: Campaign;
   series: Campaign["performance_series"];
 }) {
-  const points = series.length
-    ? series
-    : ([
-        { move: 0, portfolio_value_paise: 0, benchmark_value_paise: 0 },
-      ] as Campaign["performance_series"]);
-  const values = points.flatMap((point) => [
-    point.portfolio_value_paise,
-    point.benchmark_value_paise,
-  ]);
-  const max = Math.max(...values, campaign.monthly_amount_rupees * 100, 1);
-  const makePath = (key: "portfolio_value_paise" | "benchmark_value_paise") =>
+  const annualTargetPct =
+    series.at(-1)?.benchmark_projected_annual_return_pct || 8;
+  const monthlyTargetRate = Math.pow(1 + annualTargetPct / 100, 1 / 12) - 1;
+  const contributionPaise = campaign.monthly_amount_rupees * 100;
+  const niftyTarget = [{ move: 0, value: 0 }];
+  let projected = 0;
+  for (let move = 1; move <= campaign.horizon_months; move += 1) {
+    const actual = series[move - 1]?.benchmark_value_paise;
+    projected =
+      actual ?? projected * (1 + monthlyTargetRate) + contributionPaise;
+    niftyTarget.push({ move, value: projected });
+  }
+  const player = [
+    { move: 0, value: 0 },
+    ...series.map((point) => ({
+      move: point.move,
+      value: point.portfolio_value_paise,
+    })),
+  ];
+  const max = Math.max(
+    ...niftyTarget.map((point) => point.value),
+    ...player.map((point) => point.value),
+    contributionPaise,
+    1,
+  );
+  const makePath = (points: Array<{ move: number; value: number }>) =>
     points
-      .map((point, index) => {
-        const x = points.length === 1 ? 0 : (index / (points.length - 1)) * 100;
-        return `${x},${54 - (point[key] / max) * 48}`;
-      })
+      .map(
+        (point) =>
+          `${(point.move / campaign.horizon_months) * 100},${54 - (point.value / max) * 48}`,
+      )
       .join(" ");
   return (
     <section className="mobile-chase-card">
@@ -61,14 +76,9 @@ function MobileChase({
         </span>
       </div>
       <svg viewBox="0 0 100 58" preserveAspectRatio="none">
-        <polyline
-          className="nifty"
-          points={makePath("benchmark_value_paise")}
-        />
-        <polyline
-          className="player"
-          points={makePath("portfolio_value_paise")}
-        />
+        <polyline className="nifty" points={makePath(niftyTarget)} />
+        <polyline className="player" points={makePath(player)} />
+        <circle className="player-origin" cx="0" cy="54" r="1.6" />
       </svg>
       <footer>
         <span>M1</span>
