@@ -20,9 +20,9 @@ const TILE_LABELS: Record<TileId, string> = {
   news: "NEWS & SENTIMENT",
 };
 const DEFAULT_TILES: TileConfig[] = (Object.keys(TILE_LABELS) as TileId[]).map(
-  (id) => ({ id, hidden: false, wide: id === "pulse" }),
+  (id) => ({ id, hidden: false, wide: id === "pulse" || id === "movers" }),
 );
-const LAYOUT_KEY = "bti_cockpit_layout_v2";
+const LAYOUT_KEY = "bti_cockpit_layout_v3";
 
 const rupees = (paise: number) =>
   new Intl.NumberFormat("en-IN", {
@@ -346,6 +346,14 @@ export function IntelligenceDeck({ market }: { market: Market }) {
   const movers = [...market.stocks]
     .sort((a, b) => Math.abs(move(b)) - Math.abs(move(a)))
     .slice(0, 6);
+  const gainers = [...market.stocks]
+    .filter((stock) => move(stock) > 0)
+    .sort((a, b) => move(b) - move(a))
+    .slice(0, 6);
+  const losers = [...market.stocks]
+    .filter((stock) => move(stock) < 0)
+    .sort((a, b) => move(a) - move(b))
+    .slice(0, 6);
   const sectors = Object.entries(
     market.stocks.reduce<Record<string, Stock[]>>((result, stock) => {
       (result[stock.sector] ||= []).push(stock);
@@ -485,21 +493,30 @@ export function IntelligenceDeck({ market }: { market: Market }) {
       );
     if (id === "movers")
       return (
-        <div className="tile-movers">
+        <div className="tile-movers momentum-columns">
           {movers.every((stock) => Math.abs(move(stock)) < 0.0001) && (
             <p>Awaiting the first simulated market advance.</p>
           )}
-          {movers
-            .filter((stock) => Math.abs(move(stock)) >= 0.0001)
-            .map((stock) => (
+          <section>
+            <header>TOP GAINERS · MONTH</header>
+            {gainers.map((stock) => (
               <div key={stock.ticker}>
                 <b>{stock.ticker}</b>
                 <span>{stock.sector}</span>
-                <strong className={move(stock) >= 0 ? "positive" : "negative"}>
-                  {signed(move(stock))}
-                </strong>
+                <strong className="positive">{signed(move(stock))}</strong>
               </div>
             ))}
+          </section>
+          <section>
+            <header>TOP LOSERS · MONTH</header>
+            {losers.map((stock) => (
+              <div key={stock.ticker}>
+                <b>{stock.ticker}</b>
+                <span>{stock.sector}</span>
+                <strong className="negative">{signed(move(stock))}</strong>
+              </div>
+            ))}
+          </section>
         </div>
       );
     return (

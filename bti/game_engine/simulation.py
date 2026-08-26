@@ -7,7 +7,7 @@ import math
 import random
 from typing import Any
 
-SIMULATION_VERSION = "bti-calibrated-synthetic-2026-08-v3"
+SIMULATION_VERSION = "bti-calibrated-synthetic-2026-08-v4"
 
 REGIMES = (
     ("SELECTIVE GROWTH", "Growth remains available, but valuation discipline separates leaders.", 0.10, 0.95),
@@ -211,7 +211,21 @@ def advance_market(
             + 0.25 * sectors[previous["sector"]]
             + 0.57 * _rng(seed, "stock", ticker, month).gauss(0, 1)
         )
-        ret = max(-0.24, min(0.24, drift / 12 + annual_vol / math.sqrt(12) * shock))
+        recent_return = previous.get("returns", [0.0])[-1] if previous.get("returns") else 0.0
+        # Crowded monthly winners and losers are deliberately allowed to mean-revert.
+        # This keeps the visible momentum/news boards educationally tempting without
+        # turning yesterday's headline into a deterministic shortcut to tomorrow's alpha.
+        reversal_strength = 0.28 if abs(recent_return) >= 0.04 else 0.08
+        attention_reversal = -reversal_strength * recent_return
+        ret = max(
+            -0.24,
+            min(
+                0.24,
+                drift / 12
+                + annual_vol / math.sqrt(12) * shock
+                + attention_reversal,
+            ),
+        )
         stock_returns.append(ret)
         opening = previous["close_paise"]
         close = max(100, round(opening * (1 + ret)))

@@ -43,7 +43,7 @@ select:focus-visible {
 .shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
 }
 .shell > aside {
   position: sticky;
@@ -55,6 +55,11 @@ select:focus-visible {
   flex-direction: column;
   padding: 22px 14px;
   z-index: 10;
+  width: 220px;
+  min-width: 78px;
+  max-width: 360px;
+  resize: horizontal;
+  overflow: auto;
 }
 .brand {
   border: 0;
@@ -1235,6 +1240,12 @@ header h2 {
   .shell {
     grid-template-columns: 78px 1fr;
   }
+  .shell > aside {
+    width: 78px;
+    min-width: 78px;
+    max-width: 78px;
+    resize: none;
+  }
   .brand small,
   .shell nav button:not(.active) {
     font-size: 0;
@@ -1288,6 +1299,10 @@ header h2 {
     border: 0;
     border-top: 1px solid var(--line);
     z-index: 20;
+    min-width: 0;
+    max-width: none;
+    resize: none;
+    overflow: hidden;
   }
   .brand,
   .rail-foot,
@@ -1621,9 +1636,10 @@ header h2 {
 }
 .terminal-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 250px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
 }
+.terminal-main-shell,
 .terminal-main,
 .workbench-center {
   min-width: 0;
@@ -1687,6 +1703,19 @@ header h2 {
 .terminal-main {
   overflow-x: auto;
 }
+.table-scroll-top {
+  height: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--terminal-line);
+  border-bottom: 0;
+  background: #03090d;
+  scrollbar-color: #5e7380 #d9dde0;
+}
+.table-scroll-spacer {
+  width: 1390px;
+  height: 1px;
+}
 .pro-row {
   display: grid;
   grid-template-columns: minmax(150px, 1.4fr) 78px 68px 125px repeat(
@@ -1719,11 +1748,12 @@ header h2 {
   white-space: nowrap;
 }
 .pro-row.pro-head {
-  min-height: 27px;
+  min-height: 34px;
   background: #0d1a22;
-  color: #648190;
-  font-size: 7px;
-  letter-spacing: 0.12em;
+  color: #e7f0f4;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   cursor: default;
 }
 .pro-security {
@@ -1784,6 +1814,19 @@ header h2 {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.terminal-side {
+  width: 290px;
+  min-width: 220px;
+  max-width: 520px;
+  resize: horizontal;
+  overflow: auto;
+  direction: rtl;
+  border-left: 2px solid #27404c;
+  padding-left: 6px;
+}
+.terminal-side > * {
+  direction: ltr;
 }
 .terminal-panel {
   border: 1px solid var(--terminal-line);
@@ -2607,7 +2650,7 @@ header h2 {
 }
 .game-board-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
 }
 .game-board-grid > main {
@@ -2619,6 +2662,17 @@ header h2 {
   display: grid;
   align-content: start;
   gap: 10px;
+  width: 340px;
+  min-width: 240px;
+  max-width: 560px;
+  resize: horizontal;
+  overflow: auto;
+  direction: rtl;
+  border-left: 2px solid #27404c;
+  padding-left: 6px;
+}
+.game-board-side > * {
+  direction: ltr;
 }
 .execution-board {
   min-height: 220px;
@@ -3045,11 +3099,15 @@ header h2 {
 }
 .endgame-card.lost {
   border-color: #8c3e48;
-  background: radial-gradient(circle at 50% 0, rgba(212, 71, 80, 0.16), transparent 43%), #07131a;
+  background:
+    radial-gradient(circle at 50% 0, rgba(212, 71, 80, 0.16), transparent 43%),
+    #07131a;
 }
 .endgame-card.draw {
   border-color: #9d7135;
-  background: radial-gradient(circle at 50% 0, rgba(214, 163, 58, 0.16), transparent 43%), #07131a;
+  background:
+    radial-gradient(circle at 50% 0, rgba(214, 163, 58, 0.16), transparent 43%),
+    #07131a;
 }
 .endgame-kicker {
   color: var(--green);
@@ -3058,7 +3116,7 @@ header h2 {
 }
 .endgame-card h1 {
   margin: 10px 0 4px;
-  font: 800 clamp(40px, 6vw, 78px)/0.98 var(--display);
+  font: 800 clamp(40px, 6vw, 78px) / 0.98 var(--display);
   color: #f5fbff;
   text-shadow: 0 0 28px rgba(64, 239, 110, 0.25);
 }
@@ -3469,6 +3527,37 @@ header h2 {
 .tile-movers span {
   color: #5f7b88;
 }
+.momentum-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.momentum-columns > section:first-of-type {
+  border-right: 1px solid #1b3039;
+  padding-right: 10px;
+}
+.momentum-columns > section > header {
+  padding: 2px 0 6px;
+  color: #d9e8ed;
+  font:
+    900 7px ui-monospace,
+    Consolas,
+    monospace;
+  letter-spacing: 0.1em;
+}
+.momentum-columns > section > div {
+  display: grid;
+  grid-template-columns: 66px 1fr 50px;
+  gap: 5px;
+  align-items: center;
+  min-height: 21px;
+  border-bottom: 1px solid #142832;
+  color: #91a7b1;
+  font:
+    700 7px ui-monospace,
+    Consolas,
+    monospace;
+}
 .tile-news button,
 .tile-news article {
   display: block;
@@ -3485,6 +3574,85 @@ header h2 {
 .tile-news small,
 .tile-news b {
   display: block;
+}
+.attention-wire button {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) 42px;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-bottom: 1px solid #172a34;
+  background: transparent;
+  color: #aebfc7;
+  text-align: left;
+  cursor: pointer;
+}
+.attention-wire button:hover {
+  background: #102029;
+}
+.attention-wire span b,
+.attention-wire span small {
+  display: block;
+}
+.attention-wire span b {
+  color: #f0f6f8;
+  font-size: 8px;
+}
+.attention-wire span small {
+  margin-top: 2px;
+  color: #b976ef;
+  font-size: 6px;
+}
+.attention-wire p {
+  margin: 0;
+  color: #8199a4;
+  font-size: 7px;
+  line-height: 1.35;
+}
+.attention-wire strong {
+  text-align: right;
+  font:
+    800 8px ui-monospace,
+    Consolas,
+    monospace;
+}
+.attention-wire > em {
+  display: block;
+  padding: 8px;
+  color: #e3ad55;
+  font:
+    800 6px/1.5 ui-monospace,
+    Consolas,
+    monospace;
+  letter-spacing: 0.06em;
+}
+.sentiment-board > div:not(.panel-label) {
+  display: grid;
+  grid-template-columns: 62px 1fr 26px;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid #172a34;
+  color: #91a8b2;
+  font:
+    700 7px ui-monospace,
+    Consolas,
+    monospace;
+}
+.sentiment-board i {
+  height: 4px;
+  overflow: hidden;
+  background: #182b34;
+}
+.sentiment-board i b {
+  display: block;
+  height: 100%;
+  background: #4ce87b;
+}
+.sentiment-board i b.negative-bar {
+  background: #ff5b6d;
 }
 .tile-news small {
   color: #a86ce4;
@@ -4417,6 +4585,15 @@ header h2 {
   }
   .research-hero {
     grid-template-columns: 1fr;
+  }
+  .terminal-side,
+  .game-board-side {
+    width: auto;
+    max-width: none;
+    resize: none;
+    direction: ltr;
+    border-left: 0;
+    padding-left: 0;
   }
 }
 @media (max-width: 760px) {

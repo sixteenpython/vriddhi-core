@@ -73,6 +73,30 @@ Official references:
 - [Prepare and roll out a release](https://support.google.com/googleplay/android-developer/answer/9859348?hl=en)
 - [Sign in with Google using Credential Manager](https://developer.android.com/identity/sign-in/credential-manager-siwg)
 
+## Playtest iteration 02 — seasoned-trader workstation and attention traps
+
+Implemented on 26 August 2026 as a targeted Market Monitor release:
+
+- Monthly Movers now separates the six strongest gainers and losers, preserving the immediate
+  visual temptation to chase green and avoid red.
+- The Portfolio X-Ray rail is followed by an Attention Wire and crowd-sentiment heat board. These
+  are realistic simulated information signals, explicitly labelled as noisy rather than alpha.
+- The security table can sort and filter by `POSITION / DRAFT`, including held, drafted,
+  held-or-drafted and not-held views. This makes repeat-month portfolio review practical.
+- The market table has synchronized horizontal navigation at both its top and bottom and uses
+  larger, high-contrast headers.
+- Desktop navigation and intelligence rails are horizontally resizable. Compact and mobile
+  breakpoints deliberately return to governed fixed layouts.
+- The synthetic market now includes deterministic short-horizon mean reversion after unusually
+  crowded moves. The market still advances independently of the player; it does not inspect or
+  punish the player portfolio.
+
+The eight-seed, 24-month strategy tournament after calibration produced mean wealth alpha of
+`-0.12%` for the concentrated momentum strategy versus `+6.72%` for the high-Sharpe strategy.
+Momentum won 50% of scenarios rather than becoming a universal shortcut. Lowest-PEG also remained
+non-universal (`-1.21%` mean wealth alpha; 37.5% win rate). These are release diagnostics for game
+fairness, not investment research or forecasts.
+
 ## Player observation
 
 The first complete 24-move campaign was broadly enjoyable and the overall experience was decent.

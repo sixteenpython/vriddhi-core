@@ -37,7 +37,7 @@ def _annualised_sip_return(contribution: int, months: int, final_value: int) -> 
 
 
 class BTIGame:
-    ENGINE_VERSION = "bti-game-v2"
+    ENGINE_VERSION = "bti-game-v3"
 
     @classmethod
     def create(
