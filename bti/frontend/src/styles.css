@@ -5915,7 +5915,7 @@ header h2 {
        Without this, the tab bar becomes a full-screen layer on phone widths
        and visually hides the otherwise healthy mobile application. */
     width: 100%;
-    height: auto;
+    height: auto !important;
     z-index: 90;
     display: grid;
     grid-template-columns: repeat(3, 1fr);

@@ -156,7 +156,7 @@ def test_investor_preview_is_installable_and_mobile_first() -> None:
     assert {192, 512} <= {
         int(icon["sizes"].split("x", 1)[0]) for icon in manifest["icons"]
     }
-    assert "bti-mobile-preview-v0.10.1" in service_worker
+    assert "bti-mobile-preview-v0.10.2" in service_worker
     assert "INSTALL BTI" in app
     assert 'railCollapsed ? ">>" : "<<"' in app
     assert "mobile-navigation-open" in styles
@@ -228,7 +228,7 @@ def test_mobile_uses_progressive_disclosure_not_a_compressed_terminal() -> None:
     mobile_breakpoint = styles.index("@media (max-width: 760px)")
     mobile_tabbar_start = styles.index(".mobile-tabbar {", mobile_breakpoint)
     mobile_tabbar_rule = styles[mobile_tabbar_start : mobile_tabbar_start + 700]
-    assert "height: auto" in mobile_tabbar_rule
+    assert "height: auto !important" in mobile_tabbar_rule
     assert ".mobile-stock-feed" in styles
     assert ".mobile-move-sheet" in styles
     assert ".mobile-chase-card" in styles
