@@ -6,7 +6,7 @@ import {
   normalizeTrades,
   setDraftDelta,
 } from "./portfolioDraft";
-import { IntelligenceDeck, PortfolioRibbon } from "./Cockpit";
+import { PortfolioRibbon } from "./Cockpit";
 
 type BaseProps = { market: Market; campaign: Campaign };
 type MarketProps = BaseProps & {
@@ -240,6 +240,19 @@ export function MarketTerminal({
   const sectors = [
     ...new Set(market.stocks.map((stock) => stock.sector)),
   ].sort();
+  const marketPulse = useMemo(() => {
+    const length = Math.min(
+      42,
+      ...market.stocks.map((stock) => stock.history_paise.length),
+    );
+    return Array.from({ length }, (_, index) => {
+      const values = market.stocks.map((stock) => {
+        const history = stock.history_paise.slice(-length);
+        return (history[index] / (history[0] || 1)) * 100;
+      });
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    });
+  }, [market]);
   const numberPass = (value: number, raw: string, mode: "min" | "max") =>
     raw === "" ||
     (mode === "min" ? value >= Number(raw) : value <= Number(raw));
@@ -402,7 +415,67 @@ export function MarketTerminal({
         trades={trades}
         openWorkbench={buildMove}
       />
-      <IntelligenceDeck market={market} />
+      <div className="terminal-panel flash-newswire market-newswire-stage">
+        <div className="panel-label">
+          <span>
+            <i className="wire-live" /> BTI NEWSWIRE
+          </span>
+          <small>SIMULATED · LIVE MARKET DESK · ATTENTION IS NOT ALPHA</small>
+        </div>
+        <div className="wire-ticker">
+          <span>BREAKING</span>
+          <b>
+            {analytics.gainers[0]?.ticker || "MARKET"} LEADS ·{" "}
+            {analytics.losers[0]?.ticker || "RISK"} LAGS · VOLATILITY{" "}
+            {analytics.meanVolatility.toFixed(1)}% · ADV/DEC{" "}
+            {analytics.advances}/{analytics.declines}
+          </b>
+        </div>
+        <div className="wire-columns">
+          {stories.map((story, index) => (
+            <article
+              className={`wire-story macro ${story.tone}`}
+              key={story.title}
+            >
+              <div>
+                <small>
+                  {story.age} · {story.tag}
+                </small>
+                <em>{index === 0 ? "TOP STORY" : "MARKET DESK"}</em>
+              </div>
+              <h4>{story.title}</h4>
+              <p>{story.body}</p>
+              <strong>{story.impact}</strong>
+            </article>
+          ))}
+          {analytics.attention.slice(0, 12).map((stock, index) => (
+            <button key={stock.ticker} onClick={() => select(stock)}>
+              <div>
+                <small>
+                  SIM {String(9 + Math.floor(index / 6)).padStart(2, "0")}:
+                  {String((index * 7) % 60).padStart(2, "0")} ·{" "}
+                  {stock.sector.toUpperCase()}
+                </small>
+                <em>{index < 3 ? "TRENDING" : "WATCH"}</em>
+              </div>
+              <h4>
+                {change(stock) >= 0
+                  ? `${stock.ticker} catches screens after a ${signed(change(stock))} simulated move`
+                  : `${stock.ticker} enters the red as desks reassess the monthly setup`}
+              </h4>
+              <p>
+                Sentiment {stock.sentiment_score.toFixed(0)}/100 · volume{" "}
+                {stock.volume_index.toFixed(0)} · PEG {stock.peg.toFixed(2)} ·
+                Sharpe {stock.sharpe.toFixed(2)}
+              </p>
+            </button>
+          ))}
+        </div>
+        <footer>
+          SIMULATION MODE · EVERY STORY, EVENT AND PRICE IS GENERATED FOR THE
+          GAME
+        </footer>
+      </div>
       <div className="terminal-grid">
         <div className="terminal-main-shell">
           <div className="terminal-toolbar">
@@ -823,75 +896,71 @@ export function MarketTerminal({
               </div>
             ))}
           </div>
-          <div className="terminal-panel flash-newswire">
-            <div className="panel-label">
-              <span>
-                <i className="wire-live" /> BTI NEWSWIRE
-              </span>
-              <small>SIMULATED · LIVE DESK</small>
-            </div>
-            <div className="wire-ticker">
-              <span>BREAKING</span>
-              <b>
-                {analytics.gainers[0]?.ticker || "MARKET"} LEADS ·{" "}
-                {analytics.losers[0]?.ticker || "RISK"} LAGS · VOLATILITY{" "}
-                {analytics.meanVolatility.toFixed(1)}%
-              </b>
-            </div>
-            {stories.map((story, index) => (
-              <article
-                className={`wire-story macro ${story.tone}`}
-                key={story.title}
-              >
-                <div>
-                  <small>
-                    {story.age} · {story.tag}
-                  </small>
-                  <em>{index === 0 ? "TOP STORY" : "MARKET DESK"}</em>
-                </div>
-                <h4>{story.title}</h4>
-                <p>{story.body}</p>
-                <strong>{story.impact}</strong>
-              </article>
-            ))}
-            {analytics.attention.slice(0, 18).map((stock, index) => (
-              <button key={stock.ticker} onClick={() => select(stock)}>
-                <div>
-                  <small>
-                    SIM {String(9 + Math.floor(index / 6)).padStart(2, "0")}:
-                    {String((index * 7) % 60).padStart(2, "0")} ·{" "}
-                    {stock.sector.toUpperCase()}
-                  </small>
-                  <em>
-                    {index < 3
-                      ? "TRENDING"
-                      : stock.sentiment_score >= 60
-                        ? "BULLISH"
-                        : "WATCH"}
-                  </em>
-                </div>
-                <h4>
-                  {change(stock) > 0
-                    ? `${stock.ticker} catches momentum screens after a ${signed(change(stock))} simulated move`
-                    : change(stock) < 0
-                      ? `${stock.ticker} enters the red as traders reassess the monthly setup`
-                      : `${stock.ticker} features on desk screens as valuation and growth signals diverge`}
-                </h4>
-                <p>
-                  Sentiment {stock.sentiment_score.toFixed(0)}/100 · volume{" "}
-                  {stock.volume_index.toFixed(0)} · PEG {stock.peg.toFixed(2)} ·
-                  Sharpe {stock.sharpe.toFixed(2)}
-                </p>
-                <strong
-                  className={change(stock) >= 0 ? "positive" : "negative"}
-                >
-                  {signed(change(stock))}
-                </strong>
-              </button>
-            ))}
-            <footer>
-              ATTENTION IS NOT ALPHA · EVERY STORY AND PRICE IS SIMULATED
-            </footer>
+          <div className="compact-signal-dock">
+            <section className="terminal-panel dock-signal pulse">
+              <div className="panel-label">
+                <span>MARKET PULSE</span>
+                <small>SIM</small>
+              </div>
+              <MiniChart values={marketPulse} tone="green" />
+              <strong>
+                {signed((marketPulse.at(-1)! / marketPulse[0] - 1) * 100)}
+              </strong>
+            </section>
+            <section className="terminal-panel dock-signal">
+              <div className="panel-label">
+                <span>MARKET INTERNALS</span>
+                <small>LIVE</small>
+              </div>
+              <div className="dock-metrics">
+                <span>
+                  ADV/DEC
+                  <b>
+                    {analytics.advances}/{analytics.declines}
+                  </b>
+                </span>
+                <span>
+                  PEG <b>{analytics.medianPeg.toFixed(2)}</b>
+                </span>
+              </div>
+            </section>
+            <section className="terminal-panel dock-signal">
+              <div className="panel-label">
+                <span>QUANT RISK</span>
+                <small>PUBLIC</small>
+              </div>
+              <div className="dock-metrics">
+                <span>
+                  VOL <b>{analytics.meanVolatility.toFixed(1)}%</b>
+                </span>
+                <span>
+                  SHARPE &gt; 1
+                  <b>
+                    {market.stocks.filter((stock) => stock.sharpe > 1).length}
+                  </b>
+                </span>
+              </div>
+            </section>
+            <section className="terminal-panel dock-signal dock-movers">
+              <div className="panel-label">
+                <span>MONTHLY MOVERS</span>
+                <small>5 × 5</small>
+              </div>
+              <div>
+                {analytics.gainers.slice(0, 5).map((stock) => (
+                  <span key={stock.ticker}>
+                    <b>{stock.ticker}</b>
+                    <em className="positive">{signed(change(stock))}</em>
+                  </span>
+                ))}
+                {analytics.losers.slice(0, 5).map((stock) => (
+                  <span key={stock.ticker}>
+                    <b>{stock.ticker}</b>
+                    <em className="negative">{signed(change(stock))}</em>
+                  </span>
+                ))}
+              </div>
+            </section>
           </div>
         </aside>
       </div>

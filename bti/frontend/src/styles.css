@@ -3673,6 +3673,39 @@ header h2 {
     ),
     #071017;
 }
+.market-newswire-stage {
+  min-height: 312px;
+  max-height: 36vh;
+  margin: 7px 0 8px;
+  overflow: hidden;
+  box-shadow: inset 0 0 34px rgba(91, 46, 121, 0.12);
+}
+.market-newswire-stage .wire-ticker {
+  grid-template-columns: 72px 1fr;
+  padding: 8px 10px;
+  font-size: 8px;
+}
+.wire-columns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  align-content: start;
+  max-height: 235px;
+  padding-bottom: 24px;
+  overflow: auto;
+}
+.wire-columns .wire-story,
+.wire-columns > button {
+  min-height: 102px;
+  border-right: 1px solid #1a2c35;
+}
+.wire-columns .wire-story:first-child {
+  grid-column: span 2;
+  background:
+    linear-gradient(100deg, rgba(101, 43, 139, 0.25), transparent), #08131a;
+}
+.wire-columns .wire-story:first-child h4 {
+  font-size: 15px;
+}
 .wire-live {
   display: inline-block;
   width: 6px;
@@ -3710,7 +3743,8 @@ header h2 {
   color: #e8cdf7;
 }
 .wire-story,
-.flash-newswire > button {
+.flash-newswire > button,
+.wire-columns > button {
   display: block;
   width: 100%;
   padding: 8px;
@@ -3721,21 +3755,25 @@ header h2 {
   color: #a9bdc6;
   text-align: left;
 }
-.flash-newswire > button {
+.flash-newswire > button,
+.wire-columns > button {
   cursor: pointer;
 }
-.flash-newswire > button:hover {
+.flash-newswire > button:hover,
+.wire-columns > button:hover {
   border-left-color: #50ed7d;
   background: #10212a;
 }
 .wire-story > div,
-.flash-newswire > button > div {
+.flash-newswire > button > div,
+.wire-columns > button > div {
   display: flex;
   justify-content: space-between;
   gap: 5px;
 }
 .wire-story small,
-.flash-newswire > button small {
+.flash-newswire > button small,
+.wire-columns > button small {
   color: #a96de6;
   font:
     800 6px ui-monospace,
@@ -3743,7 +3781,8 @@ header h2 {
     monospace;
 }
 .wire-story em,
-.flash-newswire > button em {
+.flash-newswire > button em,
+.wire-columns > button em {
   color: #efb550;
   font:
     800 5px ui-monospace,
@@ -3751,7 +3790,8 @@ header h2 {
     monospace;
 }
 .wire-story h4,
-.flash-newswire > button h4 {
+.flash-newswire > button h4,
+.wire-columns > button h4 {
   margin: 4px 0 3px;
   color: #edf4f6;
   font:
@@ -3759,14 +3799,16 @@ header h2 {
     serif;
 }
 .wire-story p,
-.flash-newswire > button p {
+.flash-newswire > button p,
+.wire-columns > button p {
   margin: 0;
   color: #7f98a4;
   font-size: 7px;
   line-height: 1.35;
 }
 .wire-story > strong,
-.flash-newswire > button > strong {
+.flash-newswire > button > strong,
+.wire-columns > button > strong {
   display: block;
   margin-top: 4px;
   font:
@@ -3803,6 +3845,80 @@ header h2 {
     Consolas,
     monospace;
   text-align: center;
+}
+.compact-signal-dock {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-top: auto;
+}
+.dock-signal {
+  min-width: 0;
+  height: 104px;
+  overflow: hidden;
+}
+.dock-signal .panel-label {
+  padding: 6px;
+  font-size: 7px;
+}
+.dock-signal .panel-label small {
+  font-size: 5px;
+}
+.dock-signal .terminal-spark {
+  width: calc(100% - 12px);
+  height: 36px;
+  margin: 6px;
+}
+.dock-signal.pulse > strong {
+  display: block;
+  margin: -3px 7px 0;
+  color: #4ded7b;
+  font:
+    900 10px ui-monospace,
+    Consolas,
+    monospace;
+}
+.dock-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 70px;
+}
+.dock-metrics span {
+  padding: 9px 6px;
+  border-right: 1px solid #182c35;
+  color: #688592;
+  font:
+    700 6px ui-monospace,
+    Consolas,
+    monospace;
+}
+.dock-metrics b {
+  display: block;
+  margin-top: 6px;
+  color: #e1edf1;
+  font-size: 10px;
+}
+.dock-movers > div:last-child {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-height: 73px;
+  overflow-y: auto;
+}
+.dock-movers span {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 3px 5px;
+  border-right: 1px solid #182c35;
+  border-bottom: 1px solid #142832;
+  color: #93aab4;
+  font:
+    700 6px ui-monospace,
+    Consolas,
+    monospace;
+}
+.dock-movers em {
+  font-style: normal;
 }
 .sentiment-board > div:not(.panel-label) {
   display: grid;
