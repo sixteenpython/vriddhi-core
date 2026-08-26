@@ -1,0 +1,48 @@
+{
+  "id": "/?source=pwa",
+  "name": "BTI — Beat the Index",
+  "short_name": "BTI",
+  "description": "An immersive simulated portfolio decision game powered by Vriddhi intelligence.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#050a0e",
+  "theme_color": "#050a0e",
+  "categories": ["games", "education", "finance"],
+  "icons": [
+    {
+      "src": "/icons/bti-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/bti-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/bti-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Market Monitor",
+      "short_name": "Market",
+      "url": "/?source=pwa&screen=market",
+      "icons": [{ "src": "/icons/bti-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Game Board",
+      "short_name": "Game",
+      "url": "/?source=pwa&screen=game",
+      "icons": [{ "src": "/icons/bti-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -45,7 +45,8 @@ def create_app(save_dir: str | Path | None = None,
     service = BTIService(save_dir or os.getenv("BTI_SAVE_DIR", root / ".bti_saves"), root)
 
     async def health(_: Request) -> Response:
-        return _ok({"status": "ok", "service": "bti-immersive-api"})
+        return _ok({"status": "ok", "service": "bti-immersive-api",
+                    "release": "0.9.0", "storage": service.storage_status()})
 
     async def session(_: Request) -> Response:
         return _ok(service.new_session(), 201)
@@ -127,6 +128,31 @@ def create_app(save_dir: str | Path | None = None,
         assets = frontend / "assets"
         if assets.is_dir():
             routes.append(Mount("/assets", StaticFiles(directory=assets), name="assets"))
+        icons = frontend / "icons"
+        if icons.is_dir():
+            routes.append(Mount("/icons", StaticFiles(directory=icons), name="icons"))
+
+        async def manifest(_: Request) -> Response:
+            return FileResponse(
+                frontend / "manifest.webmanifest",
+                media_type="application/manifest+json",
+                headers={"Cache-Control": "public, max-age=3600"},
+            )
+
+        async def service_worker(_: Request) -> Response:
+            return FileResponse(
+                frontend / "sw.js",
+                media_type="application/javascript",
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Service-Worker-Allowed": "/",
+                },
+            )
+
+        routes.extend([
+            Route("/manifest.webmanifest", manifest),
+            Route("/sw.js", service_worker),
+        ])
 
         async def spa(_: Request) -> Response:
             # The HTML shell points at content-hashed assets and must be revalidated on

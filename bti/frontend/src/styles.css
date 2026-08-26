@@ -40,6 +40,54 @@ select:focus-visible {
   outline: 2px solid var(--green);
   outline-offset: 2px;
 }
+.mobile-menu,
+.navigation-scrim {
+  display: none;
+}
+.simulation-strip > small {
+  margin-left: auto;
+  color: #bb83e8;
+  font:
+    800 7px ui-monospace,
+    Consolas,
+    monospace;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+.install-bti {
+  min-height: 28px;
+  border: 1px solid #55e36a;
+  background: #14341e;
+  color: #6bf08b;
+  padding: 0 10px;
+  font:
+    900 8px ui-monospace,
+    Consolas,
+    monospace;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.rail-toggle {
+  position: absolute;
+  top: 13px;
+  right: 10px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #29404b;
+  border-radius: 7px;
+  background: #101923;
+  color: #8da7b4;
+  font:
+    900 11px ui-monospace,
+    Consolas,
+    monospace;
+  cursor: pointer;
+}
+.rail-toggle:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
 .shell {
   min-height: 100vh;
   display: grid;
@@ -60,6 +108,35 @@ select:focus-visible {
   max-width: 360px;
   resize: horizontal;
   overflow: auto;
+}
+.shell.rail-collapsed {
+  grid-template-columns: 78px minmax(0, 1fr);
+}
+.shell.rail-collapsed > aside {
+  width: 78px;
+  min-width: 78px;
+  max-width: 78px;
+  resize: none;
+  padding-inline: 8px;
+}
+.shell.rail-collapsed .brand {
+  padding: 0 4px 25px;
+}
+.shell.rail-collapsed .brand small,
+.shell.rail-collapsed nav button {
+  font-size: 0;
+}
+.shell.rail-collapsed nav button {
+  justify-content: center;
+  padding-inline: 4px;
+}
+.shell.rail-collapsed .campaign-rail,
+.shell.rail-collapsed .rail-foot {
+  display: none;
+}
+.shell.rail-collapsed .rail-toggle {
+  top: 58px;
+  right: 23px;
 }
 .brand {
   border: 0;
@@ -5351,5 +5428,473 @@ header h2 {
   }
   .research-chart {
     height: 220px;
+  }
+}
+
+/* Investor Preview v0.9.0 — purpose-built installed mobile game */
+@media (max-width: 760px) {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background: #050a0e;
+  }
+  body {
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .shell,
+  .shell.rail-collapsed {
+    display: block;
+  }
+  .shell > main {
+    min-width: 0;
+    width: 100%;
+  }
+  .shell > aside,
+  .shell.rail-collapsed > aside {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 80;
+    width: min(84vw, 330px);
+    min-width: min(84vw, 330px);
+    max-width: min(84vw, 330px);
+    height: 100dvh;
+    padding: 22px 14px;
+    border: 0;
+    border-right: 1px solid #29404b;
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+    resize: none;
+    overflow: auto;
+    box-shadow: 16px 0 42px rgba(0, 0, 0, 0.58);
+  }
+  .shell.mobile-navigation-open > aside {
+    transform: translateX(0);
+  }
+  .navigation-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    border: 0;
+    background: rgba(1, 5, 8, 0.78);
+    backdrop-filter: blur(3px);
+  }
+  .shell.mobile-navigation-open .navigation-scrim {
+    display: block;
+  }
+  .shell > aside .brand,
+  .shell.rail-collapsed > aside .brand,
+  .shell > aside .rail-foot,
+  .shell > aside .campaign-rail {
+    display: flex;
+  }
+  .shell > aside .brand {
+    display: block;
+  }
+  .shell > aside nav {
+    display: grid;
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .shell > aside nav button,
+  .shell.rail-collapsed > aside nav button,
+  .shell > aside nav button.active {
+    display: flex !important;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 13px;
+    min-height: 48px;
+    padding: 0 13px;
+    font-size: 14px !important;
+    box-shadow: inset 3px 0 var(--green);
+  }
+  .shell > aside nav button:not(.active) {
+    box-shadow: none;
+  }
+  .shell > aside .campaign-rail {
+    min-height: 180px;
+  }
+  .shell > aside .rail-foot {
+    margin-top: auto;
+  }
+  .rail-toggle {
+    display: none;
+  }
+  .mobile-menu {
+    display: grid;
+    place-items: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border: 1px solid #29404b;
+    border-radius: 8px;
+    background: #0b151d;
+    color: var(--green);
+    font-size: 20px;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 45;
+    height: 58px;
+    gap: 10px;
+    padding: 0 10px;
+    background: rgba(5, 10, 14, 0.97);
+    backdrop-filter: blur(12px);
+  }
+  header > div:first-of-type {
+    min-width: 0;
+    flex: 1;
+  }
+  header h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+  }
+  .header-actions .sim-badge {
+    padding-inline: 8px;
+    font-size: 7px;
+    letter-spacing: 0.08em;
+  }
+  .simulation-strip {
+    position: relative;
+    z-index: 35;
+    padding: 7px 10px;
+    font-size: 8px;
+  }
+  .simulation-strip small {
+    display: block;
+    margin-top: 4px;
+    color: #a878d8;
+    font:
+      800 7px ui-monospace,
+      Consolas,
+      monospace;
+    letter-spacing: 0.12em;
+  }
+  .page {
+    padding: 18px 10px 28px;
+  }
+  .terminal-page,
+  .game-board-page {
+    padding: 7px 7px 24px;
+  }
+  .terminal-commandbar {
+    position: sticky;
+    top: 58px;
+    z-index: 32;
+    padding: 8px;
+    background: rgba(5, 15, 20, 0.98);
+  }
+  .terminal-clock {
+    font-size: 7px;
+  }
+  .market-countermove {
+    align-items: flex-start;
+    padding: 8px;
+  }
+  .market-countermove strong {
+    font-size: 13px;
+  }
+  .cockpit-ribbon {
+    position: relative;
+    top: 0;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+  .cockpit-ribbon > div {
+    flex: 0 0 126px;
+    scroll-snap-align: start;
+  }
+  .cockpit-ribbon .ribbon-title {
+    flex-basis: 185px;
+  }
+  .market-information-row {
+    display: block;
+  }
+  .newswire-panel {
+    min-height: 220px;
+  }
+  .news-movers-panel {
+    margin-top: 7px;
+  }
+  .terminal-toolbar {
+    position: sticky;
+    top: 102px;
+    z-index: 28;
+    gap: 6px;
+    padding: 7px;
+    background: rgba(5, 14, 19, 0.98);
+  }
+  .terminal-filters {
+    width: 100%;
+    padding-bottom: 2px;
+  }
+  .terminal-filters button {
+    flex: 0 0 auto;
+  }
+  .table-scroll-top {
+    display: none;
+  }
+  .terminal-grid {
+    display: block;
+  }
+  .terminal-main {
+    overflow: visible;
+  }
+  .pro-table {
+    min-width: 0;
+    border: 0;
+    background: transparent;
+  }
+  .pro-row.pro-head {
+    display: none;
+  }
+  .pro-row.pro-filter-row {
+    position: sticky;
+    top: 184px;
+    z-index: 24;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    min-height: auto;
+    padding: 7px;
+    border: 1px solid #25404d;
+    background: rgba(6, 16, 22, 0.98);
+  }
+  .pro-filter-row > * {
+    display: none;
+  }
+  .pro-filter-row > :first-child,
+  .pro-filter-row > :nth-child(4) {
+    display: block;
+    width: 100%;
+    min-height: 36px;
+  }
+  .pro-row:not(.pro-head):not(.pro-filter-row) {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    min-height: 0;
+    margin: 7px 0;
+    border: 1px solid #1d3540;
+    border-radius: 10px;
+    background: linear-gradient(145deg, #0a161e, #071017);
+    overflow: hidden;
+  }
+  .pro-row:not(.pro-head):not(.pro-filter-row) > * {
+    padding: 8px 7px;
+  }
+  .pro-row .pro-security {
+    grid-column: span 3;
+    min-width: 0;
+  }
+  .pro-row > :nth-child(2),
+  .pro-row > :nth-child(3) {
+    display: grid;
+    align-content: center;
+    justify-content: end;
+    font-size: 10px;
+  }
+  .pro-row .inline-position,
+  .pro-row .terminal-spark {
+    grid-column: 1 / -1;
+  }
+  .pro-row .inline-position {
+    display: grid;
+    grid-template-columns: 44px 38px 48px 38px 44px 1fr;
+    gap: 4px;
+    border-top: 1px solid #172b35;
+    border-bottom: 1px solid #172b35;
+  }
+  .pro-row .terminal-spark {
+    display: block;
+    width: 100%;
+    height: 38px;
+    padding: 3px 8px;
+  }
+  .pro-row > :nth-child(n + 6) {
+    display: none;
+  }
+  .pro-row > :nth-child(8),
+  .pro-row > :nth-child(9),
+  .pro-row > :nth-child(10),
+  .pro-row > :nth-child(11),
+  .pro-row > :nth-child(13) {
+    display: grid;
+    gap: 4px;
+    justify-items: start;
+    border-right: 1px solid #152833;
+    color: #dbeaf0;
+    font-size: 9px;
+  }
+  .pro-row > :nth-child(8)::before,
+  .pro-row > :nth-child(9)::before,
+  .pro-row > :nth-child(10)::before,
+  .pro-row > :nth-child(11)::before,
+  .pro-row > :nth-child(13)::before {
+    color: #6f8995;
+    font-size: 6px;
+    letter-spacing: 0.08em;
+  }
+  .pro-row > :nth-child(8)::before {
+    content: "PEG";
+  }
+  .pro-row > :nth-child(9)::before {
+    content: "SHARPE";
+  }
+  .pro-row > :nth-child(10)::before {
+    content: "VOL";
+  }
+  .pro-row > :nth-child(11)::before {
+    content: "DD";
+  }
+  .pro-row > :nth-child(13)::before {
+    content: "SIM 12M";
+  }
+  .terminal-side {
+    display: grid;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    margin-top: 8px;
+    padding: 0;
+    border: 0;
+    overflow: visible;
+  }
+  .terminal-side .draft-tray {
+    position: fixed;
+    inset: auto 7px calc(7px + env(safe-area-inset-bottom)) 7px;
+    z-index: 55;
+    min-height: 58px;
+    border-color: #45ed75;
+    box-shadow: 0 -12px 35px rgba(0, 0, 0, 0.72);
+  }
+  .terminal-side .draft-tray > div:not(.panel-label),
+  .terminal-side .draft-tray > p {
+    display: none;
+  }
+  .terminal-side .draft-tray .panel-label {
+    float: left;
+    width: 47%;
+    min-height: 50px;
+    border-bottom: 0;
+  }
+  .terminal-side .draft-tray .tray-review {
+    float: right;
+    width: 53%;
+    min-height: 50px;
+  }
+  .terminal-page {
+    padding-bottom: 88px;
+  }
+  .compact-signal-dock {
+    grid-template-columns: 1fr;
+  }
+  .compact-signal-dock .pulse,
+  .compact-signal-dock .quant-clickable {
+    grid-column: auto;
+  }
+  .signal-modal-card {
+    width: calc(100vw - 14px);
+    max-height: calc(100dvh - 18px);
+  }
+  .signal-modal-card > header {
+    position: static;
+  }
+  .game-board-command {
+    position: relative;
+    top: 0;
+  }
+  .history-controls {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .history-controls button {
+    flex: 0 0 auto;
+    min-height: 38px;
+  }
+  .game-board-grid {
+    display: flex;
+    flex-direction: column;
+  }
+  .game-board-grid > main,
+  .game-board-side {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+  .game-board-side {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 0;
+    border: 0;
+    overflow: visible;
+    order: 2;
+  }
+  .game-sheet-head,
+  .game-sheet-row {
+    grid-template-columns: 26px minmax(0, 1fr) 78px;
+    gap: 5px;
+    padding: 9px 7px;
+  }
+  .commit-bar {
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .commit-bar > button {
+    grid-column: 1 / -1;
+    min-height: 45px;
+  }
+  .chase-card {
+    min-height: 300px;
+  }
+  .chase-scoreboard,
+  .chase-rates,
+  .match-metrics,
+  .endgame-grid,
+  .endgame-moves {
+    grid-template-columns: 1fr 1fr;
+  }
+  .history-timeline {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+  .history-timeline button {
+    flex: 0 0 110px;
+    scroll-snap-align: start;
+  }
+  .terminal-statusbar {
+    display: none;
+  }
+  .home .hero {
+    min-height: 0;
+    padding: 28px 22px;
+  }
+  .home .hero h1 {
+    font-size: clamp(42px, 13vw, 60px);
+  }
+  .setup-panel,
+  .campaign-card {
+    padding: 18px;
+  }
+  .choice-grid,
+  .choice-grid.horizons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (display-mode: standalone) and (max-width: 760px) {
+  header {
+    padding-top: env(safe-area-inset-top);
+    height: calc(58px + env(safe-area-inset-top));
+  }
+  .simulation-strip {
+    padding-inline: max(10px, env(safe-area-inset-left));
   }
 }

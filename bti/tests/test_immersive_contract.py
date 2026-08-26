@@ -142,6 +142,27 @@ def test_frontend_keeps_simulation_boundary_visible() -> None:
     assert "not a live quote or investment recommendation" in app
 
 
+def test_investor_preview_is_installable_and_mobile_first() -> None:
+    manifest = json.loads(
+        (WEB / "public" / "manifest.webmanifest").read_text(encoding="utf-8")
+    )
+    service_worker = (WEB / "public" / "sw.js").read_text(encoding="utf-8")
+    app = (WEB / "src" / "App.tsx").read_text(encoding="utf-8")
+    styles = (WEB / "src" / "styles.css").read_text(encoding="utf-8")
+
+    assert manifest["name"] == "BTI — Beat the Index"
+    assert manifest["display"] == "standalone"
+    assert manifest["orientation"] == "portrait-primary"
+    assert {192, 512} <= {
+        int(icon["sizes"].split("x", 1)[0]) for icon in manifest["icons"]
+    }
+    assert "bti-investor-preview-v0.9.0" in service_worker
+    assert "INSTALL BTI" in app
+    assert 'railCollapsed ? ">>" : "<<"' in app
+    assert "mobile-navigation-open" in styles
+    assert "purpose-built installed mobile game" in styles
+
+
 def test_research_and_market_analysis_surfaces_remain_first_class() -> None:
     terminal = (WEB / "src" / "Terminal.tsx").read_text(encoding="utf-8")
     cockpit = (WEB / "src" / "Cockpit.tsx").read_text(encoding="utf-8")

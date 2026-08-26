@@ -9,3 +9,5 @@ services:
     envVars:
       - key: BTI_SAVE_DIR
         value: /tmp/bti-saves
+      - key: DATABASE_URL
+        sync: false

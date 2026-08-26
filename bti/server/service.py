@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import secrets
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,7 @@ from bti.game_engine import BTIGame
 from bti.game_engine.engine import GameRuleError
 
 from .errors import APIError
-from .repository import JSONRepository
+from .repository import JSONRepository, PostgresRepository
 
 
 class BTIService:
@@ -19,7 +20,12 @@ class BTIService:
 
     def __init__(self, save_dir: str | Path, repository_root: str | Path | None = None,
                  content_dir: str | Path | None = None) -> None:
-        self.repo = JSONRepository(save_dir)
+        database_url = os.getenv("DATABASE_URL", "").strip()
+        self.repo = (
+            PostgresRepository(database_url)
+            if database_url
+            else JSONRepository(save_dir)
+        )
         self.repository_root = Path(repository_root) if repository_root else None
         self.content_dir = Path(content_dir or Path(__file__).resolve().parents[1] / "content")
 
@@ -29,6 +35,10 @@ class BTIService:
 
     def authenticate(self, token: str | None) -> str:
         return self.repo.authenticate(token)
+
+    def storage_status(self) -> dict[str, Any]:
+        healthy = self.repo.healthcheck() if hasattr(self.repo, "healthcheck") else True
+        return {"backend": self.repo.backend, "durable": self.repo.backend == "postgres", "healthy": healthy}
 
     def create_campaign(self, owner: str, payload: Any) -> dict[str, Any]:
         body = self._object(payload)

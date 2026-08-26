@@ -29,6 +29,10 @@ type View =
   | "profile"
   | "news"
   | "final";
+type InstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
 const rupees = (p: number, compact = false) => {
   const v = p / 100;
   if (compact && v >= 1e7) return `₹${(v / 1e7).toFixed(2)}Cr`;
@@ -120,12 +124,21 @@ function Metric({
 function Header({
   campaign,
   terminalMode,
+  openNavigation,
 }: {
   campaign: Campaign | null;
   terminalMode: boolean;
+  openNavigation: () => void;
 }) {
   return (
     <header>
+      <button
+        className="mobile-menu"
+        aria-label="Open BTI navigation"
+        onClick={openNavigation}
+      >
+        ☰
+      </button>
       <div>
         <span className="eyebrow">
           {terminalMode
@@ -219,6 +232,8 @@ function Shell({
   selectCampaign,
   newCampaign,
   abortCampaign,
+  installAvailable,
+  installApp,
   children,
 }: {
   view: View;
@@ -228,8 +243,14 @@ function Shell({
   selectCampaign: (campaign: Campaign) => void;
   newCampaign: () => void;
   abortCampaign: (campaign: Campaign) => void;
+  installAvailable: boolean;
+  installApp: () => void;
   children: React.ReactNode;
 }) {
+  const [railCollapsed, setRailCollapsed] = useState(
+    () => window.localStorage.getItem("bti-rail-collapsed") === "true",
+  );
+  const [mobileNavigation, setMobileNavigation] = useState(false);
   const terminalMode = [
     "market",
     "stock",
@@ -238,10 +259,35 @@ function Shell({
     "news",
   ].includes(view);
   const navigation = terminalMode ? TERMINAL_NAV : NAV;
+  const setCollapsed = (collapsed: boolean) => {
+    setRailCollapsed(collapsed);
+    window.localStorage.setItem("bti-rail-collapsed", String(collapsed));
+  };
+  const navigate = (next: View) => {
+    setView(next);
+    setMobileNavigation(false);
+  };
   return (
-    <div className="shell">
-      <aside>
-        <button className="brand" onClick={() => setView("home")}>
+    <div
+      className={`shell ${railCollapsed ? "rail-collapsed" : ""} ${mobileNavigation ? "mobile-navigation-open" : ""}`}
+    >
+      <button
+        className="navigation-scrim"
+        aria-label="Close BTI navigation"
+        onClick={() => setMobileNavigation(false)}
+      />
+      <aside aria-label="BTI navigation">
+        <button
+          className="rail-toggle"
+          aria-label={
+            railCollapsed ? "Expand navigation" : "Collapse navigation"
+          }
+          title={railCollapsed ? "Expand navigation" : "Collapse navigation"}
+          onClick={() => setCollapsed(!railCollapsed)}
+        >
+          {railCollapsed ? ">>" : "<<"}
+        </button>
+        <button className="brand" onClick={() => navigate("home")}>
           <b>BTI</b>
           <small>BEAT THE INDEX</small>
         </button>
@@ -257,7 +303,7 @@ function Shell({
                   ? "active"
                   : ""
               }
-              onClick={() => setView(id)}
+              onClick={() => navigate(id)}
             >
               <span>{icon}</span>
               {label}
@@ -267,8 +313,14 @@ function Shell({
         <CampaignRail
           campaigns={campaigns}
           selected={campaign?.campaign_id || null}
-          select={selectCampaign}
-          create={newCampaign}
+          select={(selectedCampaign) => {
+            setMobileNavigation(false);
+            selectCampaign(selectedCampaign);
+          }}
+          create={() => {
+            setMobileNavigation(false);
+            newCampaign();
+          }}
           abort={abortCampaign}
         />
         <div className="rail-foot">
@@ -285,7 +337,11 @@ function Shell({
         </div>
       </aside>
       <main>
-        <Header campaign={campaign} terminalMode={terminalMode} />
+        <Header
+          campaign={campaign}
+          terminalMode={terminalMode}
+          openNavigation={() => setMobileNavigation(true)}
+        />
         <div className="simulation-strip">
           <b>
             The stocks are real. The market you are about to play in is not.
@@ -294,6 +350,12 @@ function Shell({
             Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
+          <small>BTI INVESTOR PREVIEW · v0.9.0</small>
+          {installAvailable && (
+            <button className="install-bti" onClick={installApp}>
+              INSTALL BTI ↓
+            </button>
+          )}
         </div>
         {children}
       </main>
@@ -1438,7 +1500,18 @@ export default function App() {
     [reviewData, setReviewData] = useState<MoveReview | null>(null),
     [busy, setBusy] = useState(true),
     [launching, setLaunching] = useState(false),
+    [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(
+      null,
+    ),
     [error, setError] = useState("");
+  useEffect(() => {
+    const capture = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as InstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", capture);
+    return () => window.removeEventListener("beforeinstallprompt", capture);
+  }, []);
   useEffect(() => {
     (async () => {
       try {
@@ -1702,6 +1775,13 @@ export default function App() {
       selectCampaign={selectCampaign}
       newCampaign={() => setView("setup")}
       abortCampaign={abortCampaign}
+      installAvailable={Boolean(installPrompt)}
+      installApp={async () => {
+        if (!installPrompt) return;
+        await installPrompt.prompt();
+        const choice = await installPrompt.userChoice;
+        if (choice.outcome === "accepted") setInstallPrompt(null);
+      }}
     >
       {error && campaign && (
         <div className="toast">

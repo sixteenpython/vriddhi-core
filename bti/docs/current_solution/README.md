@@ -1,7 +1,7 @@
 # BTI current solution baseline
 
 - **Product:** Beat the Index (BTI)
-- **Baseline date:** 25 August 2026
+- **Baseline date:** 26 August 2026
 - **Release:** GitHub `master` (see repository history for the immutable commit)
 - **Live application:** <https://beat-the-index.onrender.com/>
 - **Status:** playable immersive web MVP under active product testing
@@ -34,6 +34,7 @@ and tries to beat the simulated Nifty benchmark over a fixed 24–60 month campa
 9. [CODEBASE_TRACEABILITY.md](CODEBASE_TRACEABILITY.md) — source-file ownership and change-impact guide.
 10. [CALIBRATED_SYNTHETIC_MARKET.md](CALIBRATED_SYNTHETIC_MARKET.md) — realism, coherence and market-data provenance boundary.
 11. [RATED_GAMEPLAY.md](RATED_GAMEPLAY.md) — two-screen loop, permanent moves, repeat, chase and historical review.
+12. [INVESTOR_PREVIEW_PWA.md](INVESTOR_PREVIEW_PWA.md) — installable portrait PWA, durable guest persistence and investor-release runbook.
 
 ## Canonical principles
 
@@ -65,7 +66,7 @@ or a 0.5%-band `PHOTO FINISH`; decision quality remains a separate process verdi
 campaigns reopen on their immutable result rather than presenting a fictitious next move, and the
 player can download the match summary.
 
-The web application is still using anonymous showcase identity and Render ephemeral storage. Google
-identity and cross-session durable persistence require production OAuth credentials and a durable
-database/disk; they must not be represented as delivered until those external release inputs are
-configured and tested.
+The investor preview uses anonymous guest identity and a dedicated Supabase PostgreSQL project.
+Campaigns therefore survive Render restarts and can be resumed on the same device. Google identity
+and cross-device account recovery remain explicitly deferred; durable storage must not be confused
+with authenticated ownership.

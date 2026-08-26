@@ -3,7 +3,7 @@
 ## Implemented now
 
 - Real React/TypeScript/Vite web application; no Streamlit runtime.
-- Anonymous showcase session with automatic expired-token recovery.
+- Anonymous guest session with automatic expired-token recovery and same-device resume.
 - Fixed ₹10K–₹1L monthly contribution and 24/36/48/60-move campaigns.
 - Governed 50-security universe derived from Vriddhi artifacts.
 - Deterministic generated market with financial metrics and Nifty benchmark.
@@ -15,7 +15,10 @@
 - Rated Game Board with permanent commit, scoring, position evaluation, cricket-chase progress,
   exact repeat-last-move and immutable historical review.
 - Campaign state, latest result and historical-review APIs.
-- Docker build, Render auto-deployment and health endpoint.
+- Dedicated Supabase PostgreSQL persistence with a JSON fallback for local development.
+- Installable portrait-first PWA with branded icon, splash metadata and service-worker shell cache.
+- Collapsible desktop navigation and a mobile drawer so the workstation retains maximum analysis space.
+- Docker build, Render auto-deployment and health/storage endpoint.
 - Simulation and private-oracle contract tests.
 
 ## Present but still being product-tested
@@ -23,16 +26,16 @@
 - review/commit and score-reveal choreography;
 - long-campaign progress and historical move analysis;
 - final campaign report and replay value;
-- responsive behaviour below desktop width;
+- final certification on the Samsung M30s portrait viewport;
 - empty, error, offline and long-campaign usability states.
 
 ## Deliberately deferred
 
-- Google login and durable player accounts;
+- Google login, cross-device identity and durable player accounts;
 - public leaderboard and multiplayer/social features;
 - live news, quotations or brokerage integration;
 - real-money execution;
-- durable database, multi-instance scaling and production analytics;
+- multi-instance load testing and production analytics;
 - native Android application and Play Store release;
 - puzzles, lessons, rankings, leaderboards and social/player ecosystem;
 - push notifications, subscriptions or monetisation.
