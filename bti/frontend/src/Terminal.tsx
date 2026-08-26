@@ -135,9 +135,9 @@ function QuantRiskModal({
       " / 50",
     ],
   ] as const;
-  const ranked = [...market.stocks]
-    .sort((a, b) => b.sharpe - a.sharpe || a.var_95_pct - b.var_95_pct)
-    .slice(0, 10);
+  const ranked = [...market.stocks].sort(
+    (a, b) => b.sharpe - a.sharpe || a.var_95_pct - b.var_95_pct,
+  );
   return (
     <div
       className="signal-modal"
@@ -148,7 +148,7 @@ function QuantRiskModal({
       <div className="signal-modal-card quant-risk-modal">
         <header>
           <div>
-            <small>SIMULATED CROSS-SECTION</small>
+            <small>SIMULATED CROSS-SECTION · ALL 50 SECURITIES</small>
             <h2>QUANT RISK MONITOR</h2>
           </div>
           <button onClick={close}>CLOSE ×</button>
@@ -1044,31 +1044,13 @@ export function MarketTerminal({
             >
               <div className="panel-label">
                 <span>MARKET PULSE</span>
-                <small>SIM</small>
+                <small className="pulse-return">
+                  {signed((marketPulse.at(-1)! / marketPulse[0] - 1) * 100)}
+                </small>
               </div>
               <MiniChart values={marketPulse} tone="green" />
-              <strong>
-                {signed((marketPulse.at(-1)! / marketPulse[0] - 1) * 100)}
-              </strong>
               <small className="dock-open">OPEN NIFTY OHLC ↗</small>
             </button>
-            <section className="terminal-panel dock-signal">
-              <div className="panel-label">
-                <span>MARKET INTERNALS</span>
-                <small>LIVE</small>
-              </div>
-              <div className="dock-metrics">
-                <span>
-                  ADV/DEC
-                  <b>
-                    {analytics.advances}/{analytics.declines}
-                  </b>
-                </span>
-                <span>
-                  PEG <b>{analytics.medianPeg.toFixed(2)}</b>
-                </span>
-              </div>
-            </section>
             <button
               className="terminal-panel dock-signal quant-clickable"
               onClick={() => setExpandedQuant(true)}
@@ -1077,14 +1059,25 @@ export function MarketTerminal({
                 <span>QUANT RISK</span>
                 <small>PUBLIC</small>
               </div>
-              <div className="dock-metrics">
+              <div className="dock-metrics quant-main-metrics">
+                <span>
+                  VaR 95
+                  <b>
+                    {median(
+                      market.stocks.map((stock) => stock.var_95_pct),
+                    ).toFixed(1)}
+                    %
+                  </b>
+                </span>
                 <span>
                   VOL <b>{analytics.meanVolatility.toFixed(1)}%</b>
                 </span>
                 <span>
-                  SHARPE &gt; 1
+                  SHARPE
                   <b>
-                    {market.stocks.filter((stock) => stock.sharpe > 1).length}
+                    {median(market.stocks.map((stock) => stock.sharpe)).toFixed(
+                      2,
+                    )}
                   </b>
                 </span>
               </div>

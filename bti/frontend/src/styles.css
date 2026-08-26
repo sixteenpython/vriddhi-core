@@ -4057,6 +4057,7 @@ header h2 {
 }
 .dock-signal {
   min-width: 0;
+  width: 100%;
   min-height: 112px;
   height: auto;
   overflow: hidden;
@@ -4136,20 +4137,25 @@ header h2 {
   font-size: 5px;
 }
 .dock-signal .terminal-spark {
+  display: block;
+  box-sizing: border-box;
   width: calc(100% - 12px);
   height: clamp(44px, 18cqi, 78px);
   margin: 6px;
+  padding: 0 8px;
+  overflow: hidden;
 }
-.dock-signal.pulse > strong {
-  display: block;
-  max-width: calc(100% - 14px);
-  margin: -3px 7px 0;
+.dock-signal .pulse-return {
+  position: static;
+  max-width: 48%;
   overflow: hidden;
   color: #4ded7b;
   font:
-    900 10px ui-monospace,
+    900 9px ui-monospace,
     Consolas,
     monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dock-metrics {
   display: grid;
@@ -4172,11 +4178,38 @@ header h2 {
   color: #e1edf1;
   font-size: 10px;
 }
+.quant-main-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.quant-main-metrics span {
+  padding: 12px 8px;
+  font-size: 8px;
+}
+.quant-main-metrics b {
+  margin-top: 7px;
+  font-size: 15px;
+}
+.quant-risk-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  overflow: hidden;
+}
+.quant-risk-modal .quant-rank-table {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #38515d #071017;
+}
 @container (min-width: 390px) {
   .compact-signal-dock {
     grid-template-columns: 1fr 1fr;
   }
   .compact-signal-dock .pulse {
+    grid-column: 1 / -1;
+  }
+  .compact-signal-dock .quant-clickable {
     grid-column: 1 / -1;
   }
   .dock-signal .terminal-spark {
