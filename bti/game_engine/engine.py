@@ -37,7 +37,7 @@ def _annualised_sip_return(contribution: int, months: int, final_value: int) -> 
 
 
 class BTIGame:
-    ENGINE_VERSION = "bti-game-v1"
+    ENGINE_VERSION = "bti-game-v2"
 
     @classmethod
     def create(
@@ -321,10 +321,11 @@ class BTIGame:
         )
         self.state["moves"].append(deepcopy(result))
         self.state["rating"] = rating_after
+        result["match_summary"] = self.match_summary()
         if self.state["current_month"] == self.state["horizon_months"]:
             self.state["status"] = "COMPLETED"
             result["final_result"] = self.final_result()
-            self.state["moves"][-1] = deepcopy(result)
+        self.state["moves"][-1] = deepcopy(result)
         return deepcopy(result)
 
     def performance_series(self) -> list[dict[str, Any]]:
@@ -369,6 +370,64 @@ class BTIGame:
             )
         return series
 
+    @staticmethod
+    def _max_drawdown_pct(series: list[dict[str, Any]]) -> float:
+        """Measure drawdown on the contribution-adjusted wealth multiple."""
+        peak = 0.0
+        worst = 0.0
+        for point in series:
+            invested = point["total_invested_paise"]
+            multiple = point["portfolio_value_paise"] / invested if invested else 1.0
+            peak = max(peak, multiple)
+            if peak:
+                worst = min(worst, multiple / peak - 1)
+        return round(abs(worst) * 100, 2)
+
+    def match_summary(self, move_number: int | None = None) -> dict[str, Any]:
+        completed = len(self.state["moves"])
+        move = completed if move_number is None else min(move_number, completed)
+        series = self.performance_series()[:move]
+        latest = series[-1] if series else {
+            "total_invested_paise": 0,
+            "portfolio_value_paise": 0,
+            "benchmark_value_paise": 0,
+            "wealth_gap_paise": 0,
+            "portfolio_xirr_pct": 0.0,
+            "benchmark_xirr_pct": 0.0,
+        }
+        moves = self.state["moves"][:move]
+        distribution: dict[str, int] = {}
+        for item in moves:
+            label = item["classification"]
+            distribution[label] = distribution.get(label, 0) + 1
+        gap = latest["wealth_gap_paise"]
+        benchmark = latest["benchmark_value_paise"]
+        rating = moves[-1].get("rating_after", 1200) if moves else 1200
+        return {
+            "move": move,
+            "total_moves": self.state["horizon_months"],
+            "overs_remaining": self.state["horizon_months"] - move,
+            "total_invested_paise": latest["total_invested_paise"],
+            "portfolio_value_paise": latest["portfolio_value_paise"],
+            "benchmark_value_paise": benchmark,
+            "wealth_gap_paise": gap,
+            "wealth_alpha_pct": round((latest["portfolio_value_paise"] / benchmark - 1) * 100, 2)
+            if benchmark
+            else 0.0,
+            "portfolio_xirr_pct": latest["portfolio_xirr_pct"],
+            "benchmark_xirr_pct": latest["benchmark_xirr_pct"],
+            "xirr_advantage_pct": round(
+                latest["portfolio_xirr_pct"] - latest["benchmark_xirr_pct"], 2
+            ),
+            "max_drawdown_pct": self._max_drawdown_pct(series),
+            "average_move_score": round(sum(item["score"] for item in moves) / move, 1)
+            if move
+            else 0.0,
+            "rating": rating,
+            "classification_distribution": distribution,
+            "position": "LEADING" if gap > 0 else "TRAILING" if gap < 0 else "LEVEL",
+        }
+
     def move_history(self) -> list[dict[str, Any]]:
         return [
             {
@@ -405,13 +464,14 @@ class BTIGame:
             "market": market_view,
             "performance_series": self.performance_series()[:move_number],
             "move_history": self.move_history(),
+            "match_summary": self.match_summary(move_number),
         }
 
     def public_state(self) -> dict[str, Any]:
         market = self.state["market"]
         portfolio = self.state["cash_paise"] + _value(self.state["holdings"], market)
         benchmark = self.state["benchmark_value_paise"]
-        return {
+        result = {
             "campaign_id": self.state["campaign_id"],
             "status": self.status,
             "horizon_months": self.state["horizon_months"],
@@ -448,6 +508,9 @@ class BTIGame:
             "release_id": self.state["release_id"],
             "market_label": "SIMULATED MARKET",
         }
+        result["match_summary"] = self.match_summary()
+        result["final_result"] = self.final_result() if self.status == "COMPLETED" else None
+        return result
 
     def resign(self) -> dict[str, Any]:
         if self.status != "ACTIVE":
@@ -461,23 +524,77 @@ class BTIGame:
         months = self.state["current_month"]
         contribution = self.state["monthly_amount_paise"]
         benchmark = self.state["benchmark_value_paise"]
+        summary = self.match_summary()
+        gap = portfolio - benchmark
+        gap_pct = abs(gap / benchmark * 100) if benchmark else 0.0
+        if gap_pct <= 0.5:
+            verdict = "PHOTO_FINISH"
+            headline = "PHOTO FINISH"
+        elif gap > 0:
+            verdict = "BEAT_INDEX"
+            headline = "YOU BEAT THE INDEX"
+        else:
+            verdict = "INDEX_WON"
+            headline = "NIFTY WON THIS CAMPAIGN"
+        ranked = sorted(
+            (
+                {
+                    "move": index,
+                    "score": item["score"],
+                    "classification": item["classification"],
+                    "notation": item.get("notation", ""),
+                }
+                for index, item in enumerate(self.state["moves"], start=1)
+            ),
+            key=lambda item: item["score"],
+        )
+        average = summary["average_move_score"]
+        process = (
+            "ELITE DECISION DISCIPLINE"
+            if average >= 90
+            else "STRONG DECISION DISCIPLINE"
+            if average >= 80
+            else "SOUND, IMPROVABLE PROCESS"
+            if average >= 70
+            else "INCONSISTENT DECISION PROCESS"
+            if average >= 60
+            else "FRAGILE DECISION PROCESS"
+        )
+        if gap > 0 and average < 70:
+            lesson = "You won the outcome, but the move record shows avoidable decision risk. Do not confuse a winning simulation with a repeatable process."
+        elif gap <= 0 and average >= 80:
+            lesson = "Your process was strong even though this market path won. Preserve the discipline; one campaign outcome is not the same as decision quality."
+        elif gap > 0:
+            lesson = "You converted disciplined portfolio decisions into a lead over the simulated index. Study the strongest moves and make that process repeatable."
+        else:
+            lesson = "The index finished ahead. Use the weakest moves to identify where valuation, risk or diversification discipline broke down."
         return {
             "status": self.status,
+            "verdict": verdict,
+            "headline": headline,
             "months_completed": months,
             "total_invested_paise": self.state["total_invested_paise"],
             "portfolio_value_paise": portfolio,
             "benchmark_value_paise": benchmark,
             "wealth_alpha_paise": portfolio - benchmark,
+            "portfolio_gain_paise": portfolio - self.state["total_invested_paise"],
+            "benchmark_gain_paise": benchmark - self.state["total_invested_paise"],
+            "wealth_alpha_pct": summary["wealth_alpha_pct"],
             "portfolio_money_weighted_annual_return_pct": _annualised_sip_return(
                 contribution, months, portfolio
             ),
             "benchmark_money_weighted_annual_return_pct": _annualised_sip_return(
                 contribution, months, benchmark
             ),
-            "average_move_score": round(sum(m["score"] for m in self.state["moves"]) / months, 1)
-            if months
-            else 0.0,
+            "xirr_advantage_pct": summary["xirr_advantage_pct"],
+            "max_drawdown_pct": summary["max_drawdown_pct"],
+            "average_move_score": average,
             "rating": self.state["rating"],
+            "process_verdict": process,
+            "strategic_lesson": lesson,
+            "best_move": ranked[-1] if ranked else None,
+            "weakest_move": ranked[0] if ranked else None,
+            "classification_distribution": summary["classification_distribution"],
             "decision_support_only": True,
         }
 

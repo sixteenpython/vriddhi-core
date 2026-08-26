@@ -9,6 +9,9 @@
 This folder documents the BTI solution that exists today. It complements the forward-looking files
 in `bti/docs/` by separating implemented behaviour from planned architecture.
 
+Active findings are documented separately under `bti/docs/playtesting/` so proposed improvements
+are never confused with shipped behaviour.
+
 ## The product in one sentence
 
 BTI is Lichess for investment decision-making: the player reads a realistic but explicitly
@@ -55,3 +58,14 @@ under-deployed repeat, correct and execute it, then rewind the Nifty/player chas
 analysis to Move 1 without changing the live state. The simulation boundary remains visible
 throughout. Puzzles, lessons, rankings, profiles and standalone Newswire are intentionally absent
 from this gameplay-only web release.
+
+The 26 August investor web increment adds a canonical after-every-move match scoreboard and an
+explicit campaign-complete experience. Final wealth determines `YOU BEAT THE INDEX`, `NIFTY WON`
+or a 0.5%-band `PHOTO FINISH`; decision quality remains a separate process verdict. Completed
+campaigns reopen on their immutable result rather than presenting a fictitious next move, and the
+player can download the match summary.
+
+The web application is still using anonymous showcase identity and Render ephemeral storage. Google
+identity and cross-session durable persistence require production OAuth credentials and a durable
+database/disk; they must not be represented as delivered until those external release inputs are
+configured and tested.

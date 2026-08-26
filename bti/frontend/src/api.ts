@@ -22,6 +22,57 @@ export type Campaign = {
   can_repeat_last_move: boolean;
   last_move_instructions: Trade[];
   market_label: string;
+  match_summary: MatchSummary;
+  final_result: FinalResult | null;
+};
+export type MatchSummary = {
+  move: number;
+  total_moves: number;
+  overs_remaining: number;
+  total_invested_paise: number;
+  portfolio_value_paise: number;
+  benchmark_value_paise: number;
+  wealth_gap_paise: number;
+  wealth_alpha_pct: number;
+  portfolio_xirr_pct: number;
+  benchmark_xirr_pct: number;
+  xirr_advantage_pct: number;
+  max_drawdown_pct: number;
+  average_move_score: number;
+  rating: number;
+  classification_distribution: Record<string, number>;
+  position: "LEADING" | "TRAILING" | "LEVEL";
+};
+export type FinalResult = {
+  status: string;
+  verdict: "BEAT_INDEX" | "INDEX_WON" | "PHOTO_FINISH";
+  headline: string;
+  months_completed: number;
+  total_invested_paise: number;
+  portfolio_value_paise: number;
+  benchmark_value_paise: number;
+  wealth_alpha_paise: number;
+  portfolio_gain_paise: number;
+  benchmark_gain_paise: number;
+  wealth_alpha_pct: number;
+  portfolio_money_weighted_annual_return_pct: number;
+  benchmark_money_weighted_annual_return_pct: number;
+  xirr_advantage_pct: number;
+  max_drawdown_pct: number;
+  average_move_score: number;
+  rating: number;
+  process_verdict: string;
+  strategic_lesson: string;
+  best_move: MoveHighlight | null;
+  weakest_move: MoveHighlight | null;
+  classification_distribution: Record<string, number>;
+  decision_support_only: true;
+};
+export type MoveHighlight = {
+  move: number;
+  score: number;
+  classification: string;
+  notation: string;
 };
 export type MarketRegime = {
   month: number;
@@ -165,6 +216,8 @@ export type MoveResult = {
     value_paise: number;
     health: PortfolioHealth;
   };
+  match_summary: MatchSummary;
+  final_result?: FinalResult;
 };
 export type MoveReview = {
   review_mode: true;
@@ -174,6 +227,7 @@ export type MoveReview = {
   market: Market;
   performance_series: PerformancePoint[];
   move_history: MoveHistory[];
+  match_summary: MatchSummary;
 };
 
 const TOKEN = "bti_access_token";

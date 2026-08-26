@@ -245,8 +245,16 @@ function Home({
           </p>
           <div className="hero-actions">
             {campaign ? (
-              <button className="primary" onClick={() => setView("market")}>
-                PLAY MOVE {campaign.current_move} <b>→</b>
+              <button
+                className="primary"
+                onClick={() =>
+                  setView(campaign.status === "COMPLETED" ? "review" : "market")
+                }
+              >
+                {campaign.status === "COMPLETED"
+                  ? "VIEW FINAL MATCH RESULT"
+                  : `PLAY MOVE ${campaign.current_move}`} {" "}
+                <b>→</b>
               </button>
             ) : (
               <button className="primary" onClick={() => setView("setup")}>
@@ -265,7 +273,9 @@ function Home({
         <div className="campaign-card">
           <div className="campaign-top">
             <div>
-              <span className="eyebrow">ACTIVE CAMPAIGN</span>
+              <span className="eyebrow">
+                {campaign.status === "COMPLETED" ? "COMPLETED RATED CAMPAIGN" : "ACTIVE CAMPAIGN"}
+              </span>
               <h3>
                 {rupees(campaign.monthly_amount_rupees * 100)} / month ·{" "}
                 {campaign.horizon_months} moves

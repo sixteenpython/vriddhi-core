@@ -113,6 +113,18 @@ def test_complete_campaign_smoke(horizon: int) -> None:
     assert final["total_invested_paise"] == horizon * 1_000_000
     assert final["portfolio_value_paise"] > 0
     assert final["benchmark_value_paise"] > 0
+    assert final["verdict"] in {"BEAT_INDEX", "INDEX_WON", "PHOTO_FINISH"}
+    assert final["headline"]
+    assert final["process_verdict"]
+    assert final["strategic_lesson"]
+    assert final["best_move"]["move"] in range(1, horizon + 1)
+    assert final["weakest_move"]["move"] in range(1, horizon + 1)
+    public = game.public_state()
+    assert public["final_result"] == final
+    assert public["match_summary"]["overs_remaining"] == 0
+    assert sum(final["classification_distribution"].values()) == horizon
+    with pytest.raises(GameRuleError, match="active campaign"):
+        _fund_one_month(game)
 
 
 def test_rating_is_capital_neutral_for_equivalent_decisions() -> None:
@@ -142,10 +154,16 @@ def test_rated_history_is_immutable_reconstructable_and_chase_ready() -> None:
     assert review["review_mode"] is True
     assert review["selected_move"] == 1
     assert len(review["performance_series"]) == 1
+    assert review["match_summary"]["move"] == 1
+    assert review["match_summary"]["total_invested_paise"] == 2_500_000
     assert review["result"] == first
     assert review["market"]["month"] == 1
     assert game.to_json() == state_before_review
     assert second["regime"]["difficulty"] >= first["regime"]["difficulty"]
+    assert second["match_summary"]["move"] == 2
+    assert second["match_summary"]["average_move_score"] == pytest.approx(
+        (first["score"] + second["score"]) / 2, abs=0.1
+    )
 
 
 def test_market_regime_path_is_precomputed_and_portfolio_independent() -> None:

@@ -7,7 +7,7 @@ import math
 import random
 from typing import Any
 
-SIMULATION_VERSION = "bti-calibrated-synthetic-2026-08-v2"
+SIMULATION_VERSION = "bti-calibrated-synthetic-2026-08-v3"
 
 REGIMES = (
     ("SELECTIVE GROWTH", "Growth remains available, but valuation discipline separates leaders.", 0.10, 0.95),
@@ -201,6 +201,7 @@ def advance_market(
         for sector in {v["sector"] for v in market.values()}
     }
     updated = {}
+    stock_returns: list[float] = []
     for ticker, previous in market.items():
         item = dict(previous)
         drift = max(-0.08, min(0.28, previous["forecast_pct"] / 100))
@@ -211,6 +212,7 @@ def advance_market(
             + 0.57 * _rng(seed, "stock", ticker, month).gauss(0, 1)
         )
         ret = max(-0.24, min(0.24, drift / 12 + annual_vol / math.sqrt(12) * shock))
+        stock_returns.append(ret)
         opening = previous["close_paise"]
         close = max(100, round(opening * (1 + ret)))
         intraday = abs(_rng(seed, "ohlc", ticker, month).gauss(0, annual_vol / math.sqrt(252)))
@@ -290,7 +292,16 @@ def advance_market(
             }
         )
         updated[ticker] = item
-    return updated, max(-0.18, min(0.18, 0.08 / 12 + 0.135 / math.sqrt(12) * common))
+    # The simulated Nifty must participate in the same market as its constituents. A
+    # mostly cross-sectional return proxy prevents the old fixed 8% drift from becoming
+    # an artificially easy target when the playable universe has materially stronger
+    # growth. Trimming extremes approximates a broad large-cap index without disclosing
+    # or inventing real-world index weights.
+    ordered_returns = sorted(stock_returns)
+    broad_market_return = sum(ordered_returns[5:-5]) / max(1, len(ordered_returns[5:-5]))
+    macro_index_return = 0.08 / 12 + 0.135 / math.sqrt(12) * common
+    benchmark_return = 0.85 * broad_market_return + 0.15 * macro_index_return
+    return updated, max(-0.18, min(0.18, benchmark_return))
 
 
 def public_market(market: dict[str, Any], month: int, data_through: str) -> dict[str, Any]:

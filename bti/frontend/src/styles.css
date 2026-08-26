@@ -3005,6 +3005,139 @@ header h2 {
   grid-column: 1/-1;
   color: var(--muted);
 }
+.match-scoreboard {
+  overflow: hidden;
+}
+.match-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(125px, 1fr));
+}
+.match-metrics > div {
+  padding: 12px;
+  border-right: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 5px;
+}
+.match-metrics span,
+.endgame-grid span,
+.endgame-scoreline span,
+.endgame-moves span,
+.endgame-process > span {
+  color: var(--dim);
+  font: 8px var(--mono);
+  letter-spacing: 0.12em;
+}
+.match-metrics b {
+  font: 700 14px var(--mono);
+  color: #edf8ff;
+}
+.endgame-card {
+  margin: 8px 0 10px;
+  padding: 26px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  border-color: #2d7950;
+  background:
+    radial-gradient(circle at 50% 0, rgba(54, 239, 110, 0.18), transparent 43%),
+    #07131a;
+}
+.endgame-card.lost {
+  border-color: #8c3e48;
+  background: radial-gradient(circle at 50% 0, rgba(212, 71, 80, 0.16), transparent 43%), #07131a;
+}
+.endgame-card.draw {
+  border-color: #9d7135;
+  background: radial-gradient(circle at 50% 0, rgba(214, 163, 58, 0.16), transparent 43%), #07131a;
+}
+.endgame-kicker {
+  color: var(--green);
+  font: 800 9px var(--mono);
+  letter-spacing: 0.18em;
+}
+.endgame-card h1 {
+  margin: 10px 0 4px;
+  font: 800 clamp(40px, 6vw, 78px)/0.98 var(--display);
+  color: #f5fbff;
+  text-shadow: 0 0 28px rgba(64, 239, 110, 0.25);
+}
+.endgame-deck {
+  color: var(--muted);
+  font-size: 15px;
+}
+.endgame-scoreline {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 28px;
+  max-width: 740px;
+  margin: 24px auto;
+}
+.endgame-scoreline > div {
+  display: grid;
+  gap: 6px;
+}
+.endgame-scoreline b {
+  font: 800 34px var(--mono);
+}
+.endgame-scoreline strong {
+  color: var(--dim);
+  font: 900 18px var(--mono);
+}
+.endgame-scoreline small {
+  color: var(--muted);
+  font: 700 10px var(--mono);
+}
+.endgame-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border: 1px solid var(--line);
+  max-width: 980px;
+  margin: 0 auto 18px;
+}
+.endgame-grid > div {
+  padding: 13px;
+  display: grid;
+  gap: 7px;
+  border-right: 1px solid var(--line);
+}
+.endgame-grid b {
+  font: 800 15px var(--mono);
+}
+.endgame-process {
+  max-width: 820px;
+  margin: 18px auto;
+  padding: 18px;
+  border-left: 3px solid var(--green);
+  background: rgba(6, 23, 27, 0.75);
+  text-align: left;
+}
+.endgame-process h2 {
+  margin: 6px 0;
+  font-size: 22px;
+}
+.endgame-process p {
+  margin: 0;
+  color: var(--muted);
+}
+.endgame-moves {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-width: 820px;
+  margin: 0 auto 18px;
+  text-align: left;
+}
+.endgame-moves > div {
+  padding: 12px;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+}
+.endgame-moves b {
+  font: 700 11px var(--mono);
+}
 
 @media (max-width: 1180px) {
   .game-board-grid {
@@ -3014,6 +3147,10 @@ header h2 {
     grid-template-columns: 1fr 1fr;
   }
   .chase-scoreboard {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .match-metrics,
+  .endgame-grid {
     grid-template-columns: repeat(3, 1fr);
   }
   .game-board-command {
@@ -3036,8 +3173,17 @@ header h2 {
     grid-template-columns: 1fr 1fr;
   }
   .chase-scoreboard,
-  .chase-rates {
+  .chase-rates,
+  .match-metrics,
+  .endgame-grid,
+  .endgame-moves {
     grid-template-columns: 1fr 1fr;
+  }
+  .endgame-scoreline {
+    gap: 10px;
+  }
+  .endgame-scoreline b {
+    font-size: 20px;
   }
 }
 

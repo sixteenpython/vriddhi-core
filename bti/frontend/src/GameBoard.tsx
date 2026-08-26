@@ -1,6 +1,8 @@
 import type {
   Campaign,
+  FinalResult,
   Market,
+  MatchSummary,
   MoveResult,
   MoveReview,
   PerformancePoint,
@@ -245,6 +247,99 @@ function EvaluationBar({ result }: { result: MoveResult | null }) {
   );
 }
 
+function MatchScoreboard({ summary }: { summary: MatchSummary }) {
+  const forming = summary.move < 3;
+  const gapTone = summary.wealth_gap_paise >= 0 ? "positive" : "negative";
+  return (
+    <section className="terminal-panel match-scoreboard">
+      <div className="panel-label">
+        <span>MATCH STATUS · AFTER MOVE {summary.move}</span>
+        <small>{summary.position} · {summary.overs_remaining} MOVES REMAINING</small>
+      </div>
+      <div className="match-metrics">
+        <div><span>TOTAL INVESTED</span><b>{rupees(summary.total_invested_paise, true)}</b></div>
+        <div><span>PLAYER PORTFOLIO</span><b>{rupees(summary.portfolio_value_paise, true)}</b></div>
+        <div><span>NIFTY PORTFOLIO</span><b>{rupees(summary.benchmark_value_paise, true)}</b></div>
+        <div><span>WEALTH {summary.wealth_gap_paise >= 0 ? "LEAD" : "GAP"}</span><b className={gapTone}>{rupees(Math.abs(summary.wealth_gap_paise), true)}</b></div>
+        <div><span>PLAYER SIP XIRR</span><b>{forming ? "FORMING" : signed(summary.portfolio_xirr_pct)}</b></div>
+        <div><span>NIFTY SIP XIRR</span><b>{forming ? "FORMING" : signed(summary.benchmark_xirr_pct)}</b></div>
+        <div><span>MAX DRAWDOWN</span><b className="negative">-{summary.max_drawdown_pct.toFixed(2)}%</b></div>
+        <div><span>AVG MOVE QUALITY</span><b>{summary.average_move_score.toFixed(1)} / 100</b></div>
+        <div><span>BTI RATING</span><b className="gold">{summary.rating}</b></div>
+      </div>
+    </section>
+  );
+}
+
+function Endgame({ campaign, final }: { campaign: Campaign; final: FinalResult }) {
+  const won = final.verdict === "BEAT_INDEX";
+  const draw = final.verdict === "PHOTO_FINISH";
+  const download = () => {
+    const report = [
+      `BTI CAMPAIGN ${campaign.campaign_id}`,
+      final.headline,
+      `${final.months_completed}-move rated simulated campaign`,
+      "",
+      `Total invested: ${rupees(final.total_invested_paise)}`,
+      `Final player portfolio: ${rupees(final.portfolio_value_paise)}`,
+      `Nifty equivalent: ${rupees(final.benchmark_value_paise)}`,
+      `Wealth lead: ${rupees(final.wealth_alpha_paise)}`,
+      `Player SIP XIRR: ${signed(final.portfolio_money_weighted_annual_return_pct)}`,
+      `Nifty SIP XIRR: ${signed(final.benchmark_money_weighted_annual_return_pct)}`,
+      `XIRR advantage: ${signed(final.xirr_advantage_pct)}`,
+      `Max drawdown: -${final.max_drawdown_pct.toFixed(2)}%`,
+      `Average move quality: ${final.average_move_score.toFixed(1)} / 100`,
+      `Final BTI rating: ${final.rating}`,
+      "",
+      `Process verdict: ${final.process_verdict}`,
+      final.strategic_lesson,
+      "",
+      "SIMULATION MODE. This is an educational strategy game, not investment advice.",
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob([report], { type: "text/plain" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `BTI-${campaign.campaign_id}-match-report.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+  return (
+    <section className={`terminal-panel endgame-card ${won ? "won" : draw ? "draw" : "lost"}`}>
+      <div className="endgame-kicker">RATED CAMPAIGN COMPLETE · {final.months_completed}/{final.months_completed} MOVES</div>
+      <h1>{final.headline}</h1>
+      <p className="endgame-deck">
+        {won
+          ? `You finished ${rupees(Math.abs(final.wealth_alpha_paise), true)} ahead of the simulated Nifty portfolio.`
+          : draw
+            ? "Neither side established a decisive wealth advantage. The match was settled within 0.5%."
+            : `The simulated Nifty portfolio finished ${rupees(Math.abs(final.wealth_alpha_paise), true)} ahead.`}
+      </p>
+      <div className="endgame-scoreline">
+        <div><span>PLAYER</span><b>{rupees(final.portfolio_value_paise, true)}</b><small>{signed(final.portfolio_money_weighted_annual_return_pct)} SIP XIRR</small></div>
+        <strong>VS</strong>
+        <div><span>NIFTY</span><b>{rupees(final.benchmark_value_paise, true)}</b><small>{signed(final.benchmark_money_weighted_annual_return_pct)} SIP XIRR</small></div>
+      </div>
+      <div className="endgame-grid">
+        <div><span>TOTAL INVESTED</span><b>{rupees(final.total_invested_paise, true)}</b></div>
+        <div><span>XIRR ADVANTAGE</span><b className={final.xirr_advantage_pct >= 0 ? "positive" : "negative"}>{signed(final.xirr_advantage_pct)}</b></div>
+        <div><span>MAX DRAWDOWN</span><b className="negative">-{final.max_drawdown_pct.toFixed(2)}%</b></div>
+        <div><span>MOVE QUALITY</span><b>{final.average_move_score.toFixed(1)} / 100</b></div>
+        <div><span>FINAL RATING</span><b className="gold">{final.rating}</b></div>
+      </div>
+      <div className="endgame-process">
+        <span>PROCESS VERDICT</span>
+        <h2>{final.process_verdict}</h2>
+        <p>{final.strategic_lesson}</p>
+      </div>
+      <div className="endgame-moves">
+        {final.best_move && <div><span>BEST MOVE</span><b>M{final.best_move.move} · {final.best_move.classification} · {final.best_move.score}</b></div>}
+        {final.weakest_move && <div><span>MOVE TO STUDY</span><b>M{final.weakest_move.move} · {final.weakest_move.classification} · {final.weakest_move.score}</b></div>}
+      </div>
+      <button className="primary" onClick={download}>DOWNLOAD MATCH REPORT ↓</button>
+    </section>
+  );
+}
+
 type Props = {
   campaign: Campaign;
   market: Market;
@@ -307,6 +402,8 @@ export function GameBoard({
     (preCommit ? campaign.current_move : displayedResult?.move) ||
     campaign.current_move;
   const canNextHistory = historical && selectedMove < campaign.moves_completed;
+  const summary = reviewData?.match_summary || displayedResult?.match_summary || campaign.match_summary;
+  const final = !historical ? displayedResult?.final_result || campaign.final_result : null;
   return (
     <section className="terminal-page game-board-page">
       <div className="terminal-commandbar game-board-command">
@@ -346,6 +443,7 @@ export function GameBoard({
           REVIEW MODE · HISTORY IS IMMUTABLE · THE LIVE DRAFT IS PRESERVED
         </div>
       )}
+      {final && <Endgame campaign={campaign} final={final} />}
       <div className="game-board-grid">
         <main>
           <section className="terminal-panel execution-board">
@@ -428,6 +526,7 @@ export function GameBoard({
             horizon={campaign.horizon_months}
             monthlyAmountRupees={campaign.monthly_amount_rupees}
           />
+          {summary.move > 0 && <MatchScoreboard summary={summary} />}
         </main>
         <aside className="game-board-side">
           <EvaluationBar result={displayedResult || null} />
@@ -492,7 +591,7 @@ export function GameBoard({
                   <p key={item}>↗ {item}</p>
                 ))}
               </div>
-              {!historical && result && (
+              {!historical && result && campaign.status === "ACTIVE" && (
                 <button className="primary full" onClick={continueGame}>
                   CONTINUE TO MOVE {campaign.current_move} →
                 </button>
