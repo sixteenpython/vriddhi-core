@@ -1,16 +1,20 @@
 # BTI current solution baseline
 
 - **Product:** Beat the Index (BTI)
-- **Baseline date:** 26 August 2026
-- **Release:** GitHub `master` (see repository history for the immutable commit)
+- **Baseline date:** 27 August 2026
+- **Release:** BTI Mobile v0.11.0 (`f1cf4c7`)
 - **Live application:** <https://beat-the-index.onrender.com/>
-- **Status:** playable immersive web MVP under active product testing
+- **Status:** deployed investor-preview web/PWA release under active desktop and mobile playtesting
 
 This folder documents the BTI solution that exists today. It complements the forward-looking files
 in `bti/docs/` by separating implemented behaviour from planned architecture.
 
 Active findings are documented separately under `bti/docs/playtesting/` so proposed improvements
 are never confused with shipped behaviour.
+
+The implementation chronology and production validation of the current PWA/mobile surface are
+recorded in
+[`PLAYTEST_02_INVESTOR_PREVIEW_PWA_AND_MOBILE_UX.md`](../playtesting/PLAYTEST_02_INVESTOR_PREVIEW_PWA_AND_MOBILE_UX.md).
 
 ## The product in one sentence
 
@@ -70,3 +74,8 @@ The investor preview uses anonymous guest identity and a dedicated Supabase Post
 Campaigns therefore survive Render restarts and can be resumed on the same device. Google identity
 and cross-device account recovery remain explicitly deferred; durable storage must not be confused
 with authenticated ownership.
+
+The v0.11.0 phone client is now a dedicated scroll-first composition rather than a compressed
+desktop workstation. Its Market and Game surfaces were verified against production at a 360 × 800
+viewport after Render reported healthy PostgreSQL storage. Physical Samsung M30s installation and
+full-campaign acceptance remain part of investor playtesting rather than automated release evidence.

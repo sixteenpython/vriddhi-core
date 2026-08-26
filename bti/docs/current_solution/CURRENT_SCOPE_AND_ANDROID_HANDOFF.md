@@ -31,8 +31,12 @@
 - review/commit and score-reveal choreography;
 - long-campaign progress and historical move analysis;
 - final campaign report and replay value;
-- final certification on the Samsung M30s portrait viewport;
+- physical-device certification and a full 24-move campaign on the Samsung M30s;
 - empty, error, offline and long-campaign usability states.
+
+The v0.11.0 Market and Game surfaces have passed automated contracts plus local and production
+visual inspection at a 360 × 800 portrait viewport. This is strong responsive-release evidence, but
+it is deliberately not documented as a substitute for the physical-device acceptance run.
 
 ## Deliberately deferred
 
