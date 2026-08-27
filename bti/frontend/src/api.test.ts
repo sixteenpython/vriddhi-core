@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { api, ensureSession } from "./api";
+import { api, ensureSession, startFreshSession } from "./api";
 
 const values = new Map<string, string>();
 Object.defineProperty(globalThis, "localStorage", {
@@ -49,6 +49,24 @@ describe("showcase session recovery", () => {
     await api.campaigns();
     expect(values.get("bti_access_token")).toBe("fresh-token-value");
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("starts every investor-preview launch with a new anonymous session", async () => {
+    values.set("bti_access_token", "old-persisted-token");
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(() =>
+        response(201, { data: { access_token: "clean-session-token" } }),
+      );
+
+    await startFreshSession();
+
+    expect(values.get("bti_access_token")).toBe("clean-session-token");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/showcase/session",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("does not replay a move mutation after an expired session", async () => {

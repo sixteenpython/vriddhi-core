@@ -412,6 +412,12 @@ export async function ensureSession() {
   if (localStorage.getItem(TOKEN)) return;
   await createSession();
 }
+export async function startFreshSession() {
+  // Investor-preview policy: every browser launch receives a clean anonymous
+  // desk. Earlier campaign history is deliberately not restored.
+  localStorage.removeItem(TOKEN);
+  await createSession();
+}
 const withCurrentContribution = (campaign: Campaign): Campaign => ({
   ...campaign,
   cash_paise: playableCash(

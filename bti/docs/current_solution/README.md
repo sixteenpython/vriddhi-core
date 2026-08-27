@@ -1,12 +1,12 @@
 # BTI current solution baseline
 
-> **Current release:** v0.14.1 — persisted-campaign compatibility hotfix over the release-candidate UX baseline.
+> **Current release:** v0.14.2 — clean-launch investor preview over the release-candidate UX baseline.
 > See [Playtest 03](../playtesting/PLAYTEST_03_MULTI_MODE_CAPITAL_MARKET_RELEASE.md) for the current
 > mode contracts, Newswire, mobile boundary and verification gates.
 
 - **Product:** Beat the Index (BTI)
 - **Baseline date:** 27 August 2026
-- **Release:** BTI Release Candidate v0.14.1
+- **Release:** BTI Release Candidate v0.14.2
 - **Live application:** <https://beat-the-index.onrender.com/>
 - **Status:** deployed investor-preview web/PWA release under active desktop and mobile playtesting
 
@@ -74,10 +74,9 @@ or a 0.5%-band `PHOTO FINISH`; decision quality remains a separate process verdi
 campaigns reopen on their immutable result rather than presenting a fictitious next move, and the
 player can download the match summary.
 
-The investor preview uses anonymous guest identity and a dedicated Supabase PostgreSQL project.
-Campaigns therefore survive Render restarts and can be resumed on the same device. Google identity
-and cross-device account recovery remain explicitly deferred; durable storage must not be confused
-with authenticated ownership.
+The investor preview uses a new anonymous guest identity on every browser launch. Earlier campaign
+history is deliberately not restored in v0.14.2, keeping the launch path fast and giving each
+playtest a clean slate. Google identity, resume and cross-device account recovery remain deferred.
 
 The v0.11.0 phone client is now a dedicated scroll-first composition rather than a compressed
 desktop workstation. Its Market and Game surfaces were verified against production at a 360 × 800

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   api,
   APIRequestError,
-  ensureSession,
+  startFreshSession,
   type Campaign,
   type Market,
   type MoveResult,
@@ -378,7 +378,7 @@ function Shell({
             Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
-          <small>BTI RELEASE CANDIDATE · v0.14.1</small>
+          <small>BTI RELEASE CANDIDATE · v0.14.2</small>
           {installAvailable && (
             <button className="install-bti" onClick={installApp}>
               INSTALL BTI ↓
@@ -1609,19 +1609,10 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        await ensureSession();
-        const [cs, nextProfile] = await Promise.all([
-          api.campaigns(),
-          // Profile statistics enrich the shell but never own campaign availability.
-          api.profile().catch(() => null),
-        ]);
-        setProfile(nextProfile);
-        setCampaigns(cs);
-        if (cs[0]) {
-          const preferred =
-            cs.find((item) => item.status === "ACTIVE") || cs[0];
-          setCampaign(preferred);
-        }
+        await startFreshSession();
+        setProfile(null);
+        setCampaigns([]);
+        setCampaign(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "BTI server unavailable");
       } finally {
