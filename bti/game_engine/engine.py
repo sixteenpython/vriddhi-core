@@ -311,8 +311,14 @@ class BTIGame:
             )
         if mode == "CLASSIC" and buy_total * 10 < buying_power * 9:
             raise GameRuleError("Deploy at least 90% of available buying power this month")
-        if mode != "CLASSIC" and decision_index == 0 and buy_total < 10_000_000:
-            raise GameRuleError("Deploy at least ₹1 lakh before starting a Rapid or Blitz run")
+        minimum_lump_sum = min(
+            10_000_000, round(self.state["total_capital_paise"] * 0.9)
+        )
+        if mode != "CLASSIC" and decision_index == 0 and buy_total < minimum_lump_sum:
+            raise GameRuleError(
+                "Deploy at least ₹1 lakh before starting a Rapid or Blitz run "
+                "(90% when the campaign itself is ₹1 lakh)"
+            )
         if cash + _value(holdings, market) != opening_value + contribution:
             raise RuntimeError("Portfolio accounting invariant failed")
         reference = self._reference_holdings(opening_value + contribution)

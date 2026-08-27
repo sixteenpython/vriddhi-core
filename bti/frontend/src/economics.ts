@@ -6,6 +6,9 @@ export const playableCash = (
   active: boolean,
 ) => cashPaise + (active ? monthlyRupees * 100 : 0);
 
+export const initialLumpSumMinimum = (totalCapitalRupees: number) =>
+  Math.min(10_000_000, Math.round(totalCapitalRupees * 100 * 0.9));
+
 export const executionCash = (
   openingPaise: number,
   trades: Trade[],

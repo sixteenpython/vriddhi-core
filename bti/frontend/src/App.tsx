@@ -378,7 +378,7 @@ function Shell({
             Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
-          <small>BTI MULTI-MODE · v0.12.0</small>
+          <small>BTI MULTI-MODE · v0.12.1</small>
           {installAvailable && (
             <button className="install-bti" onClick={installApp}>
               INSTALL BTI ↓
@@ -467,7 +467,7 @@ function Home({
         <div className="orb">
           <span>BTI</span>
           <b>{profile?.rating || campaign?.rating || 1200}</b>
-          <small>{profile?.wins || 0} INDEX WINS</small>
+          <small>{profile?.wins || 0} INDEX BEATS</small>
         </div>
       </div>
       {campaign && (
@@ -1610,7 +1610,9 @@ export default function App() {
       try {
         await ensureSession();
         const cs = await api.campaigns();
-        setProfile(await api.profile());
+        // Profile statistics enrich the shell but never own campaign availability.
+        const nextProfile = await api.profile().catch(() => null);
+        setProfile(nextProfile);
         setCampaigns(cs);
         if (cs[0]) {
           const preferred =
@@ -1740,7 +1742,9 @@ export default function App() {
       setResult(x.result);
       setReviewData(null);
       setMarket(await api.market(x.campaign.campaign_id));
-      setProfile(await api.profile());
+      // A committed move must not be reported as failed because an optional
+      // profile refresh was unavailable during a deploy or cold start.
+      void api.profile().then(setProfile).catch(() => undefined);
       setTrades([]);
       setView("review");
     } catch (e) {

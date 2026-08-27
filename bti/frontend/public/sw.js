@@ -1,4 +1,4 @@
-const CACHE = "bti-multimode-v0.12.0";
+const CACHE = "bti-multimode-v0.12.1";
 const SHELL = [
   "/",
   "/manifest.webmanifest",

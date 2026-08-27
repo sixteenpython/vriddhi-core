@@ -28,6 +28,7 @@ function storiesFor(market: Market, campaign: Campaign): Story[] {
       desk: "MARKET DESK",
       headline: `${lead}: the tape rewards evidence, not certainty`,
       summary: `${regime?.narrative || "Cross-asset signals are mixed."} Prices and events are simulated for this rated campaign.`,
+      ticker: gainers[0]?.ticker,
       tone: "neutral",
       time: "SIM 09:12",
     },
@@ -105,7 +106,7 @@ export function Newswire({ market, campaign, select }: { market: Market; campaig
         <div><span>BTI NEWSWIRE · SIMULATED EDITION</span><h1>The tape is loud. Your decision must be clearer.</h1></div>
         <div className="newswire-sentiment"><small>MARKET REGIME</small><b>{market.regime?.label || "OPEN"}</b><em>{(market.regime?.difficulty || 1).toFixed(2)}× market intensity</em></div>
       </header>
-      <nav className="newswire-filters">
+      <nav className="newswire-filters" aria-label="Newswire desks">
         {["ALL", "MARKET", "MACRO", "RISK", "YOUR BOOK"].map((item) => <button key={item} className={desk === item ? "active" : ""} onClick={() => setDesk(item)}>{item}</button>)}
       </nav>
       <div className="newswire-layout">

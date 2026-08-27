@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { executionCash, playableCash } from "./economics";
+import { executionCash, initialLumpSumMinimum, playableCash } from "./economics";
 import type { Stock } from "./api";
 
 const stock = { ticker: "TEST", close_paise: 25_000 } as Stock;
@@ -21,5 +21,10 @@ describe("campaign economics", () => {
         [stock],
       ),
     ).toBe(25_000);
+  });
+
+  it("allows whole-share residual cash at the one-lakh campaign floor", () => {
+    expect(initialLumpSumMinimum(100_000)).toBe(9_000_000);
+    expect(initialLumpSumMinimum(500_000)).toBe(10_000_000);
   });
 });

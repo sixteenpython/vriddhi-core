@@ -288,6 +288,40 @@ export class APIRequestError extends Error {
   }
 }
 let renewal: Promise<void> | null = null;
+
+type APIEnvelope<T> = {
+  data?: T;
+  error?: { code?: string; message?: string };
+};
+
+async function readEnvelope<T>(response: Response): Promise<APIEnvelope<T>> {
+  const contentType = response.headers?.get?.("content-type") || "";
+  const raw = await response.text();
+  if (!raw.trim()) {
+    throw new APIRequestError(
+      "The game server returned an empty response. Please retry in a moment.",
+      "EMPTY_SERVER_RESPONSE",
+      response.status,
+    );
+  }
+  if (!contentType.toLowerCase().includes("json")) {
+    throw new APIRequestError(
+      "The game server is restarting or serving an outdated page. Refresh BTI and retry.",
+      "NON_JSON_SERVER_RESPONSE",
+      response.status,
+    );
+  }
+  try {
+    return JSON.parse(raw) as APIEnvelope<T>;
+  } catch {
+    throw new APIRequestError(
+      "The game server returned incomplete data. Please retry in a moment.",
+      "INVALID_JSON_SERVER_RESPONSE",
+      response.status,
+    );
+  }
+}
+
 async function createSession() {
   if (!renewal) {
     renewal = (async () => {
@@ -295,11 +329,17 @@ async function createSession() {
         method: "POST",
         headers: { "content-type": "application/json" },
       });
-      const payload = await response.json();
+      const payload = await readEnvelope<{ access_token: string }>(response);
       if (!response.ok)
         throw new APIRequestError(
           payload?.error?.message || "Could not start a showcase session.",
           payload?.error?.code || "SESSION_START_FAILED",
+          response.status,
+        );
+      if (!payload.data?.access_token)
+        throw new APIRequestError(
+          "The game server did not issue a valid session. Please refresh BTI.",
+          "SESSION_START_FAILED",
           response.status,
         );
       localStorage.setItem(TOKEN, payload.data.access_token);
@@ -323,7 +363,7 @@ async function request<T>(
       ...init.headers,
     },
   });
-  const payload = await response.json();
+  const payload = await readEnvelope<T>(response);
   if (!response.ok) {
     if (response.status === 401 && allowRecovery) {
       localStorage.removeItem(TOKEN);
@@ -344,7 +384,13 @@ async function request<T>(
       response.status,
     );
   }
-  return payload.data as T;
+  if (payload.data === undefined)
+    throw new APIRequestError(
+      "The game server returned an incomplete response. Please retry.",
+      "MISSING_RESPONSE_DATA",
+      response.status,
+    );
+  return payload.data;
 }
 export async function ensureSession() {
   if (localStorage.getItem(TOKEN)) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Campaign, Market, MoveResult, MoveReview, Trade } from "./api";
 import { buildDraftPortfolio } from "./portfolioDraft";
+import { initialLumpSumMinimum } from "./economics";
 import { RapidClock } from "./RapidClock";
 import { BlitzRun } from "./BlitzRun";
 
@@ -146,7 +147,9 @@ export function MobileGameBoard({
   const ready = preCommit && draft.cashAfterPaise >= 0 && (
     campaign.mode === "CLASSIC"
       ? draft.deploymentPct >= 90
-      : rapidHold || draft.buyTotalPaise >= 10_000_000 || campaign.current_move > 1
+      : rapidHold ||
+        draft.buyTotalPaise >= initialLumpSumMinimum(campaign.total_capital_rupees) ||
+        campaign.current_move > 1
   );
   return (
     <section className="mobile-game-page">

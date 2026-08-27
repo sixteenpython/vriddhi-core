@@ -10,6 +10,7 @@ import type {
   Trade,
 } from "./api";
 import { buildDraftPortfolio } from "./portfolioDraft";
+import { initialLumpSumMinimum } from "./economics";
 import { RapidClock } from "./RapidClock";
 import { BlitzRun } from "./BlitzRun";
 
@@ -52,10 +53,12 @@ function ChaseChart({
   series,
   horizon,
   monthlyAmountRupees,
+  returnLabel,
 }: {
   series: PerformancePoint[];
   horizon: number;
   monthlyAmountRupees: number;
+  returnLabel: "SIP XIRR" | "CAGR";
 }) {
   const portfolio = series.map((point) => point.portfolio_value_paise);
   const nifty = series.map((point) => point.benchmark_value_paise);
@@ -196,15 +199,19 @@ function ChaseChart({
       {latest && (
         <div className="chase-rates">
           <span>
-            PLAYER SIP RETURN{" "}
+            PLAYER {returnLabel}{" "}
             <b>
-              {latest.move < 3 ? "FORMING" : signed(latest.portfolio_xirr_pct)}
+              {returnLabel === "SIP XIRR" && latest.move < 3
+                ? "FORMING"
+                : signed(latest.portfolio_xirr_pct)}
             </b>
           </span>
           <span>
-            NIFTY SIP RETURN{" "}
+            NIFTY {returnLabel}{" "}
             <b>
-              {latest.move < 3 ? "FORMING" : signed(latest.benchmark_xirr_pct)}
+              {returnLabel === "SIP XIRR" && latest.move < 3
+                ? "FORMING"
+                : signed(latest.benchmark_xirr_pct)}
             </b>
           </span>
           <span>
@@ -251,7 +258,7 @@ function EvaluationBar({ result }: { result: MoveResult | null }) {
 }
 
 function MatchScoreboard({ summary, returnLabel = "SIP XIRR" }: { summary: MatchSummary; returnLabel?: string }) {
-  const forming = summary.move < 3;
+  const forming = returnLabel === "SIP XIRR" && summary.move < 3;
   const gapTone = summary.wealth_gap_paise >= 0 ? "positive" : "negative";
   return (
     <section className="terminal-panel match-scoreboard">
@@ -383,7 +390,9 @@ export function GameBoard({
   const readyToExecute = preCommit && draft.cashAfterPaise >= 0 && (
     campaign.mode === "CLASSIC"
       ? draft.deploymentPct >= 90
-      : rapidHold || draft.buyTotalPaise >= 10_000_000 || campaign.current_move > 1
+      : rapidHold ||
+        draft.buyTotalPaise >= initialLumpSumMinimum(campaign.total_capital_rupees) ||
+        campaign.current_move > 1
   );
   const execution = preCommit
     ? [
@@ -536,6 +545,7 @@ export function GameBoard({
             series={displayedSeries}
             horizon={campaign.horizon_months}
             monthlyAmountRupees={campaign.monthly_amount_rupees}
+            returnLabel={campaign.return_label}
           />
           {summary.move > 0 && <MatchScoreboard summary={summary} returnLabel={campaign.return_label} />}
         </main>

@@ -7512,3 +7512,35 @@ header h2 {
 .rapid-clock{margin:8px 0;border:1px solid #d59a29;background:linear-gradient(90deg,rgba(194,123,20,.25),#09131b);padding:10px 16px;display:flex;align-items:center;gap:20px;font-family:var(--mono);color:#f3d28c}.rapid-clock span{font-size:10px;letter-spacing:.14em}.rapid-clock b{font-size:22px;color:#fff}.rapid-clock small{margin-left:auto;color:#9db1bc}.rapid-clock.urgent{border-color:#ff435d;animation:rapidPulse .8s infinite alternate}.blitz-run-card{margin:8px 0;border:1px solid #8e4dba;background:radial-gradient(circle at 50% 80%,rgba(82,225,110,.12),transparent 45%),#071018;padding:18px;color:#eafaff}.blitz-run-card header,.blitz-run-card>div{display:flex;justify-content:space-between;align-items:center;font:10px var(--mono);letter-spacing:.12em;color:#72dfff}.blitz-run-card h2{font:30px var(--display);margin:16px 0}.blitz-run-card svg{width:100%;height:250px;background:linear-gradient(transparent 49%,#17303b 50%,transparent 51%)}.blitz-run-card polyline{fill:none;stroke-width:1.2;vector-effect:non-scaling-stroke}.blitz-run-card .player{stroke:#4be679}.blitz-run-card .nifty{stroke:#a858ff}.blitz-run-card>div{margin-top:12px}.blitz-run-card>div b{font-size:14px;color:#fff}.blitz-run-card button{margin-top:14px;border:1px solid #4be679;background:transparent;color:#4be679;padding:10px 16px;font:800 9px var(--mono)}@keyframes rapidPulse{to{box-shadow:0 0 18px rgba(255,67,93,.38)}}
 @media(max-width:760px){.rapid-clock{margin:6px 8px;padding:9px 10px;gap:10px}.rapid-clock small{display:none}.rapid-clock b{margin-left:auto}.blitz-run-card{margin:8px}.blitz-run-card h2{font-size:25px}.blitz-run-card svg{height:180px}.blitz-run-card>div{font-size:8px}.blitz-run-card>div span:last-child{display:none}}
  .newswire-tape{scrollbar-width:none}.newswire-tape::-webkit-scrollbar{display:none}
+
+/* Release 0.12.1: isolate the Newswire from generic shell header/nav rules. */
+.shell .newswire-header{
+  position:relative;top:auto;z-index:1;width:100%;height:auto;min-height:190px;
+  padding:28px 32px;overflow:visible;align-items:flex-end
+}
+.shell .newswire-header>div:first-child{min-width:0;flex:1}
+.shell .newswire-header h1{display:block;overflow:visible;white-space:normal;text-overflow:clip}
+.shell .newswire-filters{
+  display:flex!important;grid-template-columns:none!important;width:100%;height:auto!important;
+  min-height:49px;align-items:center
+}
+.shell .newswire-filters button,.shell .newswire-filters button.active{
+  display:inline-flex!important;flex:0 0 auto;width:auto;min-height:34px;
+  justify-content:center;border-radius:0;font-size:9px!important;box-shadow:none
+}
+.newswire-lead{justify-content:flex-start;overflow:hidden;align-self:start;height:530px}
+.newswire-lead h2,.newswire-lead p,.newswire-lead em{position:relative;z-index:1}
+.newswire-lead:after{
+  content:"SIMULATED MARKET INTELLIGENCE";margin-top:auto;color:#b783e9;
+  font:800 9px var(--mono);letter-spacing:.18em
+}
+@media(max-width:760px){
+  .shell .newswire-header{min-height:190px;height:auto;padding:20px 16px;display:block}
+  .shell .newswire-header>div:first-child{display:block}
+  .shell .newswire-header h1{font-size:32px;line-height:1.04;white-space:normal}
+  .shell .newswire-filters{position:sticky;top:58px;overflow-x:auto;flex-wrap:nowrap;padding-inline:0}
+  .shell .newswire-filters button,.shell .newswire-filters button.active{
+    flex:0 0 auto!important;font-size:8px!important;padding:9px 13px
+  }
+  .newswire-lead{min-height:320px;height:auto;align-self:stretch}
+}

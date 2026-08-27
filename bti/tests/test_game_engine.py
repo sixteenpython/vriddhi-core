@@ -197,6 +197,25 @@ def test_blitz_is_one_decision_with_a_monthly_replay_and_cagr() -> None:
     assert game.final_result()["return_label"] == "CAGR"
 
 
+def test_one_lakh_lump_sum_allows_whole_share_residual_cash() -> None:
+    accepted = BTIGame.create(
+        0, 24, "one-lakh-whole-share", mode="BLITZ", total_capital_rupees=100_000
+    )
+    stock = next(item for item in accepted.market_view()["stocks"] if item["ticker"] == "BPCL")
+    shares = 10_000_000 // stock["close_paise"]
+    result = accepted.submit_move(
+        [{"side": "BUY", "ticker": "BPCL", "shares": shares}]
+    )
+    assert result["portfolio_after_execution"]["cash_paise"] >= 0
+    assert accepted.status == "COMPLETED"
+
+    rejected = BTIGame.create(
+        0, 24, "one-lakh-underdeployed", mode="BLITZ", total_capital_rupees=100_000
+    )
+    with pytest.raises(GameRuleError, match="90%"):
+        rejected.submit_move([{"side": "BUY", "ticker": "BPCL", "shares": 1}])
+
+
 def test_rapid_advances_annually_and_allows_a_hold_decision() -> None:
     game = BTIGame.create(
         0, 48, "rapid-contract", mode="RAPID", total_capital_rupees=3_000_000
