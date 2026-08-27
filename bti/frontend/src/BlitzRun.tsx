@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MoveResult } from "./api";
 
 const money = (paise: number) => paise >= 10_000_000 ? `₹${(paise / 10_000_000).toFixed(1)}L` : `₹${Math.round(paise / 100).toLocaleString("en-IN")}`;
@@ -19,20 +19,9 @@ export function MarketRun({ result, onComplete }: { result: MoveResult; onComple
   const [paused, setPaused] = useState(false);
   const [speed, setSpeed] = useState<1 | 2>(1);
   const [selected, setSelected] = useState<number | null>(null);
-  const completedRef = useRef(false);
-  const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
-
-  useEffect(() => { setVisible(1); setPaused(false); setSelected(null); completedRef.current = false; }, [result.move]);
+  useEffect(() => { setVisible(1); setPaused(false); setSelected(null); }, [result.move]);
   useEffect(() => {
-    if (paused || visible >= points.length) {
-      if (points.length && visible >= points.length && !completedRef.current) {
-        completedRef.current = true;
-        const reveal = window.setTimeout(() => onCompleteRef.current(), 1100);
-        return () => window.clearTimeout(reveal);
-      }
-      return;
-    }
+    if (paused || visible >= points.length) return;
     const journeyDuration = result.mode === "RAPID" ? 10_500 : 16_000;
     const maximumStep = result.mode === "RAPID" ? 900 : 600;
     const base = Math.max(220, Math.min(maximumStep, Math.floor(journeyDuration / Math.max(points.length, 1))));
@@ -58,8 +47,9 @@ export function MarketRun({ result, onComplete }: { result: MoveResult; onComple
   const focus = shown[focusIndex], focusCandle = candles[focusIndex], focusBenchmark = benchmark[focusIndex];
   const isRapid = result.mode === "RAPID";
 
+  const finished = visible >= points.length;
   return <section className={`market-run-card ${isRapid ? "rapid" : "blitz"}`}>
-    <header><div><span>{result.mode} MARKET REPLAY · SIMULATION</span><b>MONTH {focus?.month || 0} / {points.at(-1)?.month || points.length}</b></div><div className="market-run-controls"><button onClick={() => setPaused((value) => !value)}>{paused ? "▶ RESUME" : "Ⅱ PAUSE"}</button><button onClick={() => setSpeed((value) => value === 1 ? 2 : 1)}>{speed}× SPEED</button></div></header>
+    <header><div><span>{result.mode} MARKET REPLAY · SIMULATION</span><b>MONTH {focus?.month || 0} / {points.at(-1)?.month || points.length}</b></div><div className="market-run-controls"><button onClick={() => setPaused((value) => !value)} disabled={finished}>{paused ? "▶ RESUME" : "Ⅱ PAUSE"}</button><button onClick={() => { setPaused(true); setVisible((value) => Math.max(1, value - 1)); setSelected(null); }}>← 1M</button><button onClick={() => { setVisible(1); setSelected(null); setPaused(false); }}>↶ REPLAY</button><button onClick={() => setSpeed((value) => value === 1 ? 2 : 1)}>{speed}×</button></div></header>
     <div className="market-run-title"><div><small>{isRapid ? "THE MARKET IS TRAVELLING TO YOUR NEXT STOP" : "ONE DECISION. THE ENTIRE MARKET ANSWERS."}</small><h2>{focus?.regime.label || "The market is making its moves."}</h2><p>{focus?.regime.narrative}</p></div><div className="market-run-score"><span>PLAYER <b>{money(focus?.portfolio_value_paise || 0)}</b></span><span>NIFTY <b>{money(focus?.benchmark_value_paise || 0)}</b></span><span>ALPHA <b className={(focus?.alpha_pct || 0) >= 0 ? "positive" : "negative"}>{signed(focus?.alpha_pct || 0)}</b></span></div></div>
     <div className="market-run-terminal">
       <svg viewBox="0 0 900 330" preserveAspectRatio="none" aria-label={`${result.mode} simulated portfolio OHLC journey`}>
@@ -70,7 +60,7 @@ export function MarketRun({ result, onComplete }: { result: MoveResult; onComple
       <div className="market-run-tooltip"><span>SIM MONTH {focus?.month || 0}</span><b>PORTFOLIO NAV OHLC</b><div><small>OPEN</small><strong>{money(focusCandle?.open_paise || 0)}</strong><small>HIGH</small><strong>{money(focusCandle?.high_paise || 0)}</strong><small>LOW</small><strong>{money(focusCandle?.low_paise || 0)}</strong><small>CLOSE</small><strong>{money(focusCandle?.close_paise || 0)}</strong></div><p>NIFTY O/H/L/C · {money(focusBenchmark?.open_paise || 0)} / {money(focusBenchmark?.high_paise || 0)} / {money(focusBenchmark?.low_paise || 0)} / {money(focusBenchmark?.close_paise || 0)}</p><em>Drawdown {signed(focus?.portfolio_drawdown_pct || 0)}</em></div>
     </div>
     <div className="market-run-events">{shown.slice(-3).reverse().map((point) => <article key={point.month} className={point.event?.tone || "neutral"}><span>{point.event?.desk || "MARKET DESK"} · {point.event?.time || `SIM M${point.month}`}</span><b>{point.event?.headline || point.regime.label}</b><p>{point.event?.detail || point.regime.narrative}</p></article>)}</div>
-    <footer><span>{paused ? "REPLAY PAUSED" : visible >= points.length ? "STOP REACHED" : "LIVE SIMULATION · FUTURE MONTHS SEALED"}</span><progress max={points.length} value={visible} /><button onClick={() => { setVisible(points.length); setPaused(false); }}>SKIP TO STOP →</button></footer>
+    <footer><span>{paused ? "REPLAY PAUSED" : finished ? "MARKET STOP REACHED · JOURNEY AVAILABLE FOR REVIEW" : "LIVE SIMULATION · FUTURE MONTHS SEALED"}</span><progress max={points.length} value={visible} />{finished ? <button className="primary" onClick={onComplete}>{isRapid ? "OPEN REBALANCE STOP →" : "OPEN FINAL RESULT →"}</button> : <button onClick={() => { setVisible(points.length); setPaused(true); }}>SKIP TO STOP →</button>}</footer>
   </section>;
 }
 

@@ -13,6 +13,7 @@ import { buildDraftPortfolio } from "./portfolioDraft";
 import { initialLumpSumMinimum } from "./economics";
 import { RapidClock } from "./RapidClock";
 import { BlitzRun } from "./BlitzRun";
+import { CompletedJourney } from "./CompletedJourney";
 
 const rupees = (paise: number, compact = false) => {
   const value = paise / 100;
@@ -78,8 +79,11 @@ function ChaseChart({
     }
   }
   const combined = [...portfolio, ...target];
-  const minimum = Math.min(...combined, 0);
-  const maximum = Math.max(...combined, 1);
+  const rawMinimum = Math.min(...combined);
+  const rawMaximum = Math.max(...combined);
+  const padding = Math.max(1, (rawMaximum - rawMinimum) * 0.12);
+  const minimum = Math.max(0, rawMinimum - padding);
+  const maximum = rawMaximum + padding;
   const y = (value: number) =>
     232 - ((value - minimum) / (maximum - minimum || 1)) * 214;
   const gap = latest?.wealth_gap_paise || 0;
@@ -470,7 +474,7 @@ export function GameBoard({
       )}
       <RapidClock campaign={campaign} onExpire={execute} disabled={busy || historical || Boolean(result)} />
       {activeMarketRun && result && <BlitzRun result={result} onComplete={() => setBlitzRevealed(true)} />}
-      {final && !activeMarketRun && <Endgame campaign={campaign} final={final} />}
+      {final && !activeMarketRun && <><Endgame campaign={campaign} final={final} /><CompletedJourney points={campaign.journey_series || []} /></>}
       {!activeMarketRun && !historical && result?.mode === "RAPID" && campaign.status === "ACTIVE" && (
         <section className="rapid-stop-card">
           <div><span>RAPID STOP · MONTH {campaign.months_completed}</span><h2>Care to rebalance?</h2><p>The travelled path is now evidence. Inspect the OHLC replay, current Newswire and portfolio health before choosing HOLD or changing course.</p><RapidClock campaign={campaign} onExpire={execute} disabled={busy || historical} forceActive /></div>
@@ -554,12 +558,12 @@ export function GameBoard({
               </div>
             )}
           </section>
-          <ChaseChart
+          {!final && <ChaseChart
             series={displayedSeries}
             horizon={campaign.horizon_months}
             monthlyAmountRupees={campaign.monthly_amount_rupees}
             returnLabel={campaign.return_label}
-          />
+          />}
           {summary.move > 0 && <MatchScoreboard summary={summary} returnLabel={campaign.return_label} />}
         </main>
         <aside className="game-board-side">

@@ -4,6 +4,7 @@ import { buildDraftPortfolio } from "./portfolioDraft";
 import { initialLumpSumMinimum } from "./economics";
 import { RapidClock } from "./RapidClock";
 import { BlitzRun } from "./BlitzRun";
+import { CompletedJourney } from "./CompletedJourney";
 
 type Props = {
   campaign: Campaign;
@@ -215,7 +216,7 @@ export function MobileGameBoard({
       {activeMarketRun && result && <BlitzRun result={result} onComplete={() => setBlitzRevealed(true)} />}
       {!activeMarketRun && <>
       {final && (
-        <section className="mobile-final-card">
+        <><section className="mobile-final-card">
           <span>CAMPAIGN COMPLETE</span>
           <h2>
             {final.verdict === "BEAT_INDEX"
@@ -239,7 +240,7 @@ export function MobileGameBoard({
               <small>BTI RATING</small>
             </b>
           </div>
-        </section>
+        </section><CompletedJourney points={campaign.journey_series || []} compact /></>
       )}
       {!historical && result?.mode === "RAPID" && campaign.status === "ACTIVE" && (
         <section className="rapid-stop-card mobile">
@@ -247,7 +248,7 @@ export function MobileGameBoard({
           <button className="primary full" onClick={continueGame}>OPEN THE NEXT DECISION WINDOW →</button>
         </section>
       )}
-      <MobileChase campaign={campaign} series={series} />
+      {!final && <MobileChase campaign={campaign} series={series} />}
       {summary.move > 0 && (
         <section className="mobile-score-strip">
           <span>

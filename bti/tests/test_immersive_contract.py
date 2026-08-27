@@ -156,7 +156,7 @@ def test_investor_preview_is_installable_and_mobile_first() -> None:
     assert {192, 512} <= {
         int(icon["sizes"].split("x", 1)[0]) for icon in manifest["icons"]
     }
-    assert "bti-market-replay-v0.13.0" in service_worker
+    assert "bti-release-candidate-v0.14.0" in service_worker
     assert "INSTALL BTI" in app
     assert 'railCollapsed ? ">>" : "<<"' in app
     assert "mobile-navigation-open" in styles
@@ -243,6 +243,8 @@ def test_rapid_blitz_replay_and_newswire_are_full_decision_surfaces() -> None:
     game = (WEB / "src" / "GameBoard.tsx").read_text(encoding="utf-8")
     mobile = (WEB / "src" / "MobileGameBoard.tsx").read_text(encoding="utf-8")
     news = (WEB / "src" / "Newswire.tsx").read_text(encoding="utf-8")
+    completed = (WEB / "src" / "CompletedJourney.tsx").read_text(encoding="utf-8")
+    styles = (WEB / "src" / "styles.css").read_text(encoding="utf-8")
 
     for phrase in (
         "PORTFOLIO NAV OHLC",
@@ -254,5 +256,10 @@ def test_rapid_blitz_replay_and_newswire_are_full_decision_surfaces() -> None:
         assert phrase in replay
     assert "Care to rebalance?" in game
     assert "Care to rebalance?" in mobile
+    for phrase in ("← 1M", "↶ REPLAY", "OPEN FINAL RESULT"):
+        assert phrase in replay
+    assert "COMPLETED MARKET JOURNEY" in completed
+    assert "market-run-terminal svg{width:100%" in styles
+    assert "newswire-web-desk" in news
     for phrase in ("MARKET BREADTH", "NEWS SENTIMENT", "SIGNAL MATRIX", "EARNINGS", "QUANT"):
         assert phrase in news

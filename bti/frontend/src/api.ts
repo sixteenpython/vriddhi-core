@@ -26,12 +26,30 @@ export type Campaign = {
   current_regime: MarketRegime;
   move_history: MoveHistory[];
   performance_series: PerformancePoint[];
+  journey_series?: JourneyPoint[];
   can_repeat_last_move: boolean;
   last_move_instructions: Trade[];
   market_label: string;
   match_summary: MatchSummary;
   final_result: FinalResult | null;
   initial_market?: Market;
+};
+export type JourneyPoint = {
+  month: number;
+  portfolio_value_paise: number;
+  benchmark_value_paise: number;
+  portfolio_ohlc?: OHLCPoint;
+  benchmark_ohlc?: OHLCPoint;
+  alpha_pct?: number;
+  portfolio_drawdown_pct?: number;
+  regime: MarketRegime;
+  event?: { desk: string; tone: string; headline: string; detail: string; time: string };
+};
+export type OHLCPoint = {
+  open_paise: number;
+  high_paise: number;
+  low_paise: number;
+  close_paise: number;
 };
 export type MatchSummary = {
   move: number;
@@ -194,33 +212,7 @@ export type Trade = { side: "BUY" | "SELL"; ticker: string; shares: number };
 export type MoveResult = {
   mode: "CLASSIC" | "RAPID" | "BLITZ";
   months_advanced: number;
-  segment_series: Array<{
-    month: number;
-    portfolio_value_paise: number;
-    benchmark_value_paise: number;
-    portfolio_ohlc?: {
-      open_paise: number;
-      high_paise: number;
-      low_paise: number;
-      close_paise: number;
-    };
-    benchmark_ohlc?: {
-      open_paise: number;
-      high_paise: number;
-      low_paise: number;
-      close_paise: number;
-    };
-    alpha_pct?: number;
-    portfolio_drawdown_pct?: number;
-    event?: {
-      desk: string;
-      tone: "positive" | "negative" | "neutral";
-      headline: string;
-      detail: string;
-      time: string;
-    };
-    regime: MarketRegime;
-  }>;
+  segment_series: JourneyPoint[];
   score: number;
   classification: string;
   move: number;
@@ -415,14 +407,9 @@ async function request<T>(
   return payload.data;
 }
 export async function ensureSession() {
-  if (localStorage.getItem(TOKEN)) {
-    try {
-      await request<Campaign[]>("/api/v1/campaigns");
-      return;
-    } catch {
-      localStorage.removeItem(TOKEN);
-    }
-  }
+  // The first real request already performs one safe 401 recovery. Avoid a
+  // duplicate campaigns round-trip on every page refresh.
+  if (localStorage.getItem(TOKEN)) return;
   await createSession();
 }
 const withCurrentContribution = (campaign: Campaign): Campaign => ({

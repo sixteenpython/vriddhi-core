@@ -243,6 +243,8 @@ def test_rapid_advances_annually_and_allows_a_hold_decision() -> None:
     assert second["execution"] == []
     assert game.public_state()["moves_completed"] == 2
     assert game.public_state()["months_completed"] == 24
+    assert len(game.public_state()["journey_series"]) == 24
+    assert game.public_state()["journey_series"][-1]["month"] == 24
     game.submit_move([])
     game.submit_move([])
     assert game.status == "COMPLETED"

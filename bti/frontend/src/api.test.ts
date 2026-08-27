@@ -46,6 +46,7 @@ describe("showcase session recovery", () => {
       )
       .mockImplementationOnce(() => response(200, { data: [] }));
     await ensureSession();
+    await api.campaigns();
     expect(values.get("bti_access_token")).toBe("fresh-token-value");
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });

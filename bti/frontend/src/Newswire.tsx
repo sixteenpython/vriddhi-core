@@ -133,6 +133,9 @@ export function Newswire({ market, campaign, select }: { market: Market; campaig
   const advancing = equities.filter((stock) => stock.close_paise >= stock.open_paise).length;
   const averageSentiment = equities.reduce((sum, stock) => sum + stock.sentiment_score, 0) / Math.max(1, equities.length);
   const averageVar = equities.reduce((sum, stock) => sum + stock.var_95_pct, 0) / Math.max(1, equities.length);
+  const averageSharpe = equities.reduce((sum, stock) => sum + stock.sharpe, 0) / Math.max(1, equities.length);
+  const forecastLeaders = [...equities].sort((a, b) => b.forecast_pct - a.forecast_pct).slice(0, 4);
+  const qualityLeaders = [...equities].sort((a, b) => b.roe_pct - a.roe_pct).slice(0, 4);
   const open = (story: Story) => {
     const stock = market.stocks.find((candidate) => candidate.ticker === story.ticker);
     if (stock) select(stock);
@@ -157,6 +160,12 @@ export function Newswire({ market, campaign, select }: { market: Market; campaig
         <section><span>AVERAGE VaR</span><b>{averageVar.toFixed(1)}%</b><em>ONE-MONTH 95%</em></section>
         <section><span>YOUR BOOK</span><b>{Object.keys(campaign.holdings).length} POSITIONS</b><em>{Object.keys(campaign.holdings).length ? "PORTFOLIO FEED ACTIVE" : "NO HOLDINGS YET"}</em></section>
         <section><span>STORIES ON DESK</span><b>{stories.length}</b><em>ONLY CURRENT-MONTH EVIDENCE</em></section>
+      </div>
+      <div className="newswire-web-desk" aria-label="Desktop market intelligence desk">
+        <section><span>MARKET PULSE</span><b>{market.regime?.label || "OPEN MARKET"}</b><p>{market.regime?.narrative || "Cross-asset signals are mixed."}</p><em>{advancing} ADVANCING · {equities.length - advancing} DECLINING</em></section>
+        <section><span>QUANT SNAPSHOT</span><div><b>{averageSharpe.toFixed(2)}</b><small>AVG SHARPE</small><b>{averageVar.toFixed(1)}%</b><small>AVG VaR</small></div><p>Risk-adjusted opportunity is uneven. Compare the distribution—not one heroic number.</p></section>
+        <section><span>FORWARD RADAR</span>{forecastLeaders.map((item) => <button key={item.ticker} onClick={() => select(item)}><b>{item.ticker}</b><em>{signed(item.forecast_pct)}</em><small>PEG {item.peg.toFixed(2)}</small></button>)}</section>
+        <section><span>QUALITY BOARD</span>{qualityLeaders.map((item) => <button key={item.ticker} onClick={() => select(item)}><b>{item.ticker}</b><em>ROE {item.roe_pct.toFixed(1)}%</em><small>PE {item.pe.toFixed(1)}</small></button>)}</section>
       </div>
       <nav className="newswire-filters" aria-label="Newswire desks">
         {["ALL", "MARKET", "MACRO", "EARNINGS", "SECTORS", "QUANT", "RISK", "YOUR BOOK"].map((item) => <button key={item} className={desk === item ? "active" : ""} onClick={() => setDesk(item)}>{item}</button>)}

@@ -378,7 +378,7 @@ function Shell({
             Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
-          <small>BTI MARKET REPLAY · v0.13.0</small>
+          <small>BTI RELEASE CANDIDATE · v0.14.0</small>
           {installAvailable && (
             <button className="install-bti" onClick={installApp}>
               INSTALL BTI ↓
@@ -1609,9 +1609,11 @@ export default function App() {
     (async () => {
       try {
         await ensureSession();
-        const cs = await api.campaigns();
-        // Profile statistics enrich the shell but never own campaign availability.
-        const nextProfile = await api.profile().catch(() => null);
+        const [cs, nextProfile] = await Promise.all([
+          api.campaigns(),
+          // Profile statistics enrich the shell but never own campaign availability.
+          api.profile().catch(() => null),
+        ]);
         setProfile(nextProfile);
         setCampaigns(cs);
         if (cs[0]) {
@@ -1662,8 +1664,7 @@ export default function App() {
       setStock(null);
       setResult(null);
       setReviewData(null);
-      const nextMarket = await api.market(next.campaign_id);
-      setMarket(nextMarket);
+      setMarket(await api.market(next.campaign_id));
       if (next.status === "ACTIVE") {
         setView("market");
       } else if (next.moves_completed > 0) {
@@ -1741,7 +1742,9 @@ export default function App() {
       );
       setResult(x.result);
       setReviewData(null);
-      setMarket(await api.market(x.campaign.campaign_id));
+      // Reveal the committed result immediately. Market/profile refreshes are
+      // enrichment and must not hold the player behind a second spinner.
+      void api.market(x.campaign.campaign_id).then(setMarket).catch(() => undefined);
       // A committed move must not be reported as failed because an optional
       // profile refresh was unavailable during a deploy or cold start.
       void api.profile().then(setProfile).catch(() => undefined);
@@ -1781,7 +1784,7 @@ export default function App() {
     if (launching)
       return (
         <div className="loading campaign-launching">
-          <i />
+          <div className="desk-loader"><span /><span /><span /></div>
           <b>Opening your simulated market desk…</b>
           <span>
             Generating the campaign once; no duplicate market request.
@@ -1791,7 +1794,7 @@ export default function App() {
     if (busy && !campaign)
       return (
         <div className="loading">
-          <i />
+          <div className="desk-loader"><span /><span /><span /></div>
           <b>Preparing the decision universe…</b>
           <span>Vriddhi intelligence stays server-side.</span>
         </div>

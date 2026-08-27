@@ -681,6 +681,11 @@ class BTIGame:
             ),
             "move_history": self.move_history(),
             "performance_series": self.performance_series(),
+            "journey_series": [
+                deepcopy(point)
+                for move in self.state["moves"]
+                for point in move.get("segment_series", [])
+            ],
             "can_repeat_last_move": bool(self.state["moves"] and self.status == "ACTIVE"),
             "last_move_instructions": [
                 {
