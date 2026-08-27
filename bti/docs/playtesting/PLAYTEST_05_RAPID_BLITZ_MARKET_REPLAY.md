@@ -32,9 +32,19 @@ Monthly closes continue to come from the deterministic capital-market simulation
 
 ## Acceptance gates
 
-- Frontend unit suite and production TypeScript/Vite build.
-- Full backend/API/contract suite.
-- Complete Rapid and Blitz browser playthroughs.
-- Rapid stop/rebalance prompt and no-future-leak inspection.
-- Desktop hover and mobile tap/scroll validation.
-- Newswire density, filtering, ticker drill-down and responsive overflow checks.
+- Frontend unit suite: **9/9 passed**.
+- Full backend/API/contract suite: **34/34 passed**.
+- TypeScript compilation and Vite production build passed.
+- Fresh Rapid and Blitz browser playthroughs completed.
+- Rapid replay was paused during travel and inspected before the annual stop; no final-result leakage was found.
+- The Rapid stop rendered **Care to rebalance?** with a live `02:00` decision clock.
+- Desktop was checked at 1280 px and mobile at 412 × 915; neither application shell produced page-level horizontal overflow.
+- Newswire density, filters, ticker drill-down and responsive rendering were checked without an error toast.
+
+## Production evidence
+
+- Git commit: `150972c` — `feat(bti): ship immersive rapid and blitz market replay`.
+- Production release: `0.13.0`.
+- Web and responsive PWA URL: <https://beat-the-index.onrender.com/>.
+- Production health endpoint reported `status: ok`, release `0.13.0`, and healthy durable PostgreSQL storage.
+- The production application shell displayed `BTI MARKET REPLAY · v0.13.0` at both desktop and portrait-mobile widths.
