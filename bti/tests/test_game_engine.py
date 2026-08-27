@@ -194,6 +194,19 @@ def test_blitz_is_one_decision_with_a_monthly_replay_and_cagr() -> None:
     assert result["months_advanced"] == 36
     assert len(result["segment_series"]) == 36
     assert result["segment_series"][-1]["month"] == 36
+    first_candle = result["segment_series"][0]
+    assert first_candle["portfolio_ohlc"]["close_paise"] == first_candle["portfolio_value_paise"]
+    assert first_candle["benchmark_ohlc"]["close_paise"] == first_candle["benchmark_value_paise"]
+    assert first_candle["portfolio_ohlc"]["high_paise"] >= max(
+        first_candle["portfolio_ohlc"]["open_paise"],
+        first_candle["portfolio_ohlc"]["close_paise"],
+    )
+    assert first_candle["portfolio_ohlc"]["low_paise"] <= min(
+        first_candle["portfolio_ohlc"]["open_paise"],
+        first_candle["portfolio_ohlc"]["close_paise"],
+    )
+    assert first_candle["event"]["time"] == "SIM M01"
+    assert first_candle["event"]["tone"] in {"positive", "negative", "neutral"}
     assert game.final_result()["return_label"] == "CAGR"
 
 
@@ -222,6 +235,8 @@ def test_rapid_advances_annually_and_allows_a_hold_decision() -> None:
     )
     first = game.submit_move(_initial_lump_sum_move(game))
     assert first["months_advanced"] == 12
+    assert len(first["segment_series"]) == 12
+    assert all("portfolio_ohlc" in point and "event" in point for point in first["segment_series"])
     assert game.public_state()["months_completed"] == 12
     second = game.submit_move([])
     assert second["months_advanced"] == 12

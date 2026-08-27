@@ -156,7 +156,7 @@ def test_investor_preview_is_installable_and_mobile_first() -> None:
     assert {192, 512} <= {
         int(icon["sizes"].split("x", 1)[0]) for icon in manifest["icons"]
     }
-    assert "bti-multimode-v0.12.1" in service_worker
+    assert "bti-market-replay-v0.13.0" in service_worker
     assert "INSTALL BTI" in app
     assert 'railCollapsed ? ">>" : "<<"' in app
     assert "mobile-navigation-open" in styles
@@ -236,3 +236,23 @@ def test_mobile_uses_progressive_disclosure_not_a_compressed_terminal() -> None:
     assert ".mobile-stock-feed" in styles
     assert ".mobile-move-sheet" in styles
     assert ".mobile-chase-card" in styles
+
+
+def test_rapid_blitz_replay_and_newswire_are_full_decision_surfaces() -> None:
+    replay = (WEB / "src" / "BlitzRun.tsx").read_text(encoding="utf-8")
+    game = (WEB / "src" / "GameBoard.tsx").read_text(encoding="utf-8")
+    mobile = (WEB / "src" / "MobileGameBoard.tsx").read_text(encoding="utf-8")
+    news = (WEB / "src" / "Newswire.tsx").read_text(encoding="utf-8")
+
+    for phrase in (
+        "PORTFOLIO NAV OHLC",
+        "FUTURE MONTHS SEALED",
+        "journey-candle",
+        "MARKET REPLAY",
+        "SIM MONTH",
+    ):
+        assert phrase in replay
+    assert "Care to rebalance?" in game
+    assert "Care to rebalance?" in mobile
+    for phrase in ("MARKET BREADTH", "NEWS SENTIMENT", "SIGNAL MATRIX", "EARNINGS", "QUANT"):
+        assert phrase in news

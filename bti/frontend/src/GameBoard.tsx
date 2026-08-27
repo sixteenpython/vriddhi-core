@@ -421,7 +421,13 @@ export function GameBoard({
   const canNextHistory = historical && selectedMove < campaign.moves_completed;
   const summary = reviewData?.match_summary || displayedResult?.match_summary || campaign.match_summary;
   const final = !historical ? displayedResult?.final_result || campaign.final_result : null;
-  const activeBlitzRun = Boolean(!historical && result?.mode === "BLITZ" && result.segment_series?.length && !blitzRevealed);
+  const activeMarketRun = Boolean(
+    !historical &&
+      result &&
+      result.mode !== "CLASSIC" &&
+      result.segment_series?.length &&
+      !blitzRevealed,
+  );
   useEffect(() => setBlitzRevealed(false), [result?.move]);
   return (
     <section className="terminal-page game-board-page">
@@ -463,8 +469,15 @@ export function GameBoard({
         </div>
       )}
       <RapidClock campaign={campaign} onExpire={execute} disabled={busy || historical || Boolean(result)} />
-      {activeBlitzRun && result && <BlitzRun result={result} onComplete={() => setBlitzRevealed(true)} />}
-      {final && !activeBlitzRun && <Endgame campaign={campaign} final={final} />}
+      {activeMarketRun && result && <BlitzRun result={result} onComplete={() => setBlitzRevealed(true)} />}
+      {final && !activeMarketRun && <Endgame campaign={campaign} final={final} />}
+      {!activeMarketRun && !historical && result?.mode === "RAPID" && campaign.status === "ACTIVE" && (
+        <section className="rapid-stop-card">
+          <div><span>RAPID STOP · MONTH {campaign.months_completed}</span><h2>Care to rebalance?</h2><p>The travelled path is now evidence. Inspect the OHLC replay, current Newswire and portfolio health before choosing HOLD or changing course.</p><RapidClock campaign={campaign} onExpire={execute} disabled={busy || historical} forceActive /></div>
+          <button className="primary" onClick={continueGame}>OPEN THE NEXT DECISION WINDOW →</button>
+        </section>
+      )}
+      {!activeMarketRun && <>
       <div className="game-board-grid">
         <main>
           <section className="terminal-panel execution-board">
@@ -614,7 +627,7 @@ export function GameBoard({
               </div>
               {!historical && result && campaign.status === "ACTIVE" && (
                 <button className="primary full" onClick={continueGame}>
-                  CONTINUE TO MOVE {campaign.current_move} →
+                  {campaign.mode === "RAPID" ? "CARE TO REBALANCE? →" : `CONTINUE TO MOVE ${campaign.current_move} →`}
                 </button>
               )}
             </section>
@@ -665,6 +678,7 @@ export function GameBoard({
           )}
         </div>
       </section>
+      </>}
       <div className="terminal-statusbar">
         <span>RATED CAMPAIGN · NO TAKEBACKS</span>
         <span>REVIEW RECONSTRUCTS HISTORY; IT NEVER CHANGES IT</span>

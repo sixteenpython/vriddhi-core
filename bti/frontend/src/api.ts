@@ -188,6 +188,7 @@ export type Market = {
   month: number;
   stocks: Stock[];
   regime?: MarketRegime;
+  events?: Array<{ kind: string; headline: string; detail: string }>;
 };
 export type Trade = { side: "BUY" | "SELL"; ticker: string; shares: number };
 export type MoveResult = {
@@ -197,6 +198,27 @@ export type MoveResult = {
     month: number;
     portfolio_value_paise: number;
     benchmark_value_paise: number;
+    portfolio_ohlc?: {
+      open_paise: number;
+      high_paise: number;
+      low_paise: number;
+      close_paise: number;
+    };
+    benchmark_ohlc?: {
+      open_paise: number;
+      high_paise: number;
+      low_paise: number;
+      close_paise: number;
+    };
+    alpha_pct?: number;
+    portfolio_drawdown_pct?: number;
+    event?: {
+      desk: string;
+      tone: "positive" | "negative" | "neutral";
+      headline: string;
+      detail: string;
+      time: string;
+    };
     regime: MarketRegime;
   }>;
   score: number;

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Campaign } from "./api";
 
-export function RapidClock({ campaign, onExpire, disabled }: { campaign: Campaign; onExpire: () => void; disabled: boolean }) {
-  const active = campaign.mode === "RAPID" && campaign.status === "ACTIVE" && campaign.current_move > 1;
+export function RapidClock({ campaign, onExpire, disabled, forceActive = false }: { campaign: Campaign; onExpire: () => void; disabled: boolean; forceActive?: boolean }) {
+  const active = forceActive || (campaign.mode === "RAPID" && campaign.status === "ACTIVE" && campaign.current_move > 1);
   const key = `bti-rapid-deadline-${campaign.campaign_id}-${campaign.current_move}`;
   const [remaining, setRemaining] = useState(120);
   const expireRef = useRef(onExpire);

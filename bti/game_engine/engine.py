@@ -42,6 +42,47 @@ def _cagr(initial_value: int, final_value: int, months: int) -> float:
     return round(((final_value / initial_value) ** (12 / months) - 1) * 100, 2)
 
 
+def _journey_candle(open_paise: int, close_paise: int, seed: str, month: int,
+                    channel: str, difficulty: float) -> dict[str, int]:
+    """Create a stable replay candle without changing the authoritative close.
+
+    The campaign engine owns the monthly close.  High/low are presentation-grade
+    information derived deterministically from the same seed, month and regime;
+    they can never alter portfolio accounting or the final result.
+    """
+    digest = hashlib.sha256(f"{seed}|{month}|{channel}".encode()).digest()
+    fraction = int.from_bytes(digest[:4], "big") / (2**32 - 1)
+    excursion = max(0.004, min(0.045, 0.007 + difficulty * 0.006 + fraction * 0.018))
+    upper_base = max(open_paise, close_paise)
+    lower_base = min(open_paise, close_paise)
+    return {
+        "open_paise": round(open_paise),
+        "high_paise": round(upper_base * (1 + excursion)),
+        "low_paise": max(1, round(lower_base * (1 - excursion * 0.82))),
+        "close_paise": round(close_paise),
+    }
+
+
+def _journey_event(regime: dict[str, Any], month: int, alpha_pct: float) -> dict[str, str]:
+    label = str(regime.get("label", "OPEN MARKET"))
+    if alpha_pct >= 2:
+        desk, tone = "PORTFOLIO DESK", "positive"
+        headline = f"Player opens a lead as {label.lower()} rewards the current allocation"
+    elif alpha_pct <= -2:
+        desk, tone = "RISK DESK", "negative"
+        headline = f"Nifty stretches the target as {label.lower()} tests the player's thesis"
+    else:
+        desk, tone = "MARKET DESK", "neutral"
+        headline = f"The contest stays tight while {label.lower()} reshapes the opportunity set"
+    return {
+        "desk": desk,
+        "tone": tone,
+        "headline": headline,
+        "detail": str(regime.get("narrative", "The simulated market continues to evolve.")),
+        "time": f"SIM M{month:02d}",
+    }
+
+
 MODE_RULES = {
     "CLASSIC": {"interval_months": 1, "rating_weight": 1.0, "capital_model": "MONTHLY_SIP"},
     "RAPID": {"interval_months": 12, "rating_weight": 0.7, "capital_model": "LUMP_SUM"},
@@ -329,20 +370,45 @@ class BTIGame:
         next_market = market
         benchmark_after = self.state["benchmark_value_paise"] + contribution
         segment_series = []
+        portfolio_open = before_outcome
+        benchmark_open = benchmark_after
+        portfolio_peak = max(1, portfolio_open)
         for elapsed_month in range(month + 1, segment_end + 1):
             regime = self._regime_internal(elapsed_month)
             next_market, benchmark_return = advance_market(
                 next_market, self.state["seed"], elapsed_month, regime
             )
             benchmark_after = round(benchmark_after * (1 + benchmark_return))
+            portfolio_close = cash + _value(holdings, next_market)
+            portfolio_peak = max(portfolio_peak, portfolio_close)
+            alpha_pct = (
+                (portfolio_close / benchmark_after - 1) * 100
+                if benchmark_after else 0.0
+            )
+            public_regime = self._regime_for_move(elapsed_month)
             segment_series.append(
                 {
                     "month": elapsed_month,
-                    "portfolio_value_paise": cash + _value(holdings, next_market),
+                    "portfolio_value_paise": portfolio_close,
                     "benchmark_value_paise": benchmark_after,
-                    "regime": self._regime_for_move(elapsed_month),
+                    "portfolio_ohlc": _journey_candle(
+                        portfolio_open, portfolio_close, self.state["seed"],
+                        elapsed_month, "portfolio", float(regime.get("difficulty", 1.0))
+                    ),
+                    "benchmark_ohlc": _journey_candle(
+                        benchmark_open, benchmark_after, self.state["seed"],
+                        elapsed_month, "benchmark", float(regime.get("difficulty", 1.0))
+                    ),
+                    "alpha_pct": round(alpha_pct, 2),
+                    "portfolio_drawdown_pct": round(
+                        (portfolio_close / portfolio_peak - 1) * 100, 2
+                    ),
+                    "regime": public_regime,
+                    "event": _journey_event(public_regime, elapsed_month, alpha_pct),
                 }
             )
+            portfolio_open = portfolio_close
+            benchmark_open = benchmark_after
         after_outcome = cash + _value(holdings, next_market)
         portfolio_return = after_outcome / before_outcome - 1
         benchmark_before = self.state["benchmark_value_paise"] + contribution

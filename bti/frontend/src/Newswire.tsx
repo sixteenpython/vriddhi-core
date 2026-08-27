@@ -78,6 +78,47 @@ function storiesFor(market: Market, campaign: Campaign): Story[] {
     tone: stock.sentiment_score >= 0 ? "positive" : "negative",
     time: `SIM 06:${35 - index * 5}`,
   }));
+  (market.events || []).forEach((event, index) => result.push({
+    id: `engine-${index}`,
+    desk: event.kind.includes("RISK") ? "RISK" : "MARKET INTELLIGENCE",
+    headline: event.headline,
+    summary: event.detail,
+    tone: event.kind.includes("RISK") ? "negative" : "neutral",
+    time: `SIM 06:${String(20 - index * 4).padStart(2, "0")}`,
+  }));
+  const sectors = [...new Set(equities.map((stock) => stock.sector))];
+  sectors.slice(0, 6).forEach((sector, index) => {
+    const members = equities.filter((stock) => stock.sector === sector);
+    const leader = [...members].sort((a, b) => b.forecast_pct - a.forecast_pct)[0];
+    const averageMove = members.reduce((sum, stock) => sum + stock.momentum_90d_pct, 0) / Math.max(1, members.length);
+    result.push({
+      id: `sector-${sector}`,
+      desk: "SECTORS",
+      headline: `${sector} desk: ${leader?.ticker || "leaders"} sets the forward signal while breadth stays ${averageMove >= 0 ? "constructive" : "fragile"}`,
+      summary: `${members.length} simulated securities tracked. Sector momentum ${signed(averageMove)}; the strongest forward estimate belongs to ${leader?.ticker || "the current leader"} at ${signed(leader?.forecast_pct || 0)}.`,
+      ticker: leader?.ticker,
+      tone: averageMove >= 0 ? "positive" : "negative",
+      time: `SIM 05:${String(58 - index * 6).padStart(2, "0")}`,
+    });
+  });
+  [...equities].sort((a, b) => b.earnings_growth_pct - a.earnings_growth_pct).slice(0, 4).forEach((stock, index) => result.push({
+    id: `earnings-${stock.ticker}`,
+    desk: "EARNINGS",
+    headline: `${stock.ticker} screens near the top of the simulated earnings-growth board`,
+    summary: `Earnings growth ${signed(stock.earnings_growth_pct)}, ROE ${stock.roe_pct.toFixed(1)}%, margin ${stock.profit_margin_pct.toFixed(1)}% and PE ${stock.pe.toFixed(1)}. Growth is useful only after testing its price.`,
+    ticker: stock.ticker,
+    tone: "positive",
+    time: `SIM 05:${String(24 - index * 5).padStart(2, "0")}`,
+  }));
+  [...equities].sort((a, b) => b.sharpe - a.sharpe).slice(0, 4).forEach((stock, index) => result.push({
+    id: `quant-${stock.ticker}`,
+    desk: "QUANT",
+    headline: `${stock.ticker} rises on the risk-adjusted return radar`,
+    summary: `Sharpe ${stock.sharpe.toFixed(2)}, volatility ${stock.volatility_pct.toFixed(1)}%, drawdown ${stock.drawdown_pct.toFixed(1)}% and VaR ${stock.var_95_pct.toFixed(1)}%. No single ratio owns the decision.`,
+    ticker: stock.ticker,
+    tone: stock.sharpe >= 1 ? "positive" : "neutral",
+    time: `SIM 04:${String(52 - index * 6).padStart(2, "0")}`,
+  }));
   return result;
 }
 
@@ -88,6 +129,10 @@ export function Newswire({ market, campaign, select }: { market: Market; campaig
     .filter((stock) => (stock.asset_class || "EQUITY") === "EQUITY")
     .sort((a, b) => b.momentum_90d_pct - a.momentum_90d_pct);
   const visible = stories.filter((story) => desk === "ALL" || story.desk.includes(desk));
+  const equities = market.stocks.filter((stock) => (stock.asset_class || "EQUITY") === "EQUITY");
+  const advancing = equities.filter((stock) => stock.close_paise >= stock.open_paise).length;
+  const averageSentiment = equities.reduce((sum, stock) => sum + stock.sentiment_score, 0) / Math.max(1, equities.length);
+  const averageVar = equities.reduce((sum, stock) => sum + stock.var_95_pct, 0) / Math.max(1, equities.length);
   const open = (story: Story) => {
     const stock = market.stocks.find((candidate) => candidate.ticker === story.ticker);
     if (stock) select(stock);
@@ -103,11 +148,18 @@ export function Newswire({ market, campaign, select }: { market: Market; campaig
         ))}
       </div>
       <header className="newswire-header">
-        <div><span>BTI NEWSWIRE · SIMULATED EDITION</span><h1>The tape is loud. Your decision must be clearer.</h1></div>
+        <div><span>BTI NEWSWIRE · SIMULATED EDITION · MONTH {market.month}</span><h1>The tape is loud. Your decision must be clearer.</h1></div>
         <div className="newswire-sentiment"><small>MARKET REGIME</small><b>{market.regime?.label || "OPEN"}</b><em>{(market.regime?.difficulty || 1).toFixed(2)}× market intensity</em></div>
       </header>
+      <div className="newswire-dashboard">
+        <section><span>MARKET BREADTH</span><b>{advancing} / {equities.length}</b><em>ADVANCING / UNIVERSE</em></section>
+        <section><span>NEWS SENTIMENT</span><b>{averageSentiment.toFixed(0)} / 100</b><em>{averageSentiment >= 55 ? "POSITIVE TAPE" : averageSentiment <= 45 ? "DEFENSIVE TAPE" : "MIXED TAPE"}</em></section>
+        <section><span>AVERAGE VaR</span><b>{averageVar.toFixed(1)}%</b><em>ONE-MONTH 95%</em></section>
+        <section><span>YOUR BOOK</span><b>{Object.keys(campaign.holdings).length} POSITIONS</b><em>{Object.keys(campaign.holdings).length ? "PORTFOLIO FEED ACTIVE" : "NO HOLDINGS YET"}</em></section>
+        <section><span>STORIES ON DESK</span><b>{stories.length}</b><em>ONLY CURRENT-MONTH EVIDENCE</em></section>
+      </div>
       <nav className="newswire-filters" aria-label="Newswire desks">
-        {["ALL", "MARKET", "MACRO", "RISK", "YOUR BOOK"].map((item) => <button key={item} className={desk === item ? "active" : ""} onClick={() => setDesk(item)}>{item}</button>)}
+        {["ALL", "MARKET", "MACRO", "EARNINGS", "SECTORS", "QUANT", "RISK", "YOUR BOOK"].map((item) => <button key={item} className={desk === item ? "active" : ""} onClick={() => setDesk(item)}>{item}</button>)}
       </nav>
       <div className="newswire-layout">
         {visible[0] && <button className="newswire-lead" onClick={() => open(visible[0])}>
@@ -122,6 +174,12 @@ export function Newswire({ market, campaign, select }: { market: Market; campaig
           <section><span>TOP GAINERS · 90D</span>{movers.slice(0, 5).map((stock) => <button onClick={() => select(stock)} key={stock.ticker}><b>{stock.ticker}</b><em className="positive">{signed(stock.momentum_90d_pct)}</em></button>)}</section>
           <section><span>TOP LOSERS · 90D</span>{movers.slice(-5).reverse().map((stock) => <button onClick={() => select(stock)} key={stock.ticker}><b>{stock.ticker}</b><em className="negative">{signed(stock.momentum_90d_pct)}</em></button>)}</section>
           <section className="newswire-discipline"><span>TRADER'S RULE</span><b>A headline is not a thesis.</b><p>Check valuation, quality, risk and portfolio fit before turning attention into capital.</p></section>
+          <section className="newswire-signal-matrix"><span>SIGNAL MATRIX</span>{[
+            ["VALUATION", equities.filter((stock) => stock.peg > 0 && stock.peg <= 1).length],
+            ["QUALITY", equities.filter((stock) => stock.roe_pct >= 15).length],
+            ["LOW RISK", equities.filter((stock) => stock.var_95_pct <= averageVar).length],
+            ["MOMENTUM", equities.filter((stock) => stock.momentum_90d_pct > 0).length],
+          ].map(([label, count]) => <div key={String(label)}><b>{label}</b><progress max={equities.length} value={Number(count)} /><em>{count}/{equities.length}</em></div>)}</section>
         </aside>
       </div>
     </section>

@@ -142,7 +142,13 @@ export function MobileGameBoard({
   const final = !historical
     ? displayed?.final_result || campaign.final_result
     : null;
-  const activeBlitzRun = Boolean(!historical && result?.mode === "BLITZ" && result.segment_series?.length && !blitzRevealed);
+  const activeMarketRun = Boolean(
+    !historical &&
+      result &&
+      result.mode !== "CLASSIC" &&
+      result.segment_series?.length &&
+      !blitzRevealed,
+  );
   useEffect(() => setBlitzRevealed(false), [result?.move]);
   const ready = preCommit && draft.cashAfterPaise >= 0 && (
     campaign.mode === "CLASSIC"
@@ -206,8 +212,9 @@ export function MobileGameBoard({
         </div>
       )}
       <RapidClock campaign={campaign} onExpire={execute} disabled={busy || historical || Boolean(result)} />
-      {activeBlitzRun && result && <BlitzRun result={result} onComplete={() => setBlitzRevealed(true)} />}
-      {final && !activeBlitzRun && (
+      {activeMarketRun && result && <BlitzRun result={result} onComplete={() => setBlitzRevealed(true)} />}
+      {!activeMarketRun && <>
+      {final && (
         <section className="mobile-final-card">
           <span>CAMPAIGN COMPLETE</span>
           <h2>
@@ -232,6 +239,12 @@ export function MobileGameBoard({
               <small>BTI RATING</small>
             </b>
           </div>
+        </section>
+      )}
+      {!historical && result?.mode === "RAPID" && campaign.status === "ACTIVE" && (
+        <section className="rapid-stop-card mobile">
+          <div><span>RAPID STOP · MONTH {campaign.months_completed}</span><h2>Care to rebalance?</h2><p>Tap through the replay, news and current portfolio signals before deciding whether to HOLD or change course.</p><RapidClock campaign={campaign} onExpire={execute} disabled={busy || historical} forceActive /></div>
+          <button className="primary full" onClick={continueGame}>OPEN THE NEXT DECISION WINDOW →</button>
         </section>
       )}
       <MobileChase campaign={campaign} series={series} />
@@ -363,7 +376,7 @@ export function MobileGameBoard({
           </section>
           {!historical && result && campaign.status === "ACTIVE" && (
             <button className="primary full" onClick={continueGame}>
-              BUILD MOVE {campaign.current_move} →
+              {campaign.mode === "RAPID" ? "CARE TO REBALANCE? →" : `BUILD MOVE ${campaign.current_move} →`}
             </button>
           )}
         </section>
@@ -404,6 +417,7 @@ export function MobileGameBoard({
           <p>Your permanent rated record begins after Move 1.</p>
         )}
       </section>
+      </>}
     </section>
   );
 }
