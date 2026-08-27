@@ -260,3 +260,18 @@ def test_capital_market_assets_share_the_simulated_economy() -> None:
     assert assets["CORPBOND"]["credit_quality"] == "AA+"
     assert assets["GOLD"]["asset_class"] == "GOLD"
     assert assets["GILT10Y"]["volatility_pct"] < assets["GOLD"]["volatility_pct"]
+
+
+def test_market_view_hydrates_risk_fields_for_older_persisted_campaigns() -> None:
+    game = BTIGame.create(50_000, 24, "legacy-risk-fields")
+    for stock in game.state["market"].values():
+        stock.pop("expected_shortfall_95_pct", None)
+        stock.pop("var_95_pct", None)
+
+    restored = BTIGame.from_json(game.to_json())
+    market = restored.market_view()
+
+    assert len(market["stocks"]) == 50
+    assert all("var_95_pct" in stock for stock in market["stocks"])
+    assert all("expected_shortfall_95_pct" in stock for stock in market["stocks"])
+    assert any(event["kind"] == "RISK WATCH" for event in market["events"])

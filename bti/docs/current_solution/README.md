@@ -1,12 +1,12 @@
 # BTI current solution baseline
 
-> **Current release:** v0.14.0 — release-candidate UX, contained replay controls, completed OHLC evidence and faster warm loading.
+> **Current release:** v0.14.1 — persisted-campaign compatibility hotfix over the release-candidate UX baseline.
 > See [Playtest 03](../playtesting/PLAYTEST_03_MULTI_MODE_CAPITAL_MARKET_RELEASE.md) for the current
 > mode contracts, Newswire, mobile boundary and verification gates.
 
 - **Product:** Beat the Index (BTI)
 - **Baseline date:** 27 August 2026
-- **Release:** BTI Release Candidate v0.14.0
+- **Release:** BTI Release Candidate v0.14.1
 - **Live application:** <https://beat-the-index.onrender.com/>
 - **Status:** deployed investor-preview web/PWA release under active desktop and mobile playtesting
 

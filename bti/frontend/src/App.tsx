@@ -378,7 +378,7 @@ function Shell({
             Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
-          <small>BTI RELEASE CANDIDATE · v0.14.0</small>
+          <small>BTI RELEASE CANDIDATE · v0.14.1</small>
           {installAvailable && (
             <button className="install-bti" onClick={installApp}>
               INSTALL BTI ↓
@@ -1596,6 +1596,7 @@ export default function App() {
     [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(
       null,
     ),
+    [marketLoadAttempt, setMarketLoadAttempt] = useState(0),
     [error, setError] = useState("");
   useEffect(() => {
     const capture = (event: Event) => {
@@ -1620,7 +1621,6 @@ export default function App() {
           const preferred =
             cs.find((item) => item.status === "ACTIVE") || cs[0];
           setCampaign(preferred);
-          setMarket(await api.market(preferred.campaign_id));
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "BTI server unavailable");
@@ -1629,6 +1629,27 @@ export default function App() {
       }
     })();
   }, []);
+  useEffect(() => {
+    const marketRequired = ["market", "stock", "news", "review"].includes(view);
+    if (!campaign || !marketRequired || market) return;
+    let current = true;
+    setBusy(true);
+    setError("");
+    api.market(campaign.campaign_id)
+      .then((nextMarket) => {
+        if (current) setMarket(nextMarket);
+      })
+      .catch((reason) => {
+        if (current)
+          setError(reason instanceof Error ? reason.message : "Market desk unavailable");
+      })
+      .finally(() => {
+        if (current) setBusy(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [campaign?.campaign_id, market, marketLoadAttempt, view]);
   const start = async (config: {
     mode: "CLASSIC" | "RAPID" | "BLITZ";
     horizon_months: number;
@@ -1660,17 +1681,20 @@ export default function App() {
     setError("");
     try {
       setCampaign(next);
+      setMarket(null);
       setTrades([]);
       setStock(null);
       setResult(null);
       setReviewData(null);
-      setMarket(await api.market(next.campaign_id));
       if (next.status === "ACTIVE") {
         setView("market");
       } else if (next.moves_completed > 0) {
-        setReviewData(
-          await api.reviewMove(next.campaign_id, next.moves_completed),
+        const historicalMove = await api.reviewMove(
+          next.campaign_id,
+          next.moves_completed,
         );
+        setReviewData(historicalMove);
+        setMarket(historicalMove.market);
         setView("review");
       } else {
         setView("home");
@@ -1813,6 +1837,33 @@ export default function App() {
       );
     if (view === "home") return <Home campaign={campaign} setView={setView} profile={profile} />;
     if (view === "setup") return <Setup start={start} busy={busy} />;
+    if (
+      campaign &&
+      ["market", "stock", "news", "review"].includes(view) &&
+      !market
+    )
+      return error ? (
+        <div className="connection market-reconnect">
+          <Badge />
+          <h1>The market desk needs a reconnect.</h1>
+          <p>{error}</p>
+          <button
+            className="primary"
+            onClick={() => {
+              setError("");
+              setMarketLoadAttempt((attempt) => attempt + 1);
+            }}
+          >
+            RETRY MARKET DESK →
+          </button>
+        </div>
+      ) : (
+        <div className="loading">
+          <div className="desk-loader"><span /><span /><span /></div>
+          <b>Opening the simulated market desk…</b>
+          <span>Your campaign history remains intact.</span>
+        </div>
+      );
     if (view === "market" && campaign && market)
       return isMobile ? (
         <MobileMarket

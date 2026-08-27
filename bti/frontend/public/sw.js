@@ -1,4 +1,4 @@
-const CACHE = "bti-release-candidate-v0.14.0";
+const CACHE = "bti-release-candidate-v0.14.1";
 const SHELL = [
   "/",
   "/manifest.webmanifest",

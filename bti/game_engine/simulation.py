@@ -499,6 +499,19 @@ def public_market(market: dict[str, Any], month: int, data_through: str) -> dict
     ]
     for item in visible:
         history = item.get("history_paise", [item["close_paise"]])
+        # Campaigns are durable across UI releases. New analytical fields must
+        # remain additive so an older saved market can be opened after an
+        # observability upgrade without invalidating the player's game.
+        item.setdefault("asset_class", "EQUITY")
+        item.setdefault("var_95_pct", max(0.0, item.get("volatility_pct", 0.0) * 0.45))
+        item.setdefault(
+            "expected_shortfall_95_pct",
+            max(item["var_95_pct"], item["var_95_pct"] * 1.25),
+        )
+        item.setdefault("drawdown_pct", 0.0)
+        item.setdefault("history_paise", history)
+        item.setdefault("ohlc_history", [])
+        item.setdefault("forecast_curve", [])
         item.setdefault("volume_index", 100.0)
         item.setdefault("sentiment_score", 50.0)
         item.setdefault(
@@ -518,7 +531,7 @@ def public_market(market: dict[str, Any], month: int, data_through: str) -> dict
     advancing = sum(item["close_paise"] >= item["open_paise"] for item in visible)
     equities = [item for item in visible if item.get("asset_class", "EQUITY") == "EQUITY"]
     value_watch = min(equities, key=lambda item: item["peg"])
-    risk_watch = max(visible, key=lambda item: item["expected_shortfall_95_pct"])
+    risk_watch = max(visible, key=lambda item: item.get("expected_shortfall_95_pct", 0.0))
     return {
         "label": "SIMULATED MARKET",
         "basis": f"Governed Vriddhi information available through {data_through}",
