@@ -13,6 +13,7 @@ type Lens =
   | "QUANT"
   | "TECHNICAL"
   | "NEWS"
+  | "ASSETS"
   | "HELD";
 
 type Props = {
@@ -70,6 +71,12 @@ function Sparkline({
 }
 
 function lensMetrics(stock: Stock, lens: Lens) {
+  if ((stock.asset_class || "EQUITY") !== "EQUITY")
+    return [
+      ["YIELD", stock.yield_pct ? `${stock.yield_pct.toFixed(1)}%` : "—"],
+      ["VOL", `${stock.volatility_pct.toFixed(1)}%`],
+      ["SIM 12M", signed(stock.forecast_pct)],
+    ];
   if (lens === "VALUE")
     return [
       ["PEG", stock.peg.toFixed(2)],
@@ -157,10 +164,11 @@ export function MobileMarket({
         .toLowerCase()
         .includes(query.toLowerCase()),
     );
+    const assetFiltered = lens === "ASSETS" ? filtered.filter((stock) => (stock.asset_class || "EQUITY") !== "EQUITY") : filtered;
     const held =
       lens === "HELD"
-        ? filtered.filter((stock) => campaign.holdings[stock.ticker])
-        : filtered;
+        ? assetFiltered.filter((stock) => campaign.holdings[stock.ticker])
+        : assetFiltered;
     return [...held].sort((a, b) => {
       if (lens === "VALUE") return (a.peg || 999) - (b.peg || 999);
       if (lens === "QUALITY")
@@ -346,6 +354,7 @@ export function MobileMarket({
               "QUANT",
               "TECHNICAL",
               "NEWS",
+              "ASSETS",
               "HELD",
             ] as Lens[]
           ).map((item) => (
@@ -382,7 +391,7 @@ export function MobileMarket({
                   <span>
                     <b>{stock.ticker}</b>
                     <small>
-                      {stock.sector} · {held ? `HELD ${held}` : "NOT HELD"}
+                      {stock.asset_class && stock.asset_class !== "EQUITY" ? stock.asset_class : stock.sector} · {held ? `HELD ${held}` : "NOT HELD"}
                     </small>
                   </span>
                 </div>

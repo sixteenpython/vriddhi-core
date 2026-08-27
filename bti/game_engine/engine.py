@@ -36,6 +36,19 @@ def _annualised_sip_return(contribution: int, months: int, final_value: int) -> 
     return round((low + high) * 50, 2)
 
 
+def _cagr(initial_value: int, final_value: int, months: int) -> float:
+    if initial_value <= 0 or final_value <= 0 or months <= 0:
+        return 0.0
+    return round(((final_value / initial_value) ** (12 / months) - 1) * 100, 2)
+
+
+MODE_RULES = {
+    "CLASSIC": {"interval_months": 1, "rating_weight": 1.0, "capital_model": "MONTHLY_SIP"},
+    "RAPID": {"interval_months": 12, "rating_weight": 0.7, "capital_model": "LUMP_SUM"},
+    "BLITZ": {"interval_months": None, "rating_weight": 0.35, "capital_model": "LUMP_SUM"},
+}
+
+
 class BTIGame:
     ENGINE_VERSION = "bti-game-v3"
 
@@ -47,21 +60,38 @@ class BTIGame:
         seed: str,
         repository_root: str | Path | None = None,
         campaign_id: str | None = None,
+        mode: str = "CLASSIC",
+        total_capital_rupees: int | None = None,
     ) -> "BTIGame":
         if horizon_months not in {24, 36, 48, 60}:
             raise GameRuleError("Choose a 24, 36, 48 or 60 month campaign")
-        if (
-            not isinstance(monthly_amount_rupees, int)
-            or not 10_000 <= monthly_amount_rupees <= 100_000
-        ):
-            raise GameRuleError(
-                "Monthly investment must be a whole-rupee amount from ₹10,000 to ₹1,00,000"
-            )
+        mode = str(mode).upper()
+        if mode not in MODE_RULES:
+            raise GameRuleError("Choose CLASSIC, RAPID or BLITZ gameplay")
+        if mode == "CLASSIC":
+            if (
+                not isinstance(monthly_amount_rupees, int)
+                or not 10_000 <= monthly_amount_rupees <= 100_000
+            ):
+                raise GameRuleError(
+                    "Monthly investment must be a whole-rupee amount from ₹10,000 to ₹1,00,000"
+                )
+            committed_capital = 0
+        else:
+            if (
+                not isinstance(total_capital_rupees, int)
+                or not 100_000 <= total_capital_rupees <= 30_000_000
+            ):
+                raise GameRuleError("Rapid and Blitz capital must be ₹1 lakh to ₹3 crore")
+            monthly_amount_rupees = 0
+            committed_capital = total_capital_rupees * 100
         if not seed:
             raise GameRuleError("A scenario seed is required")
         self = cls.__new__(cls)
         self.artifacts = VriddhiArtifacts(repository_root)
-        identity = f"{self.artifacts.release_id}|{horizon_months}|{monthly_amount_rupees}|{seed}"
+        identity = f"{self.artifacts.release_id}|{mode}|{horizon_months}|{monthly_amount_rupees}|{committed_capital}|{seed}"
+        interval = horizon_months if mode == "BLITZ" else MODE_RULES[mode]["interval_months"]
+        total_decisions = horizon_months // int(interval)
         self.state = {
             "campaign_id": campaign_id
             or hashlib.sha256(identity.encode()).hexdigest()[:12].upper(),
@@ -72,14 +102,20 @@ class BTIGame:
             "seed": seed,
             "horizon_months": horizon_months,
             "monthly_amount_paise": monthly_amount_rupees * 100,
+            "mode": mode,
+            "capital_model": MODE_RULES[mode]["capital_model"],
+            "total_capital_paise": committed_capital,
+            "decision_interval_months": interval,
+            "total_decisions": total_decisions,
             "current_month": 0,
-            "cash_paise": 0,
+            "cash_paise": committed_capital,
             "holdings": {},
             "market": initial_market(self.artifacts.stocks, horizon_months),
-            "benchmark_value_paise": 0,
-            "total_invested_paise": 0,
+            "benchmark_value_paise": committed_capital,
+            "total_invested_paise": committed_capital,
             "moves": [],
             "rating": 1200,
+            "starting_rating": 1200,
             "gameplay_mode": "RATED",
             "regime_schedule": build_regime_schedule(seed, horizon_months),
         }
@@ -93,6 +129,10 @@ class BTIGame:
         view = public_market(
             self.state["market"], self.state["current_month"], self.state["data_through"]
         )
+        if self.state.get("mode", "CLASSIC") == "CLASSIC":
+            view["stocks"] = [
+                item for item in view["stocks"] if item.get("asset_class", "EQUITY") == "EQUITY"
+            ]
         view["regime"] = deepcopy(self._regime_for_move(self.state["current_month"] + 1))
         return view
 
@@ -154,6 +194,27 @@ class BTIGame:
         }
         weight_total = sum(weights.values()) or 1.0
         weights = {ticker: weight / weight_total for ticker, weight in weights.items()}
+        if self.state.get("mode", "CLASSIC") != "CLASSIC":
+            regime = self._regime_internal(self.state["current_month"] + 1)
+            risk_appetite = float(regime.get("risk_appetite", 0.0))
+            inflation = float(regime.get("inflation_pressure", 0.0))
+            rate_pressure = float(regime.get("rate_pressure", 0.0))
+            gold_weight = max(0.05, min(0.20, 0.09 + inflation * 0.05 - risk_appetite * 0.03))
+            government_weight = max(
+                0.07, min(0.24, 0.13 - rate_pressure * 0.04 - risk_appetite * 0.04)
+            )
+            corporate_weight = max(
+                0.05, min(0.16, 0.09 + risk_appetite * 0.025 - rate_pressure * 0.02)
+            )
+            equity_weight = 1.0 - gold_weight - government_weight - corporate_weight
+            weights = {ticker: weight * equity_weight for ticker, weight in weights.items()}
+            weights.update(
+                {
+                    "GOLD": gold_weight,
+                    "GILT10Y": government_weight,
+                    "CORPBOND": corporate_weight,
+                }
+            )
         holdings = {
             ticker: int(total_capital * weight // market[ticker]["price_paise"])
             for ticker, weight in weights.items()
@@ -180,9 +241,11 @@ class BTIGame:
         if self.status != "ACTIVE":
             raise GameRuleError("Only an active campaign accepts moves")
         month = self.state["current_month"]
-        if expected_month is not None and expected_month != month:
+        decision_index = len(self.state["moves"])
+        mode = self.state.get("mode", "CLASSIC")
+        if expected_month is not None and expected_month != decision_index:
             raise GameRuleError("This move is stale; reload the current campaign month")
-        if not instructions:
+        if not instructions and not (mode == "RAPID" and decision_index > 0):
             raise GameRuleError("A move needs at least one BUY or SELL instruction")
         market = self.state["market"]
         holdings = dict(self.state["holdings"])
@@ -205,7 +268,8 @@ class BTIGame:
                 raise GameRuleError("Combine duplicate instructions for the same stock and side")
             seen.add((side, ticker))
             (sells if side == "SELL" else buys).append((ticker, shares))
-        cash = self.state["cash_paise"] + self.state["monthly_amount_paise"]
+        contribution = self.state["monthly_amount_paise"] if mode == "CLASSIC" else 0
+        cash = self.state["cash_paise"] + contribution
         opening_value = self.state["cash_paise"] + _value(holdings, market)
         execution = []
         for ticker, shares in sells:
@@ -245,34 +309,61 @@ class BTIGame:
                     "cash_movement_paise": -amount,
                 }
             )
-        if buy_total * 10 < buying_power * 9:
+        if mode == "CLASSIC" and buy_total * 10 < buying_power * 9:
             raise GameRuleError("Deploy at least 90% of available buying power this month")
-        if cash + _value(holdings, market) != opening_value + self.state["monthly_amount_paise"]:
+        if mode != "CLASSIC" and decision_index == 0 and buy_total < 10_000_000:
+            raise GameRuleError("Deploy at least ₹1 lakh before starting a Rapid or Blitz run")
+        if cash + _value(holdings, market) != opening_value + contribution:
             raise RuntimeError("Portfolio accounting invariant failed")
-        reference = self._reference_holdings(opening_value + self.state["monthly_amount_paise"])
+        reference = self._reference_holdings(opening_value + contribution)
         decision = evaluate(holdings, reference, market)
-        regime = self._regime_internal(month + 1)
-        next_market, benchmark_return = advance_market(
-            market, self.state["seed"], month + 1, regime
-        )
+        interval = int(self.state.get("decision_interval_months", 1))
+        segment_end = min(self.state["horizon_months"], month + interval)
         before_outcome = cash + _value(holdings, market)
+        next_market = market
+        benchmark_after = self.state["benchmark_value_paise"] + contribution
+        segment_series = []
+        for elapsed_month in range(month + 1, segment_end + 1):
+            regime = self._regime_internal(elapsed_month)
+            next_market, benchmark_return = advance_market(
+                next_market, self.state["seed"], elapsed_month, regime
+            )
+            benchmark_after = round(benchmark_after * (1 + benchmark_return))
+            segment_series.append(
+                {
+                    "month": elapsed_month,
+                    "portfolio_value_paise": cash + _value(holdings, next_market),
+                    "benchmark_value_paise": benchmark_after,
+                    "regime": self._regime_for_move(elapsed_month),
+                }
+            )
         after_outcome = cash + _value(holdings, next_market)
         portfolio_return = after_outcome / before_outcome - 1
-        benchmark_before = self.state["benchmark_value_paise"] + self.state["monthly_amount_paise"]
-        benchmark_after = round(benchmark_before * (1 + benchmark_return))
-        invested_after = self.state["total_invested_paise"] + self.state["monthly_amount_paise"]
-        move_number = month + 1
+        benchmark_before = self.state["benchmark_value_paise"] + contribution
+        benchmark_return = benchmark_after / benchmark_before - 1 if benchmark_before else 0.0
+        invested_after = self.state["total_invested_paise"] + contribution
+        move_number = decision_index + 1
         rating_average = (
             sum(item["score"] for item in self.state["moves"]) + decision["score"]
         ) / (len(self.state["moves"]) + 1)
-        rating_after = max(600, round(1200 + (rating_average - 70) * 4))
+        rating_weight = float(MODE_RULES[mode]["rating_weight"])
+        rating_after = max(
+            600,
+            round(
+                int(self.state.get("starting_rating", 1200))
+                + (rating_average - 70) * 4 * rating_weight
+            ),
+        )
         result = {
             **decision,
             "move": move_number,
             "execution": execution,
             "notation": self._notation(move_number, execution),
             "rating_after": rating_after,
-            "regime": self._regime_for_move(move_number),
+            "mode": mode,
+            "months_advanced": segment_end - month,
+            "segment_series": segment_series,
+            "regime": self._regime_for_move(month + 1),
             "portfolio_before": {
                 "holdings": holdings_before,
                 "cash_paise": cash_before,
@@ -292,16 +383,19 @@ class BTIGame:
             },
             "progress": {
                 "move": move_number,
-                "total": self.state["horizon_months"],
+                "month": segment_end,
+                "total": self.state["total_decisions"],
+                "horizon_months": self.state["horizon_months"],
                 "total_invested_paise": invested_after,
                 "portfolio_value_paise": after_outcome,
                 "benchmark_value_paise": benchmark_after,
                 "portfolio_xirr_pct": _annualised_sip_return(
-                    self.state["monthly_amount_paise"], move_number, after_outcome
-                ),
+                    self.state["monthly_amount_paise"], segment_end, after_outcome
+                ) if mode == "CLASSIC" else _cagr(self.state["total_capital_paise"], after_outcome, segment_end),
                 "benchmark_xirr_pct": _annualised_sip_return(
-                    self.state["monthly_amount_paise"], move_number, benchmark_after
-                ),
+                    self.state["monthly_amount_paise"], segment_end, benchmark_after
+                ) if mode == "CLASSIC" else _cagr(self.state["total_capital_paise"], benchmark_after, segment_end),
+                "return_label": "SIP XIRR" if mode == "CLASSIC" else "CAGR",
                 "projected_annual_return_pct": round(
                     decision["portfolio_health"]["forecast"], 2
                 ),
@@ -316,7 +410,7 @@ class BTIGame:
                 "market": next_market,
                 "benchmark_value_paise": benchmark_after,
                 "total_invested_paise": invested_after,
-                "current_month": month + 1,
+                "current_month": segment_end,
             }
         )
         self.state["moves"].append(deepcopy(result))
@@ -339,6 +433,7 @@ class BTIGame:
             series.append(
                 {
                     "move": index,
+                    "month": int(progress.get("month", index)),
                     "total_invested_paise": invested,
                     "portfolio_value_paise": portfolio,
                     "benchmark_value_paise": benchmark,
@@ -405,8 +500,9 @@ class BTIGame:
         rating = moves[-1].get("rating_after", 1200) if moves else 1200
         return {
             "move": move,
-            "total_moves": self.state["horizon_months"],
-            "overs_remaining": self.state["horizon_months"] - move,
+            "month": latest.get("month", move),
+            "total_moves": self.state.get("total_decisions", self.state["horizon_months"]),
+            "overs_remaining": self.state.get("total_decisions", self.state["horizon_months"]) - move,
             "total_invested_paise": latest["total_invested_paise"],
             "portfolio_value_paise": latest["portfolio_value_paise"],
             "benchmark_value_paise": benchmark,
@@ -419,6 +515,7 @@ class BTIGame:
             "xirr_advantage_pct": round(
                 latest["portfolio_xirr_pct"] - latest["benchmark_xirr_pct"], 2
             ),
+            "return_label": "SIP XIRR" if self.state.get("mode", "CLASSIC") == "CLASSIC" else "CAGR",
             "max_drawdown_pct": self._max_drawdown_pct(series),
             "average_move_score": round(sum(item["score"] for item in moves) / move, 1)
             if move
@@ -451,14 +548,23 @@ class BTIGame:
     def review_move(self, move_number: int) -> dict[str, Any]:
         if move_number < 1 or move_number > len(self.state["moves"]):
             raise GameRuleError("That completed move is not available for review")
-        market = self._market_at_month(move_number - 1)
-        market_view = public_market(market, move_number - 1, self.state["data_through"])
-        market_view["regime"] = deepcopy(self._regime_for_move(move_number))
+        interval = int(self.state.get("decision_interval_months", 1))
+        completed_months = (move_number - 1) * interval
+        market = self._market_at_month(completed_months)
+        market_view = public_market(market, completed_months, self.state["data_through"])
+        if self.state.get("mode", "CLASSIC") == "CLASSIC":
+            market_view["stocks"] = [
+                item
+                for item in market_view["stocks"]
+                if item.get("asset_class", "EQUITY") == "EQUITY"
+            ]
+        market_view["regime"] = deepcopy(self._regime_for_move(completed_months + 1))
         return {
             "review_mode": True,
             "selected_move": move_number,
             "live_move": min(
-                self.state["current_month"] + 1, self.state["horizon_months"]
+                len(self.state["moves"]) + 1,
+                self.state.get("total_decisions", self.state["horizon_months"]),
             ),
             "result": deepcopy(self.state["moves"][move_number - 1]),
             "market": market_view,
@@ -476,8 +582,17 @@ class BTIGame:
             "status": self.status,
             "horizon_months": self.state["horizon_months"],
             "monthly_amount_rupees": self.state["monthly_amount_paise"] // 100,
-            "current_move": min(self.state["current_month"] + 1, self.state["horizon_months"]),
-            "moves_completed": self.state["current_month"],
+            "mode": self.state.get("mode", "CLASSIC"),
+            "capital_model": self.state.get("capital_model", "MONTHLY_SIP"),
+            "total_capital_rupees": self.state.get("total_capital_paise", 0) // 100,
+            "decision_interval_months": self.state.get("decision_interval_months", 1),
+            "total_decisions": self.state.get("total_decisions", self.state["horizon_months"]),
+            "current_move": min(
+                len(self.state["moves"]) + 1,
+                self.state.get("total_decisions", self.state["horizon_months"]),
+            ),
+            "moves_completed": len(self.state["moves"]),
+            "months_completed": self.state["current_month"],
             "holdings": dict(self.state["holdings"]),
             "cash_paise": self.state["cash_paise"],
             "portfolio_value_paise": portfolio,
@@ -507,6 +622,7 @@ class BTIGame:
             else [],
             "release_id": self.state["release_id"],
             "market_label": "SIMULATED MARKET",
+            "return_label": "SIP XIRR" if self.state.get("mode", "CLASSIC") == "CLASSIC" else "CAGR",
         }
         result["match_summary"] = self.match_summary()
         result["final_result"] = self.final_result() if self.status == "COMPLETED" else None
@@ -527,6 +643,7 @@ class BTIGame:
         portfolio = self.state["cash_paise"] + _value(self.state["holdings"], self.state["market"])
         months = self.state["current_month"]
         contribution = self.state["monthly_amount_paise"]
+        mode = self.state.get("mode", "CLASSIC")
         benchmark = self.state["benchmark_value_paise"]
         summary = self.match_summary()
         gap = portfolio - benchmark
@@ -574,6 +691,7 @@ class BTIGame:
             lesson = "The index finished ahead. Use the weakest moves to identify where valuation, risk or diversification discipline broke down."
         return {
             "status": self.status,
+            "mode": mode,
             "verdict": verdict,
             "headline": headline,
             "months_completed": months,
@@ -586,11 +704,12 @@ class BTIGame:
             "wealth_alpha_pct": summary["wealth_alpha_pct"],
             "portfolio_money_weighted_annual_return_pct": _annualised_sip_return(
                 contribution, months, portfolio
-            ),
+            ) if mode == "CLASSIC" else _cagr(self.state["total_capital_paise"], portfolio, months),
             "benchmark_money_weighted_annual_return_pct": _annualised_sip_return(
                 contribution, months, benchmark
-            ),
+            ) if mode == "CLASSIC" else _cagr(self.state["total_capital_paise"], benchmark, months),
             "xirr_advantage_pct": summary["xirr_advantage_pct"],
+            "return_label": "SIP XIRR" if mode == "CLASSIC" else "CAGR",
             "max_drawdown_pct": summary["max_drawdown_pct"],
             "average_move_score": average,
             "rating": self.state["rating"],
@@ -615,6 +734,12 @@ class BTIGame:
         if self.state.get("release_id") != self.artifacts.release_id:
             raise GameRuleError("Saved campaign requires a different governed Vriddhi release")
         self.state.setdefault("gameplay_mode", "RATED")
+        self.state.setdefault("starting_rating", 1200)
+        self.state.setdefault("mode", "CLASSIC")
+        self.state.setdefault("capital_model", "MONTHLY_SIP")
+        self.state.setdefault("total_capital_paise", 0)
+        self.state.setdefault("decision_interval_months", 1)
+        self.state.setdefault("total_decisions", self.state["horizon_months"])
         self.state.setdefault(
             "regime_schedule",
             build_regime_schedule(self.state["seed"], self.state["horizon_months"]),

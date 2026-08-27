@@ -173,3 +173,54 @@ def test_market_regime_path_is_precomputed_and_portfolio_independent() -> None:
     right.state["holdings"] = {"TCS": 10}
     assert left.state["regime_schedule"] == right.state["regime_schedule"]
     assert left._market_at_month(6) == right._market_at_month(6)
+
+
+def _initial_lump_sum_move(game: BTIGame) -> list[dict]:
+    stock = min(game.market_view()["stocks"], key=lambda item: item["close_paise"])
+    shares = (10_000_000 + stock["close_paise"] - 1) // stock["close_paise"]
+    return [{"side": "BUY", "ticker": stock["ticker"], "shares": shares}]
+
+
+def test_blitz_is_one_decision_with_a_monthly_replay_and_cagr() -> None:
+    game = BTIGame.create(
+        0, 36, "blitz-contract", mode="BLITZ", total_capital_rupees=1_000_000
+    )
+    state = game.public_state()
+    assert state["mode"] == "BLITZ"
+    assert state["total_decisions"] == 1
+    assert state["cash_paise"] == 100_000_000
+    result = game.submit_move(_initial_lump_sum_move(game))
+    assert game.status == "COMPLETED"
+    assert result["months_advanced"] == 36
+    assert len(result["segment_series"]) == 36
+    assert result["segment_series"][-1]["month"] == 36
+    assert game.final_result()["return_label"] == "CAGR"
+
+
+def test_rapid_advances_annually_and_allows_a_hold_decision() -> None:
+    game = BTIGame.create(
+        0, 48, "rapid-contract", mode="RAPID", total_capital_rupees=3_000_000
+    )
+    first = game.submit_move(_initial_lump_sum_move(game))
+    assert first["months_advanced"] == 12
+    assert game.public_state()["months_completed"] == 12
+    second = game.submit_move([])
+    assert second["months_advanced"] == 12
+    assert second["execution"] == []
+    assert game.public_state()["moves_completed"] == 2
+    assert game.public_state()["months_completed"] == 24
+    game.submit_move([])
+    game.submit_move([])
+    assert game.status == "COMPLETED"
+
+
+def test_capital_market_assets_share_the_simulated_economy() -> None:
+    game = BTIGame.create(
+        0, 24, "capital-market-assets", mode="BLITZ", total_capital_rupees=1_000_000
+    )
+    assets = {item["ticker"]: item for item in game.market_view()["stocks"]}
+    assert {"GILT10Y", "CORPBOND", "GOLD"}.issubset(assets)
+    assert assets["GILT10Y"]["asset_class"] == "GOVERNMENT BOND"
+    assert assets["CORPBOND"]["credit_quality"] == "AA+"
+    assert assets["GOLD"]["asset_class"] == "GOLD"
+    assert assets["GILT10Y"]["volatility_pct"] < assets["GOLD"]["volatility_pct"]

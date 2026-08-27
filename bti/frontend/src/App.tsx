@@ -7,6 +7,7 @@ import {
   type Market,
   type MoveResult,
   type MoveReview,
+  type PlayerProfile,
   type Stock,
   type Trade,
 } from "./api";
@@ -15,6 +16,7 @@ import { StockResearch } from "./StockResearch";
 import { GameBoard } from "./GameBoard";
 import { MobileGameBoard } from "./MobileGameBoard";
 import { MobileMarket } from "./MobileMarket";
+import { Newswire } from "./Newswire";
 
 type View =
   | "home"
@@ -78,8 +80,16 @@ const SIM = "SIMULATION MODE";
 const NAV: [View, string, string][] = [["home", "⌂", "Home"]];
 const TERMINAL_NAV: [View, string, string][] = [
   ["market", "▥", "Market Monitor"],
+  ["news", "◉", "Newswire"],
   ["review", "◫", "Game Board"],
 ];
+const modeName = (campaign: Campaign) => campaign.mode || "CLASSIC";
+const decisionTotal = (campaign: Campaign) =>
+  campaign.total_decisions || campaign.horizon_months;
+const capitalLabel = (campaign: Campaign) =>
+  modeName(campaign) === "CLASSIC"
+    ? `${rupees(campaign.monthly_amount_rupees * 100)} / month`
+    : `${rupees(campaign.total_capital_rupees * 100, true)} capital`;
 
 function Badge() {
   return (
@@ -162,7 +172,7 @@ function Header({
         </span>
         <h2>
           {campaign
-            ? `${campaign.campaign_id} · Move ${campaign.current_move} / ${campaign.horizon_months}`
+            ? `${campaign.campaign_id} · ${modeName(campaign)} ${campaign.current_move} / ${decisionTotal(campaign)}`
             : "Beat the Index"}
         </h2>
       </div>
@@ -212,8 +222,7 @@ function CampaignRail({
               <span>
                 <b>{item.campaign_id.slice(0, 8)}</b>
                 <small>
-                  M{item.current_move}/{item.horizon_months} · ₹
-                  {Math.round(item.monthly_amount_rupees / 1000)}K
+                  {modeName(item)} {item.current_move}/{decisionTotal(item)} · {capitalLabel(item)}
                 </small>
               </span>
               <em className={`status-${item.status.toLowerCase()}`}>
@@ -249,6 +258,7 @@ function Shell({
   abortCampaign,
   installAvailable,
   installApp,
+  profile,
   children,
 }: {
   view: View;
@@ -260,6 +270,7 @@ function Shell({
   abortCampaign: (campaign: Campaign) => void;
   installAvailable: boolean;
   installApp: () => void;
+  profile: PlayerProfile | null;
   children: React.ReactNode;
 }) {
   const [railCollapsed, setRailCollapsed] = useState(
@@ -313,7 +324,7 @@ function Shell({
               key={id}
               className={
                 view === id ||
-                (id === "market" && ["stock", "news"].includes(view)) ||
+                (id === "market" && view === "stock") ||
                 (id === "review" &&
                   ["result", "progress", "portfolio"].includes(view))
                   ? "active"
@@ -346,7 +357,8 @@ function Shell({
             <span>
               <b>{terminalMode ? "Arjun · Strategy Desk" : "Arjun Trader"}</b>
               <small>
-                {terminalMode ? "Decision rating 1450" : "Rating 1450"}
+                {terminalMode ? "Decision rating " : "Rating "}
+                {profile?.rating || campaign?.rating || 1200}
               </small>
             </span>
           </div>
@@ -366,7 +378,7 @@ function Shell({
             Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
-          <small>BTI MOBILE · v0.11.0</small>
+          <small>BTI MULTI-MODE · v0.12.0</small>
           {installAvailable && (
             <button className="install-bti" onClick={installApp}>
               INSTALL BTI ↓
@@ -390,6 +402,14 @@ function Shell({
             <span>◫</span>
             GAME
           </button>
+          <button
+            className={view === "news" ? "active" : ""}
+            disabled={!campaign}
+            onClick={() => navigate("news")}
+          >
+            <span>◉</span>
+            NEWS
+          </button>
           <button onClick={() => setMobileNavigation(true)}>
             <span>☰</span>
             CAMPAIGNS
@@ -403,9 +423,11 @@ function Shell({
 function Home({
   campaign,
   setView,
+  profile,
 }: {
   campaign: Campaign | null;
   setView: (v: View) => void;
+  profile: PlayerProfile | null;
 }) {
   return (
     <section className="page home">
@@ -416,9 +438,9 @@ function Home({
             Can you <em>beat the index?</em>
           </h1>
           <p>
-            Read a realistic market. Build one complete portfolio move each
-            month. Learn what strong investment decisions look like—without ever
-            seeing the hidden answer.
+            Choose your tempo. Study every month in Classic, rebalance annually
+            under pressure in Rapid, or make one conviction bet in Blitz. Every
+            mode asks the same question: can your process beat Nifty?
           </p>
           <div className="hero-actions">
             {campaign ? (
@@ -444,8 +466,8 @@ function Home({
         </div>
         <div className="orb">
           <span>BTI</span>
-          <b>1450</b>
-          <small>CLUB PLAYER</small>
+          <b>{profile?.rating || campaign?.rating || 1200}</b>
+          <small>{profile?.wins || 0} INDEX WINS</small>
         </div>
       </div>
       {campaign && (
@@ -460,8 +482,8 @@ function Home({
                     : "ABORTED RATED CAMPAIGN"}
               </span>
               <h3>
-                {rupees(campaign.monthly_amount_rupees * 100)} / month ·{" "}
-                {campaign.horizon_months} moves
+                {modeName(campaign)} · {capitalLabel(campaign)} ·{" "}
+                {campaign.horizon_months / 12} years
               </h3>
             </div>
             <span className="positive">{pct(campaign.alpha_pct)} ALPHA</span>
@@ -469,14 +491,14 @@ function Home({
           <div className="progress">
             <i
               style={{
-                width: `${(campaign.moves_completed / campaign.horizon_months) * 100}%`,
+                width: `${(campaign.moves_completed / decisionTotal(campaign)) * 100}%`,
               }}
             />
           </div>
           <div className="metric-row">
             <Metric
               label="CURRENT MOVE"
-              value={`${campaign.current_move} / ${campaign.horizon_months}`}
+              value={`${campaign.current_move} / ${decisionTotal(campaign)}`}
             />
             <Metric
               label="PORTFOLIO"
@@ -509,6 +531,11 @@ function Home({
             Commit permanently, chase Nifty and study every move in your record.
           </p>
         </div>
+        <div className="feature-card">
+          <span className="feature-icon purple">◉</span>
+          <b>Newswire</b>
+          <p>Read the simulated tape—but decide whether the headline is signal, context or distraction.</p>
+        </div>
       </div>
     </section>
   );
@@ -518,31 +545,54 @@ function Setup({
   start,
   busy,
 }: {
-  start: (a: number, h: number) => void;
+  start: (config: {
+    mode: "CLASSIC" | "RAPID" | "BLITZ";
+    horizon_months: number;
+    monthly_amount_rupees?: number;
+    total_capital_rupees?: number;
+  }) => void;
   busy: boolean;
 }) {
-  const [a, setA] = useState(50000),
+  const [mode, setMode] = useState<"CLASSIC" | "RAPID" | "BLITZ">("CLASSIC"),
+    [a, setA] = useState(50000),
+    [capital, setCapital] = useState(3000000),
     [h, setH] = useState(36);
+  const decisions = mode === "CLASSIC" ? h : mode === "RAPID" ? h / 12 : 1;
   return (
     <section className="page narrow">
       <div className="title-block">
         <span className="eyebrow">NEW CAMPAIGN</span>
         <h1>Choose your challenge.</h1>
         <p>
-          This decision is fixed once the campaign begins. One month becomes one
-          complete portfolio move.
+          Select the tempo before the campaign begins. Every mode is rated, uses
+          the same simulated capital market, and ends against Nifty.
         </p>
       </div>
       <div className="panel setup-panel">
-        <label>Monthly investment</label>
+        <label>Campaign mode</label>
+        <div className="mode-choice-grid">
+          {([
+            ["CLASSIC", "CLASSIC", "One SIP decision every month. Full research and rebalance discipline."],
+            ["RAPID", "RAPID", "One annual decision. Later stops are limited to 120 seconds."],
+            ["BLITZ", "BLITZ", "One allocation. Run the entire market path with no intervention."],
+          ] as const).map(([id, title, copy]) => (
+            <button className={mode === id ? "selected" : ""} onClick={() => setMode(id)} key={id}>
+              <b>{title}</b><small>{copy}</small>
+            </button>
+          ))}
+        </div>
+        <label>{mode === "CLASSIC" ? "Monthly investment" : "Campaign capital"}</label>
         <div className="choice-grid">
-          {[10000, 25000, 50000, 75000, 100000].map((x) => (
+          {(mode === "CLASSIC"
+            ? [10000, 25000, 50000, 75000, 100000]
+            : [100000, 500000, 1000000, 3000000, 10000000]
+          ).map((x) => (
             <button
-              className={a === x ? "selected" : ""}
-              onClick={() => setA(x)}
+              className={(mode === "CLASSIC" ? a : capital) === x ? "selected" : ""}
+              onClick={() => mode === "CLASSIC" ? setA(x) : setCapital(x)}
               key={x}
             >
-              ₹{x / 1000}K
+              {x >= 10000000 ? `₹${x / 10000000}Cr` : x >= 100000 ? `₹${x / 100000}L` : `₹${x / 1000}K`}
             </button>
           ))}
         </div>
@@ -560,30 +610,34 @@ function Setup({
               key={x}
             >
               <b>{l}</b>
-              <small>{x} moves</small>
+              <small>{mode === "CLASSIC" ? `${x} moves` : mode === "RAPID" ? `${(x as number) / 12} decisions` : "1 run"}</small>
             </button>
           ))}
         </div>
         <div className="commitment">
           <Metric
-            label="TOTAL CONTRIBUTION"
-            value={rupees(a * h * 100, true)}
+            label={mode === "CLASSIC" ? "TOTAL CONTRIBUTION" : "STARTING CAPITAL"}
+            value={rupees((mode === "CLASSIC" ? a * h : capital) * 100, true)}
           />
-          <Metric label="COMPLETE PORTFOLIO MOVES" value={String(h)} />
+          <Metric label="RATED DECISIONS" value={String(decisions)} />
           <Metric label="MARKET" value="SIMULATION" tone="positive" />
         </div>
         <ul className="rules">
-          <li>One complete allocation decision per investment month</li>
+          <li>{mode === "CLASSIC" ? "One complete allocation decision per investment month" : mode === "RAPID" ? "Initial allocation plus one rebalance decision after every completed year" : "One initial allocation; the full monthly path then runs without intervention"}</li>
           <li>Whole-share BUY and SELL instructions; no short selling</li>
           <li>Completed moves are immutable</li>
-          <li>Decision quality is distinct from the next market outcome</li>
+          <li>Equities, government and corporate bonds, gold and cash share one simulated economy</li>
         </ul>
         <button
           className="primary full"
           disabled={busy}
-          onClick={() => start(a, h)}
+          onClick={() => start({
+            mode,
+            horizon_months: h,
+            ...(mode === "CLASSIC" ? { monthly_amount_rupees: a } : { total_capital_rupees: capital }),
+          })}
         >
-          {busy ? "BUILDING MARKET…" : `BEGIN ${h}-MOVE CAMPAIGN →`}
+          {busy ? "BUILDING MARKET…" : `BEGIN ${mode} CAMPAIGN →`}
         </button>
       </div>
     </section>
@@ -1536,6 +1590,7 @@ export default function App() {
     [trades, setTrades] = useState<Trade[]>([]),
     [result, setResult] = useState<MoveResult | null>(null),
     [reviewData, setReviewData] = useState<MoveReview | null>(null),
+    [profile, setProfile] = useState<PlayerProfile | null>(null),
     [busy, setBusy] = useState(true),
     [launching, setLaunching] = useState(false),
     [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(
@@ -1555,6 +1610,7 @@ export default function App() {
       try {
         await ensureSession();
         const cs = await api.campaigns();
+        setProfile(await api.profile());
         setCampaigns(cs);
         if (cs[0]) {
           const preferred =
@@ -1569,19 +1625,24 @@ export default function App() {
       }
     })();
   }, []);
-  const start = async (a: number, h: number) => {
+  const start = async (config: {
+    mode: "CLASSIC" | "RAPID" | "BLITZ";
+    horizon_months: number;
+    monthly_amount_rupees?: number;
+    total_capital_rupees?: number;
+  }) => {
     setBusy(true);
     setLaunching(true);
     setView("market");
     try {
-      const c = await api.create(a, h);
+      const c = await api.create(config);
       setCampaign(c);
       setCampaigns((current) => [c, ...current]);
       setMarket(c.initial_market || (await api.market(c.campaign_id)));
       setTrades([]);
       setResult(null);
       setReviewData(null);
-      setView("market");
+      setView(config.mode === "BLITZ" ? "news" : "market");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not create campaign");
     } finally {
@@ -1679,6 +1740,7 @@ export default function App() {
       setResult(x.result);
       setReviewData(null);
       setMarket(await api.market(x.campaign.campaign_id));
+      setProfile(await api.profile());
       setTrades([]);
       setView("review");
     } catch (e) {
@@ -1742,7 +1804,7 @@ export default function App() {
           </code>
         </div>
       );
-    if (view === "home") return <Home campaign={campaign} setView={setView} />;
+    if (view === "home") return <Home campaign={campaign} setView={setView} profile={profile} />;
     if (view === "setup") return <Setup start={start} busy={busy} />;
     if (view === "market" && campaign && market)
       return isMobile ? (
@@ -1784,6 +1846,8 @@ export default function App() {
           openWorkbench={() => setView("market")}
         />
       );
+    if (view === "news" && market && campaign)
+      return <Newswire market={market} campaign={campaign} select={select} />;
     if (view === "review" && campaign && market)
       return isMobile ? (
         <MobileGameBoard
@@ -1831,6 +1895,7 @@ export default function App() {
     launching,
     error,
     isMobile,
+    profile,
   ]);
   return (
     <Shell
@@ -1842,6 +1907,7 @@ export default function App() {
       newCampaign={() => setView("setup")}
       abortCampaign={abortCampaign}
       installAvailable={Boolean(installPrompt)}
+      profile={profile}
       installApp={async () => {
         if (!installPrompt) return;
         await installPrompt.prompt();

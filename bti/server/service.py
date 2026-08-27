@@ -42,23 +42,82 @@ class BTIService:
 
     def create_campaign(self, owner: str, payload: Any) -> dict[str, Any]:
         body = self._object(payload)
-        amount, horizon = body.get("monthly_amount_rupees"), body.get("horizon_months")
-        if isinstance(amount, bool) or not isinstance(amount, int):
+        mode = str(body.get("mode", "CLASSIC")).upper()
+        amount, horizon = body.get("monthly_amount_rupees", 0), body.get("horizon_months")
+        total_capital = body.get("total_capital_rupees")
+        if mode == "CLASSIC" and (isinstance(amount, bool) or not isinstance(amount, int)):
             raise APIError(422, "INVALID_MONTHLY_AMOUNT", "monthly_amount_rupees must be a whole number.")
+        if mode != "CLASSIC" and (isinstance(total_capital, bool) or not isinstance(total_capital, int)):
+            raise APIError(422, "INVALID_TOTAL_CAPITAL", "total_capital_rupees must be a whole number.")
         if isinstance(horizon, bool) or not isinstance(horizon, int):
             raise APIError(422, "INVALID_HORIZON", "horizon_months must be 24, 36, 48 or 60.")
         try:
             game = BTIGame.create(amount, horizon, seed=secrets.token_urlsafe(24),
                                   repository_root=self.repository_root,
-                                  campaign_id=secrets.token_hex(6).upper())
+                                  campaign_id=secrets.token_hex(6).upper(),
+                                  mode=mode, total_capital_rupees=total_capital)
         except GameRuleError as exc:
             raise APIError(422, "GAME_RULE_VIOLATION", str(exc)) from exc
+        current_rating = self.profile(owner)["rating"]
+        game.state["starting_rating"] = current_rating
+        game.state["rating"] = current_rating
         self.repo.create_campaign(owner, game.to_json())
         return {**self._campaign(game), "initial_market": game.market_view()}
 
     def campaigns(self, owner: str) -> list[dict[str, Any]]:
         games = [self._load(item) for item in self.repo.list_campaigns(owner)]
         return [self._campaign(game) for game in sorted(games, key=lambda g: g.state["campaign_id"])]
+
+    def profile(self, owner: str) -> dict[str, Any]:
+        games = [self._load(item) for item in self.repo.list_campaigns(owner)]
+        records: dict[str, dict[str, int]] = {
+            mode: {"wins": 0, "losses": 0, "draws": 0, "completed": 0}
+            for mode in ("CLASSIC", "RAPID", "BLITZ")
+        }
+        rating_delta = 0.0
+        best_alpha = -999.0
+        streak = 0
+        for game in games:
+            mode = game.state.get("mode", "CLASSIC")
+            if game.status == "COMPLETED":
+                result = game.final_result()
+                records[mode]["completed"] += 1
+                if result["verdict"] == "BEAT_INDEX":
+                    records[mode]["wins"] += 1
+                    streak += 1
+                    outcome = 18
+                elif result["verdict"] == "PHOTO_FINISH":
+                    records[mode]["draws"] += 1
+                    streak = 0
+                    outcome = 2
+                else:
+                    records[mode]["losses"] += 1
+                    streak = 0
+                    outcome = -16
+                weight = {"CLASSIC": 1.0, "RAPID": 0.7, "BLITZ": 0.35}[mode]
+                process = (result["average_move_score"] - 70) * 0.35
+                rating_delta += (outcome + process) * weight
+                best_alpha = max(best_alpha, float(result["wealth_alpha_pct"]))
+            elif game.status == "ABORTED":
+                records[mode]["losses"] += 1
+                streak = 0
+                rating_delta -= {"CLASSIC": 18, "RAPID": 13, "BLITZ": 7}[mode]
+        wins = sum(item["wins"] for item in records.values())
+        losses = sum(item["losses"] for item in records.values())
+        draws = sum(item["draws"] for item in records.values())
+        completed = sum(item["completed"] for item in records.values())
+        return {
+            "rating": max(600, round(1200 + rating_delta)),
+            "wins": wins,
+            "losses": losses,
+            "draws": draws,
+            "completed": completed,
+            "beat_index_pct": round(wins / completed * 100, 1) if completed else 0.0,
+            "best_alpha_pct": best_alpha if best_alpha > -900 else 0.0,
+            "current_streak": streak,
+            "by_mode": records,
+            "rating_model": "ONE BTI RATING · MODE-NORMALISED EVIDENCE",
+        }
 
     def state(self, owner: str, campaign_id: str) -> dict[str, Any]:
         return self._campaign(self._load(self.repo.get_campaign(owner, campaign_id)))

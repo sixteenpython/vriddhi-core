@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import type { Campaign, Market, MoveResult, MoveReview, Trade } from "./api";
 import { buildDraftPortfolio } from "./portfolioDraft";
+import { RapidClock } from "./RapidClock";
+import { BlitzRun } from "./BlitzRun";
 
 type Props = {
   campaign: Campaign;
@@ -35,18 +38,20 @@ function MobileChase({
     series.at(-1)?.benchmark_projected_annual_return_pct || 8;
   const monthlyTargetRate = Math.pow(1 + annualTargetPct / 100, 1 / 12) - 1;
   const contributionPaise = campaign.monthly_amount_rupees * 100;
-  const niftyTarget = [{ move: 0, value: 0 }];
-  let projected = 0;
+  const startingValue = campaign.mode === "CLASSIC" ? 0 : campaign.total_capital_rupees * 100;
+  const niftyTarget = [{ move: 0, value: startingValue }];
+  let projected = startingValue;
   for (let move = 1; move <= campaign.horizon_months; move += 1) {
-    const actual = series[move - 1]?.benchmark_value_paise;
+    const actualPoint = series.find((point) => (point.month || point.move) === move);
+    const actual = actualPoint?.benchmark_value_paise;
     projected =
       actual ?? projected * (1 + monthlyTargetRate) + contributionPaise;
     niftyTarget.push({ move, value: projected });
   }
   const player = [
-    { move: 0, value: 0 },
+    { move: 0, value: startingValue },
     ...series.map((point) => ({
-      move: point.move,
+      move: point.month || point.move,
       value: point.portfolio_value_paise,
     })),
   ];
@@ -102,9 +107,11 @@ export function MobileGameBoard({
   reviewMove,
   returnLive,
 }: Props) {
+  const [blitzRevealed, setBlitzRevealed] = useState(false);
   const historical = Boolean(reviewData);
   const draft = buildDraftPortfolio(campaign, market, trades);
-  const preCommit = !historical && !result && trades.length > 0;
+  const rapidHold = !historical && !result && campaign.mode === "RAPID" && campaign.current_move > 1 && trades.length === 0;
+  const preCommit = !historical && !result && (trades.length > 0 || rapidHold);
   const displayed = preCommit
     ? null
     : reviewData?.result || result || campaign.last_result;
@@ -134,15 +141,20 @@ export function MobileGameBoard({
   const final = !historical
     ? displayed?.final_result || campaign.final_result
     : null;
-  const ready =
-    preCommit && draft.cashAfterPaise >= 0 && draft.deploymentPct >= 90;
+  const activeBlitzRun = Boolean(!historical && result?.mode === "BLITZ" && result.segment_series?.length && !blitzRevealed);
+  useEffect(() => setBlitzRevealed(false), [result?.move]);
+  const ready = preCommit && draft.cashAfterPaise >= 0 && (
+    campaign.mode === "CLASSIC"
+      ? draft.deploymentPct >= 90
+      : rapidHold || draft.buyTotalPaise >= 10_000_000 || campaign.current_move > 1
+  );
   return (
     <section className="mobile-game-page">
       <header className="mobile-game-hero">
         <small>
           {historical
             ? `REVIEWING MOVE ${selectedMove}`
-            : `RATED CAMPAIGN · MOVE ${campaign.current_move}/${campaign.horizon_months}`}
+            : `RATED CAMPAIGN · ${campaign.mode || "CLASSIC"} · DECISION ${campaign.current_move}/${campaign.total_decisions || campaign.horizon_months}`}
         </small>
         <h1>
           {final
@@ -190,7 +202,9 @@ export function MobileGameBoard({
           <button onClick={returnLive}>RETURN LIVE</button>
         </div>
       )}
-      {final && (
+      <RapidClock campaign={campaign} onExpire={execute} disabled={busy || historical || Boolean(result)} />
+      {activeBlitzRun && result && <BlitzRun result={result} onComplete={() => setBlitzRevealed(true)} />}
+      {final && !activeBlitzRun && (
         <section className="mobile-final-card">
           <span>CAMPAIGN COMPLETE</span>
           <h2>
@@ -204,11 +218,11 @@ export function MobileGameBoard({
           <div>
             <b>
               {signed(final.portfolio_money_weighted_annual_return_pct)}
-              <small>PLAYER XIRR</small>
+              <small>PLAYER {final.return_label || "SIP XIRR"}</small>
             </b>
             <b>
               {signed(final.benchmark_money_weighted_annual_return_pct)}
-              <small>NIFTY XIRR</small>
+              <small>NIFTY {final.return_label || "SIP XIRR"}</small>
             </b>
             <b>
               {final.rating}
@@ -225,11 +239,11 @@ export function MobileGameBoard({
             <b>{money(summary.total_invested_paise, true)}</b>
           </span>
           <span>
-            <small>PLAYER XIRR</small>
+            <small>PLAYER {campaign.return_label || "SIP XIRR"}</small>
             <b>{signed(summary.portfolio_xirr_pct)}</b>
           </span>
           <span>
-            <small>NIFTY XIRR</small>
+            <small>NIFTY {campaign.return_label || "SIP XIRR"}</small>
             <b>{signed(summary.benchmark_xirr_pct)}</b>
           </span>
           <span>
@@ -271,8 +285,7 @@ export function MobileGameBoard({
         ))}
         {!execution.length && (
           <p className="mobile-board-empty">
-            Return to Market, research the decision universe and construct a
-            complete portfolio move.
+            {rapidHold ? "Hold the current portfolio and advance the simulation one year." : "Return to Market, research the decision universe and construct a complete portfolio move."}
           </p>
         )}
         {preCommit && (
@@ -299,8 +312,8 @@ export function MobileGameBoard({
               {busy
                 ? "EVALUATING…"
                 : !ready
-                  ? "ADJUST MOVE TO PASS THE 90% GATE"
-                  : "EXECUTE PERMANENT MOVE →"}
+                  ? campaign.mode === "CLASSIC" ? "ADJUST MOVE TO PASS THE 90% GATE" : "DEPLOY AT LEAST ₹1 LAKH"
+                  : rapidHold ? "RECORD HOLD · ADVANCE ONE YEAR →" : campaign.mode === "BLITZ" ? "RUN FULL CAMPAIGN →" : "EXECUTE PERMANENT MOVE →"}
             </button>
           </>
         )}

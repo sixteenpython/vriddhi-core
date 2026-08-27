@@ -52,7 +52,7 @@ def test_health_content_and_auth_boundary(tmp_path):
     app, _, auth = setup(tmp_path)
     status, health = request(app, "GET", "/api/v1/health")
     assert status == 200
-    assert health["data"]["release"] == "0.11.0"
+    assert health["data"]["release"] == "0.12.0"
     assert health["data"]["storage"] == {
         "backend": "json",
         "durable": False,
@@ -158,3 +158,33 @@ def test_explicit_validation_errors(tmp_path):
                           {"monthly_amount_rupees": 10_000, "horizon_months": 12}, auth)
     assert bad_horizon[0] == 422
     assert bad_horizon[1]["error"]["code"] == "GAME_RULE_VIOLATION"
+
+
+def test_multi_mode_campaign_and_unified_profile(tmp_path):
+    app, _, auth = setup(tmp_path)
+    status, created = request(
+        app,
+        "POST",
+        "/api/v1/campaigns",
+        {"mode": "BLITZ", "total_capital_rupees": 1_000_000, "horizon_months": 24},
+        auth,
+    )
+    assert status == 201
+    campaign = created["data"]
+    assert campaign["mode"] == "BLITZ"
+    assert campaign["total_decisions"] == 1
+    market = campaign["initial_market"]
+    stock = min(market["stocks"], key=lambda item: item["close_paise"])
+    shares = (10_000_000 + stock["close_paise"] - 1) // stock["close_paise"]
+    move = {
+        "expected_month": 0,
+        "instructions": [{"side": "BUY", "ticker": stock["ticker"], "shares": shares}],
+    }
+    headers = {**auth, "idempotency-key": "blitz-001"}
+    committed = request(app, "POST", f"/api/v1/campaigns/{campaign['campaign_id']}/moves", move, headers)
+    assert committed[0] == 201
+    assert committed[1]["data"]["result"]["months_advanced"] == 24
+    status, profile = request(app, "GET", "/api/v1/profile", headers=auth)
+    assert status == 200
+    assert profile["data"]["completed"] == 1
+    assert profile["data"]["by_mode"]["BLITZ"]["completed"] == 1

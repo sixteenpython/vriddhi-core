@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type {
   Campaign,
   FinalResult,
@@ -9,6 +10,8 @@ import type {
   Trade,
 } from "./api";
 import { buildDraftPortfolio } from "./portfolioDraft";
+import { RapidClock } from "./RapidClock";
+import { BlitzRun } from "./BlitzRun";
 
 const rupees = (paise: number, compact = false) => {
   const value = paise / 100;
@@ -56,7 +59,7 @@ function ChaseChart({
 }) {
   const portfolio = series.map((point) => point.portfolio_value_paise);
   const nifty = series.map((point) => point.benchmark_value_paise);
-  const moves = series.map((point) => point.move);
+  const moves = series.map((point) => point.month || point.move);
   const latest = series.at(-1);
   const targetMoves = [...moves];
   const target = [...nifty];
@@ -65,7 +68,7 @@ function ChaseChart({
       Math.pow(1 + latest.benchmark_projected_annual_return_pct / 100, 1 / 12) -
       1;
     let projected = latest.benchmark_value_paise;
-    for (let move = latest.move + 1; move <= horizon; move += 1) {
+    for (let move = (latest.month || latest.move) + 1; move <= horizon; move += 1) {
       projected = projected * (1 + monthlyRate) + monthlyAmountRupees * 100;
       targetMoves.push(move);
       target.push(projected);
@@ -77,7 +80,7 @@ function ChaseChart({
   const y = (value: number) =>
     232 - ((value - minimum) / (maximum - minimum || 1)) * 214;
   const gap = latest?.wealth_gap_paise || 0;
-  const remaining = Math.max(0, horizon - (latest?.move || 0));
+  const remaining = Math.max(0, horizon - (latest ? latest.month || latest.move : 0));
   const catchUp =
     gap < 0 && remaining ? Math.ceil(Math.abs(gap) / remaining) : 0;
   return (
@@ -152,13 +155,13 @@ function ChaseChart({
               className="chase-player"
             />
             {series.map((point, index) => {
-              const x = (point.move / horizon) * 720;
+              const x = ((point.month || point.move) / horizon) * 720;
               const playerY = y(portfolio[index]);
               const niftyY = y(nifty[index]);
               const showLabel =
-                index === series.length - 1 || point.move % 6 === 0;
+                index === series.length - 1 || (point.month || point.move) % 12 === 0;
               return (
-                <g key={point.move}>
+                <g key={`${point.move}-${point.month || point.move}`}>
                   <circle
                     cx={x}
                     cy={niftyY}
@@ -173,7 +176,7 @@ function ChaseChart({
                   />
                   {showLabel && (
                     <text x={x} y="246" textAnchor="middle">
-                      M{point.move}
+                      M{point.month || point.move}
                     </text>
                   )}
                 </g>
@@ -247,7 +250,7 @@ function EvaluationBar({ result }: { result: MoveResult | null }) {
   );
 }
 
-function MatchScoreboard({ summary }: { summary: MatchSummary }) {
+function MatchScoreboard({ summary, returnLabel = "SIP XIRR" }: { summary: MatchSummary; returnLabel?: string }) {
   const forming = summary.move < 3;
   const gapTone = summary.wealth_gap_paise >= 0 ? "positive" : "negative";
   return (
@@ -261,8 +264,8 @@ function MatchScoreboard({ summary }: { summary: MatchSummary }) {
         <div><span>PLAYER PORTFOLIO</span><b>{rupees(summary.portfolio_value_paise, true)}</b></div>
         <div><span>NIFTY PORTFOLIO</span><b>{rupees(summary.benchmark_value_paise, true)}</b></div>
         <div><span>WEALTH {summary.wealth_gap_paise >= 0 ? "LEAD" : "GAP"}</span><b className={gapTone}>{rupees(Math.abs(summary.wealth_gap_paise), true)}</b></div>
-        <div><span>PLAYER SIP XIRR</span><b>{forming ? "FORMING" : signed(summary.portfolio_xirr_pct)}</b></div>
-        <div><span>NIFTY SIP XIRR</span><b>{forming ? "FORMING" : signed(summary.benchmark_xirr_pct)}</b></div>
+        <div><span>PLAYER {returnLabel}</span><b>{forming ? "FORMING" : signed(summary.portfolio_xirr_pct)}</b></div>
+        <div><span>NIFTY {returnLabel}</span><b>{forming ? "FORMING" : signed(summary.benchmark_xirr_pct)}</b></div>
         <div><span>MAX DRAWDOWN</span><b className="negative">-{summary.max_drawdown_pct.toFixed(2)}%</b></div>
         <div><span>AVG MOVE QUALITY</span><b>{summary.average_move_score.toFixed(1)} / 100</b></div>
         <div><span>BTI RATING</span><b className="gold">{summary.rating}</b></div>
@@ -278,15 +281,15 @@ function Endgame({ campaign, final }: { campaign: Campaign; final: FinalResult }
     const report = [
       `BTI CAMPAIGN ${campaign.campaign_id}`,
       final.headline,
-      `${final.months_completed}-move rated simulated campaign`,
+      `${campaign.mode || "CLASSIC"} · ${final.months_completed}-month rated simulated campaign`,
       "",
       `Total invested: ${rupees(final.total_invested_paise)}`,
       `Final player portfolio: ${rupees(final.portfolio_value_paise)}`,
       `Nifty equivalent: ${rupees(final.benchmark_value_paise)}`,
       `Wealth lead: ${rupees(final.wealth_alpha_paise)}`,
-      `Player SIP XIRR: ${signed(final.portfolio_money_weighted_annual_return_pct)}`,
-      `Nifty SIP XIRR: ${signed(final.benchmark_money_weighted_annual_return_pct)}`,
-      `XIRR advantage: ${signed(final.xirr_advantage_pct)}`,
+      `Player ${final.return_label || "SIP XIRR"}: ${signed(final.portfolio_money_weighted_annual_return_pct)}`,
+      `Nifty ${final.return_label || "SIP XIRR"}: ${signed(final.benchmark_money_weighted_annual_return_pct)}`,
+      `${final.return_label || "Return"} advantage: ${signed(final.xirr_advantage_pct)}`,
       `Max drawdown: -${final.max_drawdown_pct.toFixed(2)}%`,
       `Average move quality: ${final.average_move_score.toFixed(1)} / 100`,
       `Final BTI rating: ${final.rating}`,
@@ -305,7 +308,7 @@ function Endgame({ campaign, final }: { campaign: Campaign; final: FinalResult }
   };
   return (
     <section className={`terminal-panel endgame-card ${won ? "won" : draw ? "draw" : "lost"}`}>
-      <div className="endgame-kicker">RATED CAMPAIGN COMPLETE · {final.months_completed}/{final.months_completed} MOVES</div>
+      <div className="endgame-kicker">{campaign.mode || "CLASSIC"} CAMPAIGN COMPLETE · {final.months_completed} MONTHS SIMULATED</div>
       <h1>{final.headline}</h1>
       <p className="endgame-deck">
         {won
@@ -315,13 +318,13 @@ function Endgame({ campaign, final }: { campaign: Campaign; final: FinalResult }
             : `The simulated Nifty portfolio finished ${rupees(Math.abs(final.wealth_alpha_paise), true)} ahead.`}
       </p>
       <div className="endgame-scoreline">
-        <div><span>PLAYER</span><b>{rupees(final.portfolio_value_paise, true)}</b><small>{signed(final.portfolio_money_weighted_annual_return_pct)} SIP XIRR</small></div>
+        <div><span>PLAYER</span><b>{rupees(final.portfolio_value_paise, true)}</b><small>{signed(final.portfolio_money_weighted_annual_return_pct)} {final.return_label || "SIP XIRR"}</small></div>
         <strong>VS</strong>
-        <div><span>NIFTY</span><b>{rupees(final.benchmark_value_paise, true)}</b><small>{signed(final.benchmark_money_weighted_annual_return_pct)} SIP XIRR</small></div>
+        <div><span>NIFTY</span><b>{rupees(final.benchmark_value_paise, true)}</b><small>{signed(final.benchmark_money_weighted_annual_return_pct)} {final.return_label || "SIP XIRR"}</small></div>
       </div>
       <div className="endgame-grid">
         <div><span>TOTAL INVESTED</span><b>{rupees(final.total_invested_paise, true)}</b></div>
-        <div><span>XIRR ADVANTAGE</span><b className={final.xirr_advantage_pct >= 0 ? "positive" : "negative"}>{signed(final.xirr_advantage_pct)}</b></div>
+        <div><span>{final.return_label || "RETURN"} ADVANTAGE</span><b className={final.xirr_advantage_pct >= 0 ? "positive" : "negative"}>{signed(final.xirr_advantage_pct)}</b></div>
         <div><span>MAX DRAWDOWN</span><b className="negative">-{final.max_drawdown_pct.toFixed(2)}%</b></div>
         <div><span>MOVE QUALITY</span><b>{final.average_move_score.toFixed(1)} / 100</b></div>
         <div><span>FINAL RATING</span><b className="gold">{final.rating}</b></div>
@@ -367,16 +370,21 @@ export function GameBoard({
   reviewMove,
   returnLive,
 }: Props) {
+  const [blitzRevealed, setBlitzRevealed] = useState(false);
   const historical = Boolean(reviewData);
   const displayedSeries =
     reviewData?.performance_series || campaign.performance_series;
   const draft = buildDraftPortfolio(campaign, market, trades);
-  const preCommit = !historical && !result && trades.length > 0;
+  const rapidHold = !historical && !result && campaign.mode === "RAPID" && campaign.current_move > 1 && trades.length === 0;
+  const preCommit = !historical && !result && (trades.length > 0 || rapidHold);
   const displayedResult = preCommit
     ? null
     : reviewData?.result || result || campaign.last_result;
-  const readyToExecute =
-    preCommit && draft.cashAfterPaise >= 0 && draft.deploymentPct >= 90;
+  const readyToExecute = preCommit && draft.cashAfterPaise >= 0 && (
+    campaign.mode === "CLASSIC"
+      ? draft.deploymentPct >= 90
+      : rapidHold || draft.buyTotalPaise >= 10_000_000 || campaign.current_move > 1
+  );
   const execution = preCommit
     ? [
         ...trades.filter((trade) => trade.side === "SELL"),
@@ -404,6 +412,8 @@ export function GameBoard({
   const canNextHistory = historical && selectedMove < campaign.moves_completed;
   const summary = reviewData?.match_summary || displayedResult?.match_summary || campaign.match_summary;
   const final = !historical ? displayedResult?.final_result || campaign.final_result : null;
+  const activeBlitzRun = Boolean(!historical && result?.mode === "BLITZ" && result.segment_series?.length && !blitzRevealed);
+  useEffect(() => setBlitzRevealed(false), [result?.move]);
   return (
     <section className="terminal-page game-board-page">
       <div className="terminal-commandbar game-board-command">
@@ -443,7 +453,9 @@ export function GameBoard({
           REVIEW MODE · HISTORY IS IMMUTABLE · THE LIVE DRAFT IS PRESERVED
         </div>
       )}
-      {final && <Endgame campaign={campaign} final={final} />}
+      <RapidClock campaign={campaign} onExpire={execute} disabled={busy || historical || Boolean(result)} />
+      {activeBlitzRun && result && <BlitzRun result={result} onComplete={() => setBlitzRevealed(true)} />}
+      {final && !activeBlitzRun && <Endgame campaign={campaign} final={final} />}
       <div className="game-board-grid">
         <main>
           <section className="terminal-panel execution-board">
@@ -490,8 +502,7 @@ export function GameBoard({
             })}
             {!execution.length && (
               <div className="board-empty">
-                Build a complete move in Market Monitor before entering the Game
-                Board.
+                {rapidHold ? "HOLD every current position and advance the simulation one year." : "Build a complete move in Market Monitor before entering the Game Board."}
               </div>
             )}
             {preCommit && (
@@ -514,9 +525,9 @@ export function GameBoard({
                     ? "EVALUATING…"
                     : draft.cashAfterPaise < 0
                       ? "ADJUST MOVE · CASH OVERDRAWN"
-                      : draft.deploymentPct < 90
+                    : campaign.mode === "CLASSIC" && draft.deploymentPct < 90
                         ? `ADJUST MOVE · DEPLOYMENT ${draft.deploymentPct.toFixed(1)}%`
-                        : "EXECUTE PERMANENT MOVE →"}
+                        : rapidHold ? "RECORD HOLD · ADVANCE ONE YEAR →" : campaign.mode === "BLITZ" ? "RUN FULL CAMPAIGN →" : "EXECUTE PERMANENT MOVE →"}
                 </button>
               </div>
             )}
@@ -526,7 +537,7 @@ export function GameBoard({
             horizon={campaign.horizon_months}
             monthlyAmountRupees={campaign.monthly_amount_rupees}
           />
-          {summary.move > 0 && <MatchScoreboard summary={summary} />}
+          {summary.move > 0 && <MatchScoreboard summary={summary} returnLabel={campaign.return_label} />}
         </main>
         <aside className="game-board-side">
           <EvaluationBar result={displayedResult || null} />

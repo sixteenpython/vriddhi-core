@@ -46,7 +46,7 @@ def create_app(save_dir: str | Path | None = None,
 
     async def health(_: Request) -> Response:
         return _ok({"status": "ok", "service": "bti-immersive-api",
-                    "release": "0.11.0", "storage": service.storage_status()})
+                    "release": "0.12.0", "storage": service.storage_status()})
 
     async def session(_: Request) -> Response:
         return _ok(service.new_session(), 201)
@@ -56,6 +56,9 @@ def create_app(save_dir: str | Path | None = None,
 
     async def list_campaigns(request: Request) -> Response:
         return _ok(service.campaigns(owner(request)))
+
+    async def profile(request: Request) -> Response:
+        return _ok(service.profile(owner(request)))
 
     async def create_campaign(request: Request) -> Response:
         return _ok(service.create_campaign(owner(request), await _json(request)), 201)
@@ -106,6 +109,7 @@ def create_app(save_dir: str | Path | None = None,
         Route("/api/v1/health", health, methods=["GET"]),
         Route("/api/v1/showcase/session", session, methods=["POST"]),
         Route("/api/v1/campaigns", list_campaigns, methods=["GET"]),
+        Route("/api/v1/profile", profile, methods=["GET"]),
         Route("/api/v1/campaigns", create_campaign, methods=["POST"]),
         Route("/api/v1/campaigns/{campaign_id:str}", campaign, methods=["GET"]),
         Route("/api/v1/campaigns/{campaign_id:str}/market", market, methods=["GET"]),

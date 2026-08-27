@@ -407,6 +407,7 @@ export function MarketTerminal({
       if (filter === "LOW RISK")
         return stock.volatility_pct <= analytics.meanVolatility;
       if (filter === "HELD") return Boolean(campaign.holdings[stock.ticker]);
+      if (filter === "ASSETS") return (stock.asset_class || "EQUITY") !== "EQUITY";
       return true;
     })
     .filter(
@@ -629,7 +630,7 @@ export function MarketTerminal({
               />
             </div>
             <div className="terminal-filters">
-              {["ALL", "VALUE", "QUALITY", "LOW RISK", "HELD"].map((item) => (
+              {["ALL", "VALUE", "QUALITY", "LOW RISK", "ASSETS", "HELD"].map((item) => (
                 <button
                   key={item}
                   className={filter === item ? "active" : ""}
@@ -817,7 +818,7 @@ export function MarketTerminal({
                       <span>
                         <b>{stock.ticker}</b>
                         <small>
-                          {stock.sector}
+                          {stock.asset_class && stock.asset_class !== "EQUITY" ? stock.asset_class : stock.sector}
                           {held ? ` · HELD ${held}` : " · NOT HELD"}
                         </small>
                       </span>
@@ -894,14 +895,14 @@ export function MarketTerminal({
                       values={stock.history_paise}
                       tone={move >= 0 ? "green" : "red"}
                     />
-                    <span>{stock.pe.toFixed(1)}</span>
-                    <span>{stock.pb.toFixed(1)}</span>
+                    <span>{stock.asset_class && stock.asset_class !== "EQUITY" ? "—" : stock.pe.toFixed(1)}</span>
+                    <span>{stock.asset_class && stock.asset_class !== "EQUITY" ? "—" : stock.pb.toFixed(1)}</span>
                     <span
                       className={
                         stock.peg > 0 && stock.peg <= 1 ? "positive" : ""
                       }
                     >
-                      {stock.peg.toFixed(2)}
+                      {stock.asset_class && stock.asset_class !== "EQUITY" ? (stock.yield_pct ? `${stock.yield_pct.toFixed(1)}% YLD` : "—") : stock.peg.toFixed(2)}
                     </span>
                     <span>{stock.sharpe.toFixed(2)}</span>
                     <span>{stock.volatility_pct.toFixed(1)}%</span>

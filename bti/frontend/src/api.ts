@@ -3,8 +3,15 @@ import { playableCash } from "./economics";
 export type Campaign = {
   campaign_id: string;
   status: string;
+  mode: "CLASSIC" | "RAPID" | "BLITZ";
+  capital_model: "MONTHLY_SIP" | "LUMP_SUM";
   horizon_months: number;
   monthly_amount_rupees: number;
+  total_capital_rupees: number;
+  decision_interval_months: number | null;
+  total_decisions: number;
+  months_completed: number;
+  return_label: "SIP XIRR" | "CAGR";
   current_move: number;
   moves_completed: number;
   holdings: Record<string, number>;
@@ -45,6 +52,8 @@ export type MatchSummary = {
   position: "LEADING" | "TRAILING" | "LEVEL";
 };
 export type FinalResult = {
+  mode: "CLASSIC" | "RAPID" | "BLITZ";
+  return_label: "SIP XIRR" | "CAGR";
   status: string;
   verdict: "BEAT_INDEX" | "INDEX_WON" | "PHOTO_FINISH";
   headline: string;
@@ -114,6 +123,7 @@ export type MoveHistory = {
 };
 export type PerformancePoint = {
   move: number;
+  month?: number;
   total_invested_paise: number;
   portfolio_value_paise: number;
   benchmark_value_paise: number;
@@ -127,7 +137,12 @@ export type PerformancePoint = {
 };
 export type Stock = {
   ticker: string;
+  name?: string;
   sector: string;
+  asset_class?: "EQUITY" | "GOVERNMENT BOND" | "CORPORATE BOND" | "GOLD";
+  yield_pct?: number;
+  duration_years?: number;
+  credit_quality?: string;
   overall_rank: number;
   historical_cagr_pct: number;
   open_paise: number;
@@ -176,6 +191,14 @@ export type Market = {
 };
 export type Trade = { side: "BUY" | "SELL"; ticker: string; shares: number };
 export type MoveResult = {
+  mode: "CLASSIC" | "RAPID" | "BLITZ";
+  months_advanced: number;
+  segment_series: Array<{
+    month: number;
+    portfolio_value_paise: number;
+    benchmark_value_paise: number;
+    regime: MarketRegime;
+  }>;
   score: number;
   classification: string;
   move: number;
@@ -197,6 +220,9 @@ export type MoveResult = {
   progress: {
     move: number;
     total: number;
+    month?: number;
+    horizon_months?: number;
+    return_label?: "SIP XIRR" | "CAGR";
     portfolio_value_paise: number;
     benchmark_value_paise: number;
     total_invested_paise: number;
@@ -229,6 +255,26 @@ export type MoveReview = {
   performance_series: PerformancePoint[];
   move_history: MoveHistory[];
   match_summary: MatchSummary;
+};
+export type PlayerProfile = {
+  rating: number;
+  completed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  beat_index_pct: number;
+  best_alpha_pct: number;
+  current_streak: number;
+  by_mode: Record<
+    "CLASSIC" | "RAPID" | "BLITZ",
+    { completed: number; wins: number; losses: number; draws: number }
+  >;
+};
+export type CampaignConfig = {
+  mode: "CLASSIC" | "RAPID" | "BLITZ";
+  horizon_months: number;
+  monthly_amount_rupees?: number;
+  total_capital_rupees?: number;
 };
 
 const TOKEN = "bti_access_token";
@@ -316,7 +362,7 @@ const withCurrentContribution = (campaign: Campaign): Campaign => ({
   cash_paise: playableCash(
     campaign.cash_paise,
     campaign.monthly_amount_rupees,
-    campaign.status === "ACTIVE",
+    campaign.status === "ACTIVE" && (campaign.mode || "CLASSIC") === "CLASSIC",
   ),
 });
 export const api = {
@@ -324,13 +370,14 @@ export const api = {
     (await request<Campaign[]>("/api/v1/campaigns")).map(
       withCurrentContribution,
     ),
-  create: async (monthly_amount_rupees: number, horizon_months: number) =>
+  create: async (config: CampaignConfig) =>
     withCurrentContribution(
       await request<Campaign>("/api/v1/campaigns", {
         method: "POST",
-        body: JSON.stringify({ monthly_amount_rupees, horizon_months }),
+        body: JSON.stringify(config),
       }),
     ),
+  profile: () => request<PlayerProfile>("/api/v1/profile"),
   market: (id: string) => request<Market>(`/api/v1/campaigns/${id}/market`),
   reviewMove: (id: string, move: number) =>
     request<MoveReview>(`/api/v1/campaigns/${id}/history/${move}`),

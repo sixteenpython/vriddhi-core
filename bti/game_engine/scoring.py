@@ -36,7 +36,19 @@ def portfolio_quality(holdings: dict[str, int], market: dict[str, Any]) -> dict[
     for ticker, weight in allocation.items():
         sectors[market[ticker]["sector"]] += weight
     sector_concentration = sum(w * w for w in sectors.values())
-    valuation = sum(w * min(3.0, 1 / max(0.15, market[t]["peg"])) for t, w in allocation.items())
+    valuation = sum(
+        w
+        * (
+            min(3.0, 1 / max(0.15, market[t]["peg"]))
+            if market[t].get("asset_class", "EQUITY") == "EQUITY"
+            else 1.0
+        )
+        for t, w in allocation.items()
+    )
+    asset_classes = {
+        market[ticker].get("asset_class", "EQUITY") for ticker in allocation
+    }
+    cross_asset_bonus = min(5.0, max(0, len(asset_classes) - 1) * 1.75)
     # Utility recognises many economically equivalent portfolios; it does not score weight imitation.
     utility = (
         forecast * 2.25
@@ -44,6 +56,7 @@ def portfolio_quality(holdings: dict[str, int], market: dict[str, Any]) -> dict[
         - risk * 0.38
         - concentration * 30.0
         - sector_concentration * 12.0
+        + cross_asset_bonus
     )
     return {
         "utility": utility,
@@ -176,6 +189,13 @@ def evaluate(
         improvements.append(
             "A less volatile mix offered similar growth with a smoother expected ride."
         )
+    asset_classes = {
+        market[ticker].get("asset_class", "EQUITY")
+        for ticker in player
+        if player[ticker] and ticker in market
+    }
+    if len(asset_classes) > 1:
+        positives.append("You used more than one economic return driver instead of relying only on equities.")
     headline = {
         "BRILLIANT": "You found a portfolio within the strongest feasible decision band.",
         "EXCELLENT": "You captured nearly all of the available risk-adjusted opportunity.",

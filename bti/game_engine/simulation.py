@@ -7,7 +7,43 @@ import math
 import random
 from typing import Any
 
-SIMULATION_VERSION = "bti-calibrated-synthetic-2026-08-v4"
+SIMULATION_VERSION = "bti-capital-market-2026-08-v5"
+
+CAPITAL_MARKET_ASSETS = {
+    "GILT10Y": {
+        "name": "India 10Y Government Bond",
+        "asset_class": "GOVERNMENT BOND",
+        "sector": "Fixed Income",
+        "price_rupees": 1_000,
+        "forecast_pct": 6.8,
+        "volatility_pct": 5.2,
+        "yield_pct": 7.0,
+        "duration_years": 6.4,
+        "credit_quality": "SOVEREIGN",
+    },
+    "CORPBOND": {
+        "name": "India Investment Grade Corporate Bond",
+        "asset_class": "CORPORATE BOND",
+        "sector": "Fixed Income",
+        "price_rupees": 1_000,
+        "forecast_pct": 8.1,
+        "volatility_pct": 7.1,
+        "yield_pct": 8.4,
+        "duration_years": 4.2,
+        "credit_quality": "AA+",
+    },
+    "GOLD": {
+        "name": "Gold (INR simulated unit)",
+        "asset_class": "GOLD",
+        "sector": "Real Assets",
+        "price_rupees": 10_000,
+        "forecast_pct": 8.8,
+        "volatility_pct": 15.8,
+        "yield_pct": 0.0,
+        "duration_years": 0.0,
+        "credit_quality": "NONE",
+    },
+}
 
 REGIMES = (
     ("SELECTIVE GROWTH", "Growth remains available, but valuation discipline separates leaders.", 0.10, 0.95),
@@ -40,6 +76,10 @@ def build_regime_schedule(seed: str, horizon: int) -> list[dict[str, Any]]:
                 "difficulty": difficulty,
                 "market_bias": bias,
                 "volatility_multiplier": round(volatility * difficulty, 3),
+                "inflation_pressure": round(rng.uniform(-1.0, 1.0), 3),
+                "rate_pressure": round(rng.uniform(-1.0, 1.0), 3),
+                "risk_appetite": round(max(-1.0, min(1.0, bias * 2.2 + rng.uniform(-0.45, 0.45))), 3),
+                "liquidity_pressure": round(rng.uniform(-1.0, 1.0), 3),
             }
         )
     return schedule
@@ -145,6 +185,8 @@ def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str,
         fundamentals_rng = _rng("fundamentals", ticker, horizon)
         market[ticker] = {
             "ticker": ticker,
+            "name": ticker,
+            "asset_class": "EQUITY",
             "sector": stock["sector"],
             "overall_rank": int(stock["Overall_Rank"]),
             "historical_cagr_pct": float(stock["Avg_Historical_CAGR"]),
@@ -186,6 +228,64 @@ def initial_market(stocks: dict[str, dict[str, Any]], horizon: int) -> dict[str,
                 }
                 for months in (12, 24, 36, 48, 60)
             ],
+            "yield_pct": round(fundamentals_rng.uniform(0.2, 5.8), 2),
+            "duration_years": 0.0,
+            "credit_quality": "EQUITY",
+        }
+    for rank, (ticker, definition) in enumerate(CAPITAL_MARKET_ASSETS.items(), start=1):
+        price = int(definition["price_rupees"] * 100)
+        vol = float(definition["volatility_pct"])
+        lookback = _simulated_lookback(ticker, price, vol / 100, horizon)
+        closes = [item["close_paise"] for item in lookback]
+        peak = max(closes)
+        drawdown = max((peak - close) / peak * 100 for close in closes)
+        forecast = float(definition["forecast_pct"])
+        market[ticker] = {
+            "ticker": ticker,
+            "name": definition["name"],
+            "asset_class": definition["asset_class"],
+            "sector": definition["sector"],
+            "overall_rank": 50 + rank,
+            "historical_cagr_pct": forecast,
+            "price_paise": price,
+            "open_paise": price,
+            "high_paise": price,
+            "low_paise": price,
+            "close_paise": price,
+            "pe": 0.0,
+            "pb": 0.0,
+            "peg": 0.0,
+            "forecast_pct": forecast,
+            "volatility_pct": vol,
+            "sharpe": round((forecast - 6.0) / max(vol, 1.0), 2),
+            "drawdown_pct": round(drawdown, 2),
+            "var_95_pct": round(1.645 * vol / math.sqrt(12), 2),
+            "expected_shortfall_95_pct": round(2.063 * vol / math.sqrt(12), 2),
+            "peak_paise": price,
+            "returns": [],
+            "history_paise": closes,
+            "ohlc_history": lookback,
+            "volume_index": 100.0,
+            "sentiment_score": 50.0,
+            "momentum_90d_pct": round((closes[-1] / closes[-63] - 1) * 100, 2),
+            "rsi_14": round(_rsi(closes), 2),
+            "beta": 0.15 if ticker == "GILT10Y" else 0.35 if ticker == "CORPBOND" else 0.25,
+            "roe_pct": 0.0,
+            "earnings_growth_pct": 0.0,
+            "profit_margin_pct": 0.0,
+            "debt_to_equity": 0.0,
+            "dividend_yield_pct": float(definition["yield_pct"]),
+            "yield_pct": float(definition["yield_pct"]),
+            "duration_years": float(definition["duration_years"]),
+            "credit_quality": definition["credit_quality"],
+            "forecast_curve": [
+                {
+                    "months": months,
+                    "annualized_pct": forecast,
+                    "cumulative_pct": ((1 + forecast / 100) ** (months / 12) - 1) * 100,
+                }
+                for months in (12, 24, 36, 48, 60)
+            ],
         }
     return market
 
@@ -211,29 +311,38 @@ def advance_market(
     stock_returns: list[float] = []
     for ticker, previous in market.items():
         item = dict(previous)
-        drift = max(-0.08, min(0.28, previous["forecast_pct"] / 100))
         annual_vol = previous["volatility_pct"] / 100
-        shock = (
-            0.58 * common
-            + 0.25 * sectors[previous["sector"]]
-            + 0.57 * _rng(seed, "stock", ticker, month).gauss(0, 1)
-        )
         recent_return = previous.get("returns", [0.0])[-1] if previous.get("returns") else 0.0
-        # Crowded monthly winners and losers are deliberately allowed to mean-revert.
-        # This keeps the visible momentum/news boards educationally tempting without
-        # turning yesterday's headline into a deterministic shortcut to tomorrow's alpha.
-        reversal_strength = 0.28 if abs(recent_return) >= 0.04 else 0.08
-        attention_reversal = -reversal_strength * recent_return
-        ret = max(
-            -0.24,
-            min(
-                0.24,
-                drift / 12
-                + annual_vol / math.sqrt(12) * shock
-                + attention_reversal,
-            ),
-        )
-        stock_returns.append(ret)
+        asset_class = previous.get("asset_class", "EQUITY")
+        idiosyncratic = _rng(seed, "stock", ticker, month).gauss(0, 1)
+        if asset_class == "EQUITY":
+            drift = max(-0.08, min(0.28, previous["forecast_pct"] / 100))
+            shock = 0.58 * common + 0.25 * sectors[previous["sector"]] + 0.57 * idiosyncratic
+            # Crowded monthly winners and losers are deliberately allowed to mean-revert.
+            reversal_strength = 0.28 if abs(recent_return) >= 0.04 else 0.08
+            ret = max(
+                -0.24,
+                min(0.24, drift / 12 + annual_vol / math.sqrt(12) * shock - reversal_strength * recent_return),
+            )
+            stock_returns.append(ret)
+        else:
+            rates = float(regime.get("rate_pressure", 0.0))
+            inflation = float(regime.get("inflation_pressure", 0.0))
+            appetite = float(regime.get("risk_appetite", 0.0))
+            liquidity = float(regime.get("liquidity_pressure", 0.0))
+            if asset_class == "GOVERNMENT BOND":
+                ret = previous.get("yield_pct", 7.0) / 1200 - previous.get("duration_years", 6.0) * rates * 0.0015
+                ret += annual_vol / math.sqrt(12) * idiosyncratic * 0.34 - appetite * 0.002
+                ret = max(-0.055, min(0.055, ret))
+            elif asset_class == "CORPORATE BOND":
+                credit_stress = max(0.0, -appetite) * 0.004 + max(0.0, liquidity) * 0.002
+                ret = previous.get("yield_pct", 8.0) / 1200 - previous.get("duration_years", 4.0) * rates * 0.0011
+                ret += annual_vol / math.sqrt(12) * idiosyncratic * 0.42 - credit_stress
+                ret = max(-0.075, min(0.065, ret))
+            else:  # Gold in INR: macro hedge with no cash-flow anchor.
+                ret = 0.004 + inflation * 0.006 - rates * 0.004 - appetite * 0.003
+                ret += annual_vol / math.sqrt(12) * (0.35 * common + 0.65 * idiosyncratic)
+                ret = max(-0.14, min(0.14, ret))
         opening = previous["close_paise"]
         close = max(100, round(opening * (1 + ret)))
         intraday = abs(_rng(seed, "ohlc", ticker, month).gauss(0, annual_vol / math.sqrt(252)))
@@ -312,6 +421,27 @@ def advance_market(
                 ],
             }
         )
+        if asset_class != "EQUITY":
+            rate_shift = float(regime.get("rate_pressure", 0.0)) * 0.08
+            item.update(
+                {
+                    "pe": 0.0,
+                    "pb": 0.0,
+                    "peg": 0.0,
+                    "roe_pct": 0.0,
+                    "earnings_growth_pct": 0.0,
+                    "profit_margin_pct": 0.0,
+                    "debt_to_equity": 0.0,
+                    "yield_pct": max(
+                        0.0,
+                        previous.get("yield_pct", 0.0)
+                        + rate_shift
+                        + (max(0.0, -float(regime.get("risk_appetite", 0.0))) * 0.05 if asset_class == "CORPORATE BOND" else 0.0),
+                    ),
+                    "dividend_yield_pct": previous.get("yield_pct", 0.0),
+                    "forecast_pct": max(-8.0, min(22.0, previous["forecast_pct"] * 0.99 + ret * 24)),
+                }
+            )
         updated[ticker] = item
     # The simulated Nifty must participate in the same market as its constituents. A
     # mostly cross-sectional return proxy prevents the old fixed 8% drift from becoming
@@ -328,6 +458,8 @@ def advance_market(
 def public_market(market: dict[str, Any], month: int, data_through: str) -> dict[str, Any]:
     fields = {
         "ticker",
+        "name",
+        "asset_class",
         "sector",
         "overall_rank",
         "historical_cagr_pct",
@@ -357,6 +489,9 @@ def public_market(market: dict[str, Any], month: int, data_through: str) -> dict
         "profit_margin_pct",
         "debt_to_equity",
         "dividend_yield_pct",
+        "yield_pct",
+        "duration_years",
+        "credit_quality",
     }
     visible = [
         {k: round(v, 4) if isinstance(v, float) else v for k, v in item.items() if k in fields}
@@ -381,7 +516,8 @@ def public_market(market: dict[str, Any], month: int, data_through: str) -> dict
         item.setdefault("debt_to_equity", 0.65)
         item.setdefault("dividend_yield_pct", 1.8)
     advancing = sum(item["close_paise"] >= item["open_paise"] for item in visible)
-    value_watch = min(visible, key=lambda item: item["peg"])
+    equities = [item for item in visible if item.get("asset_class", "EQUITY") == "EQUITY"]
+    value_watch = min(equities, key=lambda item: item["peg"])
     risk_watch = max(visible, key=lambda item: item["expected_shortfall_95_pct"])
     return {
         "label": "SIMULATED MARKET",
