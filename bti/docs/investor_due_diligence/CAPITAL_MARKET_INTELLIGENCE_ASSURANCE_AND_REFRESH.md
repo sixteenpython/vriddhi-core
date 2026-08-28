@@ -1,5 +1,9 @@
 # BTI Capital Market Intelligence Engine
 
+> **Companion technical report:** [BTI Intelligence](./BTI_Intelligence.md) documents the exact
+> implemented simulation, scoring and fairness model, its limitations and independent-validation
+> gates.
+
 ## Realism, market anchoring, refresh governance and independent assurance
 
 **Document status:** Investor due-diligence design report

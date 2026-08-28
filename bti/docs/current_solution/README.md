@@ -5,6 +5,9 @@
 > mode contracts, Newswire, mobile boundary and verification gates.
 > See [Playtest 09](../playtesting/PLAYTEST_09_AUTOMATIC_VRIDDHI_BASELINE_AND_FREE_TIER_HANDOFF.md)
 > for the final automatic refresh, campaign-freeze, production verification and handoff contract.
+> Investor and independent-quant reviewers should begin with
+> [BTI Intelligence](../investor_due_diligence/BTI_Intelligence.md), the implemented market-engine,
+> scoring, fairness, limitations and validation report.
 
 - **Product:** Beat the Index (BTI)
 - **Baseline date:** 27 August 2026
