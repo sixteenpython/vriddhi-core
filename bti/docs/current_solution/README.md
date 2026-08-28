@@ -3,6 +3,8 @@
 > **Current release:** v0.16.0 — automatic, verified synchronisation to the latest promoted Vriddhi release.
 > See [Playtest 03](../playtesting/PLAYTEST_03_MULTI_MODE_CAPITAL_MARKET_RELEASE.md) for the current
 > mode contracts, Newswire, mobile boundary and verification gates.
+> See [Playtest 09](../playtesting/PLAYTEST_09_AUTOMATIC_VRIDDHI_BASELINE_AND_FREE_TIER_HANDOFF.md)
+> for the final automatic refresh, campaign-freeze, production verification and handoff contract.
 
 - **Product:** Beat the Index (BTI)
 - **Baseline date:** 27 August 2026
