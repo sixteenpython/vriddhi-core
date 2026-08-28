@@ -1,12 +1,12 @@
 # BTI current solution baseline
 
-> **Current release:** v0.15.0 — pre-live handover with clean launch, informed consent and final Rapid completion UX.
+> **Current release:** v0.15.1 — pre-live handover plus an unobstructed desktop market-run chart.
 > See [Playtest 03](../playtesting/PLAYTEST_03_MULTI_MODE_CAPITAL_MARKET_RELEASE.md) for the current
 > mode contracts, Newswire, mobile boundary and verification gates.
 
 - **Product:** Beat the Index (BTI)
 - **Baseline date:** 27 August 2026
-- **Release:** BTI Pre-Live Handover v0.15.0
+- **Release:** BTI Pre-Live Handover v0.15.1
 - **Live application:** <https://beat-the-index.onrender.com/>
 - **Status:** deployed investor-preview web/PWA release under active desktop and mobile playtesting
 
