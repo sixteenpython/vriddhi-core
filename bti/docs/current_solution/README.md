@@ -1,12 +1,12 @@
 # BTI current solution baseline
 
-> **Current release:** v0.14.2 — clean-launch investor preview over the release-candidate UX baseline.
+> **Current release:** v0.15.0 — pre-live handover with clean launch, informed consent and final Rapid completion UX.
 > See [Playtest 03](../playtesting/PLAYTEST_03_MULTI_MODE_CAPITAL_MARKET_RELEASE.md) for the current
 > mode contracts, Newswire, mobile boundary and verification gates.
 
 - **Product:** Beat the Index (BTI)
 - **Baseline date:** 27 August 2026
-- **Release:** BTI Release Candidate v0.14.2
+- **Release:** BTI Pre-Live Handover v0.15.0
 - **Live application:** <https://beat-the-index.onrender.com/>
 - **Status:** deployed investor-preview web/PWA release under active desktop and mobile playtesting
 
@@ -75,10 +75,17 @@ campaigns reopen on their immutable result rather than presenting a fictitious n
 player can download the match summary.
 
 The investor preview uses a new anonymous guest identity on every browser launch. Earlier campaign
-history is deliberately not restored in v0.14.2, keeping the launch path fast and giving each
+history is deliberately not restored in v0.15.0, keeping the launch path fast and giving each
 playtest a clean slate. Google identity, resume and cross-device account recovery remain deferred.
 
 The v0.11.0 phone client is now a dedicated scroll-first composition rather than a compressed
 desktop workstation. Its Market and Game surfaces were verified against production at a 360 × 800
 viewport after Render reported healthy PostgreSQL storage. Physical Samsung M30s installation and
 full-campaign acceptance remain part of investor playtesting rather than automated release evidence.
+
+The v0.15.0 pre-live handover adds a mandatory, non-persistent consent gate before any anonymous
+session or gameplay is created. It explains all three modes, the educational-only boundary and why
+the Capital Market Intelligence feels realistic: recent-pattern calibration, coherent cross-asset
+behaviour and sealed generated futures. It also states plainly that the simulation is not real-time
+information, advice or a prediction. The final Rapid replay now leads to the completed result rather
+than incorrectly offering another rebalance stop.

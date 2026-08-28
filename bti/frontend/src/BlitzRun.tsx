@@ -13,6 +13,13 @@ function candleFor(point: JourneyPoint, previous: number, key: "portfolio" | "be
   return { open_paise: previous || close, high_paise: Math.max(previous || close, close), low_paise: Math.min(previous || close, close), close_paise: close };
 }
 
+export function marketRunCompletionLabel(result: MoveResult): string {
+  if (result.final_result) return "GAME COMPLETED · VIEW RESULT →";
+  return result.mode === "RAPID"
+    ? "OPEN REBALANCE STOP →"
+    : "OPEN FINAL RESULT →";
+}
+
 export function MarketRun({ result, onComplete }: { result: MoveResult; onComplete: () => void }) {
   const points = result.segment_series || [];
   const [visible, setVisible] = useState(1);
@@ -46,11 +53,12 @@ export function MarketRun({ result, onComplete }: { result: MoveResult; onComple
   const focusIndex = Math.max(0, Math.min(shown.length - 1, selected ?? shown.length - 1));
   const focus = shown[focusIndex], focusCandle = candles[focusIndex], focusBenchmark = benchmark[focusIndex];
   const isRapid = result.mode === "RAPID";
+  const campaignComplete = Boolean(result.final_result);
 
   const finished = visible >= points.length;
   return <section className={`market-run-card ${isRapid ? "rapid" : "blitz"}`}>
     <header><div><span>{result.mode} MARKET REPLAY · SIMULATION</span><b>MONTH {focus?.month || 0} / {points.at(-1)?.month || points.length}</b></div><div className="market-run-controls"><button onClick={() => setPaused((value) => !value)} disabled={finished}>{paused ? "▶ RESUME" : "Ⅱ PAUSE"}</button><button onClick={() => { setPaused(true); setVisible((value) => Math.max(1, value - 1)); setSelected(null); }}>← 1M</button><button onClick={() => { setVisible(1); setSelected(null); setPaused(false); }}>↶ REPLAY</button><button onClick={() => setSpeed((value) => value === 1 ? 2 : 1)}>{speed}×</button></div></header>
-    <div className="market-run-title"><div><small>{isRapid ? "THE MARKET IS TRAVELLING TO YOUR NEXT STOP" : "ONE DECISION. THE ENTIRE MARKET ANSWERS."}</small><h2>{focus?.regime.label || "The market is making its moves."}</h2><p>{focus?.regime.narrative}</p></div><div className="market-run-score"><span>PLAYER <b>{money(focus?.portfolio_value_paise || 0)}</b></span><span>NIFTY <b>{money(focus?.benchmark_value_paise || 0)}</b></span><span>ALPHA <b className={(focus?.alpha_pct || 0) >= 0 ? "positive" : "negative"}>{signed(focus?.alpha_pct || 0)}</b></span></div></div>
+    <div className="market-run-title"><div><small>{isRapid ? campaignComplete ? "THE FINAL MARKET LEG IS COMPLETE" : "THE MARKET IS TRAVELLING TO YOUR NEXT STOP" : "ONE DECISION. THE ENTIRE MARKET ANSWERS."}</small><h2>{focus?.regime.label || "The market is making its moves."}</h2><p>{focus?.regime.narrative}</p></div><div className="market-run-score"><span>PLAYER <b>{money(focus?.portfolio_value_paise || 0)}</b></span><span>NIFTY <b>{money(focus?.benchmark_value_paise || 0)}</b></span><span>ALPHA <b className={(focus?.alpha_pct || 0) >= 0 ? "positive" : "negative"}>{signed(focus?.alpha_pct || 0)}</b></span></div></div>
     <div className="market-run-terminal">
       <svg viewBox="0 0 900 330" preserveAspectRatio="none" aria-label={`${result.mode} simulated portfolio OHLC journey`}>
         <g className="market-grid">{[35, 102, 170, 237, 305].map((line) => <line key={line} x1="24" x2="876" y1={line} y2={line} />)}</g><path className="journey-nifty" d={benchmarkPath} />
@@ -60,7 +68,7 @@ export function MarketRun({ result, onComplete }: { result: MoveResult; onComple
       <div className="market-run-tooltip"><span>SIM MONTH {focus?.month || 0}</span><b>PORTFOLIO NAV OHLC</b><div><small>OPEN</small><strong>{money(focusCandle?.open_paise || 0)}</strong><small>HIGH</small><strong>{money(focusCandle?.high_paise || 0)}</strong><small>LOW</small><strong>{money(focusCandle?.low_paise || 0)}</strong><small>CLOSE</small><strong>{money(focusCandle?.close_paise || 0)}</strong></div><p>NIFTY O/H/L/C · {money(focusBenchmark?.open_paise || 0)} / {money(focusBenchmark?.high_paise || 0)} / {money(focusBenchmark?.low_paise || 0)} / {money(focusBenchmark?.close_paise || 0)}</p><em>Drawdown {signed(focus?.portfolio_drawdown_pct || 0)}</em></div>
     </div>
     <div className="market-run-events">{shown.slice(-3).reverse().map((point) => <article key={point.month} className={point.event?.tone || "neutral"}><span>{point.event?.desk || "MARKET DESK"} · {point.event?.time || `SIM M${point.month}`}</span><b>{point.event?.headline || point.regime.label}</b><p>{point.event?.detail || point.regime.narrative}</p></article>)}</div>
-    <footer><span>{paused ? "REPLAY PAUSED" : finished ? "MARKET STOP REACHED · JOURNEY AVAILABLE FOR REVIEW" : "LIVE SIMULATION · FUTURE MONTHS SEALED"}</span><progress max={points.length} value={visible} />{finished ? <button className="primary" onClick={onComplete}>{isRapid ? "OPEN REBALANCE STOP →" : "OPEN FINAL RESULT →"}</button> : <button onClick={() => { setVisible(points.length); setPaused(true); }}>SKIP TO STOP →</button>}</footer>
+    <footer><span>{paused ? "REPLAY PAUSED" : finished ? campaignComplete ? "CAMPAIGN COMPLETE · FINAL JOURNEY AVAILABLE FOR REVIEW" : "MARKET STOP REACHED · JOURNEY AVAILABLE FOR REVIEW" : "LIVE SIMULATION · FUTURE MONTHS SEALED"}</span><progress max={points.length} value={visible} />{finished ? <button className="primary" onClick={onComplete}>{marketRunCompletionLabel(result)}</button> : <button onClick={() => { setVisible(points.length); setPaused(true); }}>SKIP TO STOP →</button>}</footer>
   </section>;
 }
 

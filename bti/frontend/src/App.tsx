@@ -98,6 +98,54 @@ function Badge() {
     </span>
   );
 }
+
+function WelcomeGate({ onAccept }: { onAccept: () => void }) {
+  const [understood, setUnderstood] = useState(false);
+  return (
+    <main className="welcome-gate">
+      <section className="welcome-card" aria-labelledby="welcome-title">
+        <header className="welcome-brand">
+          <div><b>BTI</b><small>BEAT THE INDEX</small></div>
+          <span>● SIMULATION MODE</span>
+        </header>
+        <div className="welcome-layout">
+          <div className="welcome-hero">
+            <span>AN EDUCATIONAL INVESTMENT STRATEGY GAME</span>
+            <h1 id="welcome-title">The stocks are real.<br /><em>The market is not.</em></h1>
+            <p>Build a simulated portfolio, watch the market respond and try to beat the simulated Nifty benchmark.</p>
+            <div className="welcome-modes" aria-label="BTI game modes">
+              <article><b>CLASSIC</b><p>Research and make one portfolio decision every month.</p></article>
+              <article><b>RAPID</b><p>Run one year at a time, then decide whether to rebalance.</p></article>
+              <article><b>BLITZ</b><p>Make one allocation and watch the full campaign unfold.</p></article>
+            </div>
+            <section className="welcome-realism">
+              <span>WHY THE SIMULATION FEELS REAL</span>
+              <h2>Built as a training ground.</h2>
+              <p>BTI is calibrated from recent historical market patterns. Stocks, bonds and gold move inside one coherent simulated economy, while valuation, volatility, drawdown, news and risk signals change together.</p>
+              <p>Each future path is generated for the game and hidden until you play. It trains your decision process—it does not predict actual returns.</p>
+            </section>
+          </div>
+          <form className="welcome-consent" onSubmit={(event) => { event.preventDefault(); if (understood) onAccept(); }}>
+            <span>BEFORE YOU PLAY</span>
+            <h2>Know the rules.</h2>
+            <ul>
+              <li>BTI is an educational game. No real money is invested and no trade is executed.</li>
+              <li>Except for listed-company names and tickers, prices, metrics, forecasts, news and outcomes are simulated.</li>
+              <li>Nothing in BTI is real-time market information, investment advice or a recommendation to buy or sell.</li>
+              <li>Completed game decisions are permanent and scored against the simulated benchmark.</li>
+            </ul>
+            <label className="welcome-check">
+              <input type="checkbox" checked={understood} onChange={(event) => setUnderstood(event.target.checked)} />
+              <span>I understand that BTI is an educational simulation, not a trading or investment app.</span>
+            </label>
+            <button className="primary" type="submit" disabled={!understood}>ENTER THE SIMULATION →</button>
+            <small>Educational and entertainment use only.</small>
+          </form>
+        </div>
+      </section>
+    </main>
+  );
+}
 function Spark({
   values,
   tone = "green",
@@ -378,7 +426,7 @@ function Shell({
             Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
-          <small>BTI RELEASE CANDIDATE · v0.14.2</small>
+          <small>BTI PRE-LIVE HANDOVER · v0.15.0</small>
           {installAvailable && (
             <button className="install-bti" onClick={installApp}>
               INSTALL BTI ↓
@@ -1582,7 +1630,8 @@ function Explore({
 
 export default function App() {
   const isMobile = useMobileViewport();
-  const [view, setView] = useState<View>("home"),
+  const [accepted, setAccepted] = useState(false),
+    [view, setView] = useState<View>("home"),
     [campaign, setCampaign] = useState<Campaign | null>(null),
     [campaigns, setCampaigns] = useState<Campaign[]>([]),
     [market, setMarket] = useState<Market | null>(null),
@@ -1607,6 +1656,7 @@ export default function App() {
     return () => window.removeEventListener("beforeinstallprompt", capture);
   }, []);
   useEffect(() => {
+    if (!accepted) return;
     (async () => {
       try {
         await startFreshSession();
@@ -1619,7 +1669,7 @@ export default function App() {
         setBusy(false);
       }
     })();
-  }, []);
+  }, [accepted]);
   useEffect(() => {
     const marketRequired = ["market", "stock", "news", "review"].includes(view);
     if (!campaign || !marketRequired || market) return;
@@ -1946,6 +1996,7 @@ export default function App() {
     isMobile,
     profile,
   ]);
+  if (!accepted) return <WelcomeGate onAccept={() => setAccepted(true)} />;
   return (
     <Shell
       view={view}

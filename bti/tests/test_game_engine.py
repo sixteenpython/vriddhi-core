@@ -246,8 +246,10 @@ def test_rapid_advances_annually_and_allows_a_hold_decision() -> None:
     assert len(game.public_state()["journey_series"]) == 24
     assert game.public_state()["journey_series"][-1]["month"] == 24
     game.submit_move([])
-    game.submit_move([])
+    final = game.submit_move([])
     assert game.status == "COMPLETED"
+    assert final["final_result"]["status"] == "COMPLETED"
+    assert final["progress"]["month"] == 48
 
 
 def test_capital_market_assets_share_the_simulated_economy() -> None:
