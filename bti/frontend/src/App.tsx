@@ -426,7 +426,7 @@ function Shell({
             Every price path and event is a simulation—
             {"not a live quote or investment recommendation"}.
           </span>
-          <small>BTI PRE-LIVE HANDOVER · v0.15.2</small>
+          <small>BTI PRE-LIVE HANDOVER · v0.16.0</small>
           {installAvailable && (
             <button className="install-bti" onClick={installApp}>
               INSTALL BTI ↓

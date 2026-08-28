@@ -46,7 +46,8 @@ def create_app(save_dir: str | Path | None = None,
 
     async def health(_: Request) -> Response:
         return _ok({"status": "ok", "service": "bti-immersive-api",
-                    "release": "0.15.2", "storage": service.storage_status()})
+                    "release": "0.16.0", "storage": service.storage_status(),
+                    "market_intelligence": service.market_intelligence_status()})
 
     async def session(_: Request) -> Response:
         return _ok(service.new_session(), 201)

@@ -91,7 +91,7 @@ MODE_RULES = {
 
 
 class BTIGame:
-    ENGINE_VERSION = "bti-game-v3"
+    ENGINE_VERSION = "bti-game-v4"
 
     @classmethod
     def create(
@@ -130,6 +130,8 @@ class BTIGame:
             raise GameRuleError("A scenario seed is required")
         self = cls.__new__(cls)
         self.artifacts = VriddhiArtifacts(repository_root)
+        baseline_stocks = deepcopy(self.artifacts.stocks)
+        reference_weights = self.artifacts._reference_weights(horizon_months)
         identity = f"{self.artifacts.release_id}|{mode}|{horizon_months}|{monthly_amount_rupees}|{committed_capital}|{seed}"
         interval = horizon_months if mode == "BLITZ" else MODE_RULES[mode]["interval_months"]
         total_decisions = horizon_months // int(interval)
@@ -140,6 +142,8 @@ class BTIGame:
             "engine_version": cls.ENGINE_VERSION,
             "release_id": self.artifacts.release_id,
             "data_through": self.artifacts.data_through,
+            "baseline_stocks": baseline_stocks,
+            "reference_weights": reference_weights,
             "seed": seed,
             "horizon_months": horizon_months,
             "monthly_amount_paise": monthly_amount_rupees * 100,
@@ -151,7 +155,7 @@ class BTIGame:
             "current_month": 0,
             "cash_paise": committed_capital,
             "holdings": {},
-            "market": initial_market(self.artifacts.stocks, horizon_months),
+            "market": initial_market(baseline_stocks, horizon_months),
             "benchmark_value_paise": committed_capital,
             "total_invested_paise": committed_capital,
             "moves": [],
@@ -197,7 +201,7 @@ class BTIGame:
 
     def _market_at_month(self, completed_months: int) -> dict[str, Any]:
         """Reconstruct a historical public information set without storing giant snapshots."""
-        market = initial_market(self.artifacts.stocks, self.state["horizon_months"])
+        market = initial_market(self.state["baseline_stocks"], self.state["horizon_months"])
         for month in range(1, completed_months + 1):
             market, _ = advance_market(
                 market, self.state["seed"], month, self._regime_internal(month)
@@ -214,7 +218,7 @@ class BTIGame:
 
     def _reference_holdings(self, total_capital: int) -> dict[str, int]:
         """Solve a whole-share reference feasible for this campaign's actual capital."""
-        base_weights = self.artifacts._reference_weights(self.state["horizon_months"])
+        base_weights = self.state["reference_weights"]
         market = self.state["market"]
         # Vriddhi supplies the governed horizon portfolio. The private game adapter then lets
         # its weights respond to the information available in the current simulated month.
@@ -808,8 +812,17 @@ class BTIGame:
         self.state = json.loads(payload)
         if self.state.get("engine_version") != cls.ENGINE_VERSION:
             raise GameRuleError("Unsupported saved campaign engine version")
-        if self.state.get("release_id") != self.artifacts.release_id:
-            raise GameRuleError("Saved campaign requires a different governed Vriddhi release")
+        release_matches = self.state.get("release_id") == self.artifacts.release_id
+        if "baseline_stocks" not in self.state or "reference_weights" not in self.state:
+            if not release_matches:
+                raise GameRuleError(
+                    "Saved campaign predates frozen release snapshots and requires its original "
+                    "governed Vriddhi release"
+                )
+            self.state["baseline_stocks"] = deepcopy(self.artifacts.stocks)
+            self.state["reference_weights"] = self.artifacts._reference_weights(
+                self.state["horizon_months"]
+            )
         self.state.setdefault("gameplay_mode", "RATED")
         self.state.setdefault("starting_rating", 1200)
         self.state.setdefault("mode", "CLASSIC")

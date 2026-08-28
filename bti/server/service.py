@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import Any
 
 from bti.game_engine import BTIGame
+from bti.game_engine.artifacts import VriddhiArtifacts
 from bti.game_engine.engine import GameRuleError
+from bti.game_engine.simulation import SIMULATION_VERSION
 
 from .errors import APIError
 from .repository import JSONRepository, PostgresRepository
@@ -26,7 +28,12 @@ class BTIService:
             if database_url
             else JSONRepository(save_dir)
         )
-        self.repository_root = Path(repository_root) if repository_root else None
+        self.repository_root = Path(
+            repository_root or Path(__file__).resolve().parents[2]
+        )
+        # Startup is the promotion gate: an invalid or partially refreshed Vriddhi
+        # release prevents a new BTI deployment from becoming healthy.
+        self.artifacts = VriddhiArtifacts(self.repository_root)
         self.content_dir = Path(content_dir or Path(__file__).resolve().parents[1] / "content")
 
     def new_session(self) -> dict[str, Any]:
@@ -39,6 +46,13 @@ class BTIService:
     def storage_status(self) -> dict[str, Any]:
         healthy = self.repo.healthcheck() if hasattr(self.repo, "healthcheck") else True
         return {"backend": self.repo.backend, "durable": self.repo.backend == "postgres", "healthy": healthy}
+
+    def market_intelligence_status(self) -> dict[str, Any]:
+        return {
+            **self.artifacts.status(),
+            "sync_mode": "LATEST_PROMOTED_VRIDDHI_RELEASE",
+            "simulation_version": SIMULATION_VERSION,
+        }
 
     def create_campaign(self, owner: str, payload: Any) -> dict[str, Any]:
         body = self._object(payload)

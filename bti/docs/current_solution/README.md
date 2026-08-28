@@ -1,12 +1,12 @@
 # BTI current solution baseline
 
-> **Current release:** v0.15.2 — pre-live handover with the OHLC readout docked outside the desktop plot.
+> **Current release:** v0.16.0 — automatic, verified synchronisation to the latest promoted Vriddhi release.
 > See [Playtest 03](../playtesting/PLAYTEST_03_MULTI_MODE_CAPITAL_MARKET_RELEASE.md) for the current
 > mode contracts, Newswire, mobile boundary and verification gates.
 
 - **Product:** Beat the Index (BTI)
 - **Baseline date:** 27 August 2026
-- **Release:** BTI Pre-Live Handover v0.15.2
+- **Release:** BTI Vriddhi-Synchronised Baseline v0.16.0
 - **Live application:** <https://beat-the-index.onrender.com/>
 - **Status:** deployed investor-preview web/PWA release under active desktop and mobile playtesting
 

@@ -50,9 +50,20 @@ def setup(tmp_path: Path):
 
 def test_health_content_and_auth_boundary(tmp_path):
     app, _, auth = setup(tmp_path)
+    manifest = json.loads(
+        (Path(__file__).resolve().parents[2] / "research" / "manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
     status, health = request(app, "GET", "/api/v1/health")
     assert status == 200
-    assert health["data"]["release"] == "0.15.2"
+    assert health["data"]["release"] == "0.16.0"
+    intelligence = health["data"]["market_intelligence"]
+    assert intelligence["ready"] is True
+    assert intelligence["release_id"] == manifest["release_id"]
+    assert intelligence["data_through"] == manifest["data_through"]
+    assert intelligence["sync_mode"] == "LATEST_PROMOTED_VRIDDHI_RELEASE"
+    assert intelligence["verified_artifacts"] == 5
     assert health["data"]["storage"] == {
         "backend": "json",
         "durable": False,
