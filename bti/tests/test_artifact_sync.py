@@ -62,6 +62,15 @@ def test_promoted_release_is_hash_verified_before_bti_uses_it(tmp_path: Path) ->
         VriddhiArtifacts(tmp_path)
 
 
+def test_promoted_release_hash_accepts_git_line_ending_normalisation(tmp_path: Path) -> None:
+    _candidate(tmp_path)
+    table = tmp_path / "grand_table_expanded.csv"
+    table.write_bytes(table.read_bytes().replace(b"\r\n", b"\n"))
+    _verified_digest.cache_clear()
+
+    assert VriddhiArtifacts(tmp_path).status()["ready"] is True
+
+
 def test_campaign_carries_its_vriddhi_baseline_across_future_refreshes() -> None:
     game = BTIGame.create(25_000, 24, "frozen-vriddhi-release")
     payload = json.loads(game.to_json())

@@ -18,14 +18,20 @@ class ArtifactIntegrityError(RuntimeError):
 def _verified_digest(path_text: str, expected_hash: str) -> str:
     """Hash each immutable deployment artifact only once per service process."""
     path = Path(path_text)
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    actual_hash = digest.hexdigest()
-    if actual_hash != expected_hash:
+    payload = path.read_bytes()
+    actual_hash = hashlib.sha256(payload).hexdigest()
+    # Git legitimately checks text artifacts out with LF on Linux and CRLF on
+    # Windows. Accept only those canonical newline representations; any content
+    # change still fails the promotion gate.
+    newline_normalised = payload.replace(b"\r\n", b"\n")
+    accepted_hashes = {
+        actual_hash,
+        hashlib.sha256(newline_normalised).hexdigest(),
+        hashlib.sha256(newline_normalised.replace(b"\n", b"\r\n")).hexdigest(),
+    }
+    if expected_hash not in accepted_hashes:
         raise ArtifactIntegrityError(f"Promoted artifact hash mismatch: {path.name}")
-    return actual_hash
+    return expected_hash
 
 
 class VriddhiArtifacts:
