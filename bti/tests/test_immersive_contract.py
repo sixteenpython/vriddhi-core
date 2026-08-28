@@ -156,7 +156,7 @@ def test_investor_preview_is_installable_and_mobile_first() -> None:
     assert {192, 512} <= {
         int(icon["sizes"].split("x", 1)[0]) for icon in manifest["icons"]
     }
-    assert "bti-pre-live-v0.15.1" in service_worker
+    assert "bti-pre-live-v0.15.2" in service_worker
     assert "INSTALL BTI" in app
     assert 'railCollapsed ? ">>" : "<<"' in app
     assert "mobile-navigation-open" in styles
@@ -297,5 +297,5 @@ def test_pre_game_gate_explains_rules_realism_and_consent() -> None:
 def test_market_run_ohlc_readout_is_docked_without_breaking_mobile() -> None:
     styles = (WEB / "src" / "styles.css").read_text(encoding="utf-8")
 
-    assert ".market-run-tooltip{position:absolute;top:auto;right:14px;bottom:14px" in styles
+    assert "@media(min-width:761px){.market-run-tooltip{position:static;width:230px;margin:0 14px 14px auto}}" in styles
     assert ".market-run-tooltip{position:static" in styles
