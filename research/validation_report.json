@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "validated_at": "2026-08-17T19:16:53+05:30",
+  "validated_at": "2026-09-01T08:48:29+00:00",
   "status": "passed",
-  "data_through": "2026-08-14",
+  "data_through": "2026-09-01",
   "universe_size": 50,
-  "benchmark_rows": 1238,
+  "benchmark_rows": 1240,
   "data_age_days": 0,
   "unresolved_or_stale": 0,
-  "max_turnover_pct": 10.74,
-  "ledger_releases": 3,
+  "max_turnover_pct": 24.21,
+  "ledger_releases": 4,
   "ledger_tracking_started": "2026-06-04",
   "turnover_limit_pct": 30.0,
   "warnings": [],
@@ -16,71 +16,81 @@
     {
       "horizon_years": 1,
       "recommended": false,
-      "data_through": "2026-08-14",
+      "data_through": "2026-09-01",
       "num_stocks": 12,
       "weight_total": 1.0,
-      "turnover_pct": 10.74,
+      "turnover_pct": 24.21,
       "picks": [
-        "ADANIPORTS"
+        "AXISBANK",
+        "BEL"
       ],
       "drops": [
-        "POWERGRID"
+        "ADANIPORTS",
+        "ONGC"
       ]
     },
     {
       "horizon_years": 2,
       "recommended": false,
-      "data_through": "2026-08-14",
+      "data_through": "2026-09-01",
       "num_stocks": 12,
       "weight_total": 1.0,
-      "turnover_pct": 10.74,
+      "turnover_pct": 24.21,
       "picks": [
-        "ADANIPORTS"
+        "AXISBANK",
+        "BEL"
       ],
       "drops": [
-        "POWERGRID"
+        "ADANIPORTS",
+        "ONGC"
       ]
     },
     {
       "horizon_years": 3,
       "recommended": false,
-      "data_through": "2026-08-14",
+      "data_through": "2026-09-01",
       "num_stocks": 12,
       "weight_total": 1.0,
-      "turnover_pct": 10.74,
+      "turnover_pct": 24.21,
       "picks": [
-        "ADANIPORTS"
+        "AXISBANK",
+        "BEL"
       ],
       "drops": [
-        "POWERGRID"
+        "ADANIPORTS",
+        "ONGC"
       ]
     },
     {
       "horizon_years": 4,
       "recommended": true,
-      "data_through": "2026-08-14",
+      "data_through": "2026-09-01",
       "num_stocks": 12,
       "weight_total": 1.0,
-      "turnover_pct": 10.74,
+      "turnover_pct": 24.21,
       "picks": [
-        "ADANIPORTS"
+        "AXISBANK",
+        "BEL"
       ],
       "drops": [
-        "POWERGRID"
+        "ADANIPORTS",
+        "ONGC"
       ]
     },
     {
       "horizon_years": 5,
       "recommended": true,
-      "data_through": "2026-08-14",
+      "data_through": "2026-09-01",
       "num_stocks": 12,
       "weight_total": 1.0,
-      "turnover_pct": 10.74,
+      "turnover_pct": 24.21,
       "picks": [
-        "ADANIPORTS"
+        "AXISBANK",
+        "BEL"
       ],
       "drops": [
-        "POWERGRID"
+        "ADANIPORTS",
+        "ONGC"
       ]
     }
   ]
