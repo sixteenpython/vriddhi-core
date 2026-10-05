@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-17 19:15",
+  "generated_at": "2026-10-05 15:53",
   "universe_size": 50,
   "summary": {
     "ok": 49,
@@ -33,20 +33,8 @@
       "status": "ok"
     },
     {
-      "ticker": "ADANIPORTS",
-      "symbol": "ADANIPORTS.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "SBIN",
-      "symbol": "SBIN.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "SUNPHARMA",
-      "symbol": "SUNPHARMA.NS",
+      "ticker": "M&M",
+      "symbol": "M&M.NS",
       "days": 1283,
       "status": "ok"
     },
@@ -57,8 +45,20 @@
       "status": "ok"
     },
     {
-      "ticker": "M&M",
-      "symbol": "M&M.NS",
+      "ticker": "SBIN",
+      "symbol": "SBIN.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "ADANIPORTS",
+      "symbol": "ADANIPORTS.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "APOLLOHOSP",
+      "symbol": "APOLLOHOSP.NS",
       "days": 1283,
       "status": "ok"
     },
@@ -81,8 +81,8 @@
       "status": "ok"
     },
     {
-      "ticker": "APOLLOHOSP",
-      "symbol": "APOLLOHOSP.NS",
+      "ticker": "JSWSTEEL",
+      "symbol": "JSWSTEEL.NS",
       "days": 1283,
       "status": "ok"
     },
@@ -93,56 +93,8 @@
       "status": "ok"
     },
     {
-      "ticker": "AXISBANK",
-      "symbol": "AXISBANK.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "JSWSTEEL",
-      "symbol": "JSWSTEEL.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "LT",
-      "symbol": "LT.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "SBILIFE",
-      "symbol": "SBILIFE.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "ICICIBANK",
-      "symbol": "ICICIBANK.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "NESTLEIND",
-      "symbol": "NESTLEIND.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
       "ticker": "BAJFINANCE",
       "symbol": "BAJFINANCE.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "COALINDIA",
-      "symbol": "COALINDIA.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "NTPC",
-      "symbol": "NTPC.NS",
       "days": 1283,
       "status": "ok"
     },
@@ -159,62 +111,14 @@
       "status": "ok"
     },
     {
-      "ticker": "TATACONSUM",
-      "symbol": "TATACONSUM.NS",
+      "ticker": "ULTRACEMCO",
+      "symbol": "ULTRACEMCO.NS",
       "days": 1283,
       "status": "ok"
     },
     {
-      "ticker": "POWERGRID",
-      "symbol": "POWERGRID.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "CIPLA",
-      "symbol": "CIPLA.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "ONGC",
-      "symbol": "ONGC.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "BRITANNIA",
-      "symbol": "BRITANNIA.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "BAJAJ-AUTO",
-      "symbol": "BAJAJ-AUTO.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "HCLTECH",
-      "symbol": "HCLTECH.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "HDFCBANK",
-      "symbol": "HDFCBANK.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "ITC",
-      "symbol": "ITC.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "DRREDDY",
-      "symbol": "DRREDDY.NS",
+      "ticker": "NESTLEIND",
+      "symbol": "NESTLEIND.NS",
       "days": 1283,
       "status": "ok"
     },
@@ -225,8 +129,122 @@
       "status": "ok"
     },
     {
+      "ticker": "SUNPHARMA",
+      "symbol": "SUNPHARMA.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "COALINDIA",
+      "symbol": "COALINDIA.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "LT",
+      "symbol": "LT.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "AXISBANK",
+      "symbol": "AXISBANK.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "TITAN",
+      "symbol": "TITAN.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "NTPC",
+      "symbol": "NTPC.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "CIPLA",
+      "symbol": "CIPLA.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "BRITANNIA",
+      "symbol": "BRITANNIA.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "ICICIBANK",
+      "symbol": "ICICIBANK.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "TATACONSUM",
+      "symbol": "TATACONSUM.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "TRENT",
+      "symbol": "TRENT.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "POWERGRID",
+      "symbol": "POWERGRID.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "ONGC",
+      "symbol": "ONGC.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "BAJAJ-AUTO",
+      "symbol": "BAJAJ-AUTO.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "SBILIFE",
+      "symbol": "SBILIFE.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "HCLTECH",
+      "symbol": "HCLTECH.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
       "ticker": "ADANIENT",
       "symbol": "ADANIENT.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "HDFCBANK",
+      "symbol": "HDFCBANK.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "TATAMOTORS",
+      "symbol": "TMPV.NS",
+      "days": 1283,
+      "status": "renamed"
+    },
+    {
+      "ticker": "HDFCLIFE",
+      "symbol": "HDFCLIFE.NS",
       "days": 1283,
       "status": "ok"
     },
@@ -249,26 +267,14 @@
       "status": "ok"
     },
     {
-      "ticker": "HDFCLIFE",
-      "symbol": "HDFCLIFE.NS",
+      "ticker": "INDUSINDBK",
+      "symbol": "INDUSINDBK.NS",
       "days": 1283,
       "status": "ok"
     },
     {
-      "ticker": "HINDUNILVR",
-      "symbol": "HINDUNILVR.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "TRENT",
-      "symbol": "TRENT.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "TITAN",
-      "symbol": "TITAN.NS",
+      "ticker": "DRREDDY",
+      "symbol": "DRREDDY.NS",
       "days": 1283,
       "status": "ok"
     },
@@ -279,20 +285,8 @@
       "status": "ok"
     },
     {
-      "ticker": "ULTRACEMCO",
-      "symbol": "ULTRACEMCO.NS",
-      "days": 1283,
-      "status": "ok"
-    },
-    {
-      "ticker": "TATAMOTORS",
-      "symbol": "TMPV.NS",
-      "days": 1283,
-      "status": "renamed"
-    },
-    {
-      "ticker": "INDUSINDBK",
-      "symbol": "INDUSINDBK.NS",
+      "ticker": "HINDUNILVR",
+      "symbol": "HINDUNILVR.NS",
       "days": 1283,
       "status": "ok"
     },
@@ -303,14 +297,20 @@
       "status": "ok"
     },
     {
-      "ticker": "WIPRO",
-      "symbol": "WIPRO.NS",
+      "ticker": "ITC",
+      "symbol": "ITC.NS",
       "days": 1283,
       "status": "ok"
     },
     {
       "ticker": "INFY",
       "symbol": "INFY.NS",
+      "days": 1283,
+      "status": "ok"
+    },
+    {
+      "ticker": "WIPRO",
+      "symbol": "WIPRO.NS",
       "days": 1283,
       "status": "ok"
     }

@@ -2525,7 +2525,918 @@
           ]
         }
       }
+    },
+    {
+      "release_id": "refresh-2026-09-30",
+      "data_through": "2026-09-30",
+      "captured_at": "2026-10-05 15:53",
+      "methodology_version": "2.0",
+      "provenance": "monthly_refresh",
+      "market_prices": {
+        "ADANIENT": 2903.4,
+        "ADANIPORTS": 1798.3,
+        "APOLLOHOSP": 8165.5,
+        "ASIANPAINT": 2402.6,
+        "AXISBANK": 1226.0,
+        "BAJAJ-AUTO": 10874.0,
+        "BAJAJFINSV": 1731.0,
+        "BAJFINANCE": 959.4,
+        "BEL": 388.3,
+        "BHARTIARTL": 1757.0,
+        "BPCL": 303.2,
+        "BRITANNIA": 4830.0,
+        "CIPLA": 1346.0,
+        "COALINDIA": 425.0,
+        "DRREDDY": 1233.0,
+        "EICHERMOT": 7150.0,
+        "GRASIM": 3061.9,
+        "HCLTECH": 1230.0,
+        "HDFCBANK": 708.7,
+        "HDFCLIFE": 521.2,
+        "HEROMOTOCO": 5241.0,
+        "HINDALCO": 941.8,
+        "HINDUNILVR": 1879.1,
+        "ICICIBANK": 1321.7,
+        "INDUSINDBK": 901.4,
+        "INFY": 994.1,
+        "ITC": 262.75,
+        "JSWSTEEL": 1253.4,
+        "KOTAKBANK": 417.0,
+        "LT": 3760.0,
+        "M&M": 2950.0,
+        "MARUTI": 11967.0,
+        "NESTLEIND": 1310.0,
+        "NTPC": 322.75,
+        "ONGC": 225.8,
+        "POWERGRID": 260.5,
+        "RELIANCE": 1187.0,
+        "SBILIFE": 1696.4,
+        "SBIN": 959.5,
+        "SHRIRAMFIN": 982.7,
+        "SUNPHARMA": 1816.6,
+        "TATACONSUM": 949.5,
+        "TATAMOTORS": 283.5,
+        "TATASTEEL": 184.3,
+        "TCS": 2050.6,
+        "TECHM": 1524.0,
+        "TITAN": 4587.0,
+        "TRENT": 2621.6,
+        "ULTRACEMCO": 10956.0,
+        "WIPRO": 158.5
+      },
+      "horizons": {
+        "1": {
+          "recommended": false,
+          "num_stocks": 12,
+          "stocks": [
+            {
+              "ticker": "BEL",
+              "weight": 0.15,
+              "current_price": 388.3,
+              "sector": "Infrastructure"
+            },
+            {
+              "ticker": "BAJAJ-AUTO",
+              "weight": 0.15,
+              "current_price": 10874.0,
+              "sector": "Automobile"
+            },
+            {
+              "ticker": "M&M",
+              "weight": 0.1077558079,
+              "current_price": 2950.0,
+              "sector": "Automobile"
+            },
+            {
+              "ticker": "BHARTIARTL",
+              "weight": 0.1043427039,
+              "current_price": 1757.0,
+              "sector": "Telecom"
+            },
+            {
+              "ticker": "SUNPHARMA",
+              "weight": 0.1040912626,
+              "current_price": 1816.6,
+              "sector": "Healthcare"
+            },
+            {
+              "ticker": "COALINDIA",
+              "weight": 0.0695762812,
+              "current_price": 425.0,
+              "sector": "Energy"
+            },
+            {
+              "ticker": "SHRIRAMFIN",
+              "weight": 0.0642339444,
+              "current_price": 982.7,
+              "sector": "Financials"
+            },
+            {
+              "ticker": "JSWSTEEL",
+              "weight": 0.05,
+              "current_price": 1253.4,
+              "sector": "Materials"
+            },
+            {
+              "ticker": "NTPC",
+              "weight": 0.05,
+              "current_price": 322.75,
+              "sector": "Utilities"
+            },
+            {
+              "ticker": "TITAN",
+              "weight": 0.05,
+              "current_price": 4587.0,
+              "sector": "Consumer"
+            },
+            {
+              "ticker": "HINDALCO",
+              "weight": 0.05,
+              "current_price": 941.8,
+              "sector": "Materials"
+            },
+            {
+              "ticker": "ADANIPORTS",
+              "weight": 0.05,
+              "current_price": 1798.3,
+              "sector": "Infrastructure"
+            }
+          ],
+          "actions": [
+            {
+              "ticker": "ADANIPORTS",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "BAJAJ-AUTO",
+              "action": "TOP-UP",
+              "previous_weight": 0.1138960318,
+              "current_weight": 0.15
+            },
+            {
+              "ticker": "BEL",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.15
+            },
+            {
+              "ticker": "BHARTIARTL",
+              "action": "TRIM",
+              "previous_weight": 0.15,
+              "current_weight": 0.1043427039
+            },
+            {
+              "ticker": "BPCL",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "COALINDIA",
+              "action": "TRIM",
+              "previous_weight": 0.15,
+              "current_weight": 0.0695762812
+            },
+            {
+              "ticker": "EICHERMOT",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "HINDALCO",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "JSWSTEEL",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "M&M",
+              "action": "TRIM",
+              "previous_weight": 0.1316563044,
+              "current_weight": 0.1077558079
+            },
+            {
+              "ticker": "NTPC",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "ONGC",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "SHRIRAMFIN",
+              "action": "HOLD",
+              "previous_weight": 0.0605173954,
+              "current_weight": 0.0642339444
+            },
+            {
+              "ticker": "SUNPHARMA",
+              "action": "TOP-UP",
+              "previous_weight": 0.0939302683,
+              "current_weight": 0.1040912626
+            },
+            {
+              "ticker": "TITAN",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            }
+          ]
+        },
+        "2": {
+          "recommended": false,
+          "num_stocks": 12,
+          "stocks": [
+            {
+              "ticker": "BEL",
+              "weight": 0.15,
+              "current_price": 388.3,
+              "sector": "Infrastructure"
+            },
+            {
+              "ticker": "BAJAJ-AUTO",
+              "weight": 0.15,
+              "current_price": 10874.0,
+              "sector": "Automobile"
+            },
+            {
+              "ticker": "M&M",
+              "weight": 0.1077558079,
+              "current_price": 2950.0,
+              "sector": "Automobile"
+            },
+            {
+              "ticker": "BHARTIARTL",
+              "weight": 0.1043427039,
+              "current_price": 1757.0,
+              "sector": "Telecom"
+            },
+            {
+              "ticker": "SUNPHARMA",
+              "weight": 0.1040912626,
+              "current_price": 1816.6,
+              "sector": "Healthcare"
+            },
+            {
+              "ticker": "COALINDIA",
+              "weight": 0.0695762812,
+              "current_price": 425.0,
+              "sector": "Energy"
+            },
+            {
+              "ticker": "SHRIRAMFIN",
+              "weight": 0.0642339444,
+              "current_price": 982.7,
+              "sector": "Financials"
+            },
+            {
+              "ticker": "JSWSTEEL",
+              "weight": 0.05,
+              "current_price": 1253.4,
+              "sector": "Materials"
+            },
+            {
+              "ticker": "NTPC",
+              "weight": 0.05,
+              "current_price": 322.75,
+              "sector": "Utilities"
+            },
+            {
+              "ticker": "TITAN",
+              "weight": 0.05,
+              "current_price": 4587.0,
+              "sector": "Consumer"
+            },
+            {
+              "ticker": "HINDALCO",
+              "weight": 0.05,
+              "current_price": 941.8,
+              "sector": "Materials"
+            },
+            {
+              "ticker": "ADANIPORTS",
+              "weight": 0.05,
+              "current_price": 1798.3,
+              "sector": "Infrastructure"
+            }
+          ],
+          "actions": [
+            {
+              "ticker": "ADANIPORTS",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "BAJAJ-AUTO",
+              "action": "TOP-UP",
+              "previous_weight": 0.1138960318,
+              "current_weight": 0.15
+            },
+            {
+              "ticker": "BEL",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.15
+            },
+            {
+              "ticker": "BHARTIARTL",
+              "action": "TRIM",
+              "previous_weight": 0.15,
+              "current_weight": 0.1043427039
+            },
+            {
+              "ticker": "BPCL",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "COALINDIA",
+              "action": "TRIM",
+              "previous_weight": 0.15,
+              "current_weight": 0.0695762812
+            },
+            {
+              "ticker": "EICHERMOT",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "HINDALCO",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "JSWSTEEL",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "M&M",
+              "action": "TRIM",
+              "previous_weight": 0.1316563044,
+              "current_weight": 0.1077558079
+            },
+            {
+              "ticker": "NTPC",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "ONGC",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "SHRIRAMFIN",
+              "action": "HOLD",
+              "previous_weight": 0.0605173954,
+              "current_weight": 0.0642339444
+            },
+            {
+              "ticker": "SUNPHARMA",
+              "action": "TOP-UP",
+              "previous_weight": 0.0939302683,
+              "current_weight": 0.1040912626
+            },
+            {
+              "ticker": "TITAN",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            }
+          ]
+        },
+        "3": {
+          "recommended": false,
+          "num_stocks": 12,
+          "stocks": [
+            {
+              "ticker": "BEL",
+              "weight": 0.15,
+              "current_price": 388.3,
+              "sector": "Infrastructure"
+            },
+            {
+              "ticker": "BAJAJ-AUTO",
+              "weight": 0.15,
+              "current_price": 10874.0,
+              "sector": "Automobile"
+            },
+            {
+              "ticker": "M&M",
+              "weight": 0.1077558079,
+              "current_price": 2950.0,
+              "sector": "Automobile"
+            },
+            {
+              "ticker": "BHARTIARTL",
+              "weight": 0.1043427039,
+              "current_price": 1757.0,
+              "sector": "Telecom"
+            },
+            {
+              "ticker": "SUNPHARMA",
+              "weight": 0.1040912626,
+              "current_price": 1816.6,
+              "sector": "Healthcare"
+            },
+            {
+              "ticker": "COALINDIA",
+              "weight": 0.0695762812,
+              "current_price": 425.0,
+              "sector": "Energy"
+            },
+            {
+              "ticker": "SHRIRAMFIN",
+              "weight": 0.0642339444,
+              "current_price": 982.7,
+              "sector": "Financials"
+            },
+            {
+              "ticker": "JSWSTEEL",
+              "weight": 0.05,
+              "current_price": 1253.4,
+              "sector": "Materials"
+            },
+            {
+              "ticker": "NTPC",
+              "weight": 0.05,
+              "current_price": 322.75,
+              "sector": "Utilities"
+            },
+            {
+              "ticker": "TITAN",
+              "weight": 0.05,
+              "current_price": 4587.0,
+              "sector": "Consumer"
+            },
+            {
+              "ticker": "HINDALCO",
+              "weight": 0.05,
+              "current_price": 941.8,
+              "sector": "Materials"
+            },
+            {
+              "ticker": "ADANIPORTS",
+              "weight": 0.05,
+              "current_price": 1798.3,
+              "sector": "Infrastructure"
+            }
+          ],
+          "actions": [
+            {
+              "ticker": "ADANIPORTS",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "BAJAJ-AUTO",
+              "action": "TOP-UP",
+              "previous_weight": 0.1138960318,
+              "current_weight": 0.15
+            },
+            {
+              "ticker": "BEL",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.15
+            },
+            {
+              "ticker": "BHARTIARTL",
+              "action": "TRIM",
+              "previous_weight": 0.15,
+              "current_weight": 0.1043427039
+            },
+            {
+              "ticker": "BPCL",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "COALINDIA",
+              "action": "TRIM",
+              "previous_weight": 0.15,
+              "current_weight": 0.0695762812
+            },
+            {
+              "ticker": "EICHERMOT",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "HINDALCO",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "JSWSTEEL",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "M&M",
+              "action": "TRIM",
+              "previous_weight": 0.1316563044,
+              "current_weight": 0.1077558079
+            },
+            {
+              "ticker": "NTPC",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "ONGC",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "SHRIRAMFIN",
+              "action": "HOLD",
+              "previous_weight": 0.0605173954,
+              "current_weight": 0.0642339444
+            },
+            {
+              "ticker": "SUNPHARMA",
+              "action": "TOP-UP",
+              "previous_weight": 0.0939302683,
+              "current_weight": 0.1040912626
+            },
+            {
+              "ticker": "TITAN",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            }
+          ]
+        },
+        "4": {
+          "recommended": true,
+          "num_stocks": 12,
+          "stocks": [
+            {
+              "ticker": "BEL",
+              "weight": 0.15,
+              "current_price": 388.3,
+              "sector": "Infrastructure"
+            },
+            {
+              "ticker": "BAJAJ-AUTO",
+              "weight": 0.15,
+              "current_price": 10874.0,
+              "sector": "Automobile"
+            },
+            {
+              "ticker": "M&M",
+              "weight": 0.1077558079,
+              "current_price": 2950.0,
+              "sector": "Automobile"
+            },
+            {
+              "ticker": "BHARTIARTL",
+              "weight": 0.1043427039,
+              "current_price": 1757.0,
+              "sector": "Telecom"
+            },
+            {
+              "ticker": "SUNPHARMA",
+              "weight": 0.1040912626,
+              "current_price": 1816.6,
+              "sector": "Healthcare"
+            },
+            {
+              "ticker": "COALINDIA",
+              "weight": 0.0695762812,
+              "current_price": 425.0,
+              "sector": "Energy"
+            },
+            {
+              "ticker": "SHRIRAMFIN",
+              "weight": 0.0642339444,
+              "current_price": 982.7,
+              "sector": "Financials"
+            },
+            {
+              "ticker": "JSWSTEEL",
+              "weight": 0.05,
+              "current_price": 1253.4,
+              "sector": "Materials"
+            },
+            {
+              "ticker": "NTPC",
+              "weight": 0.05,
+              "current_price": 322.75,
+              "sector": "Utilities"
+            },
+            {
+              "ticker": "TITAN",
+              "weight": 0.05,
+              "current_price": 4587.0,
+              "sector": "Consumer"
+            },
+            {
+              "ticker": "HINDALCO",
+              "weight": 0.05,
+              "current_price": 941.8,
+              "sector": "Materials"
+            },
+            {
+              "ticker": "ADANIPORTS",
+              "weight": 0.05,
+              "current_price": 1798.3,
+              "sector": "Infrastructure"
+            }
+          ],
+          "actions": [
+            {
+              "ticker": "ADANIPORTS",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "BAJAJ-AUTO",
+              "action": "TOP-UP",
+              "previous_weight": 0.1138960318,
+              "current_weight": 0.15
+            },
+            {
+              "ticker": "BEL",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.15
+            },
+            {
+              "ticker": "BHARTIARTL",
+              "action": "TRIM",
+              "previous_weight": 0.15,
+              "current_weight": 0.1043427039
+            },
+            {
+              "ticker": "BPCL",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "COALINDIA",
+              "action": "TRIM",
+              "previous_weight": 0.15,
+              "current_weight": 0.0695762812
+            },
+            {
+              "ticker": "EICHERMOT",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "HINDALCO",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "JSWSTEEL",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "M&M",
+              "action": "TRIM",
+              "previous_weight": 0.1316563044,
+              "current_weight": 0.1077558079
+            },
+            {
+              "ticker": "NTPC",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "ONGC",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "SHRIRAMFIN",
+              "action": "HOLD",
+              "previous_weight": 0.0605173954,
+              "current_weight": 0.0642339444
+            },
+            {
+              "ticker": "SUNPHARMA",
+              "action": "TOP-UP",
+              "previous_weight": 0.0939302683,
+              "current_weight": 0.1040912626
+            },
+            {
+              "ticker": "TITAN",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            }
+          ]
+        },
+        "5": {
+          "recommended": true,
+          "num_stocks": 12,
+          "stocks": [
+            {
+              "ticker": "BEL",
+              "weight": 0.15,
+              "current_price": 388.3,
+              "sector": "Infrastructure"
+            },
+            {
+              "ticker": "BAJAJ-AUTO",
+              "weight": 0.15,
+              "current_price": 10874.0,
+              "sector": "Automobile"
+            },
+            {
+              "ticker": "M&M",
+              "weight": 0.1077558079,
+              "current_price": 2950.0,
+              "sector": "Automobile"
+            },
+            {
+              "ticker": "BHARTIARTL",
+              "weight": 0.1043427039,
+              "current_price": 1757.0,
+              "sector": "Telecom"
+            },
+            {
+              "ticker": "SUNPHARMA",
+              "weight": 0.1040912626,
+              "current_price": 1816.6,
+              "sector": "Healthcare"
+            },
+            {
+              "ticker": "COALINDIA",
+              "weight": 0.0695762812,
+              "current_price": 425.0,
+              "sector": "Energy"
+            },
+            {
+              "ticker": "SHRIRAMFIN",
+              "weight": 0.0642339444,
+              "current_price": 982.7,
+              "sector": "Financials"
+            },
+            {
+              "ticker": "JSWSTEEL",
+              "weight": 0.05,
+              "current_price": 1253.4,
+              "sector": "Materials"
+            },
+            {
+              "ticker": "NTPC",
+              "weight": 0.05,
+              "current_price": 322.75,
+              "sector": "Utilities"
+            },
+            {
+              "ticker": "TITAN",
+              "weight": 0.05,
+              "current_price": 4587.0,
+              "sector": "Consumer"
+            },
+            {
+              "ticker": "HINDALCO",
+              "weight": 0.05,
+              "current_price": 941.8,
+              "sector": "Materials"
+            },
+            {
+              "ticker": "ADANIPORTS",
+              "weight": 0.05,
+              "current_price": 1798.3,
+              "sector": "Infrastructure"
+            }
+          ],
+          "actions": [
+            {
+              "ticker": "ADANIPORTS",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "BAJAJ-AUTO",
+              "action": "TOP-UP",
+              "previous_weight": 0.1138960318,
+              "current_weight": 0.15
+            },
+            {
+              "ticker": "BEL",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.15
+            },
+            {
+              "ticker": "BHARTIARTL",
+              "action": "TRIM",
+              "previous_weight": 0.15,
+              "current_weight": 0.1043427039
+            },
+            {
+              "ticker": "BPCL",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "COALINDIA",
+              "action": "TRIM",
+              "previous_weight": 0.15,
+              "current_weight": 0.0695762812
+            },
+            {
+              "ticker": "EICHERMOT",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "HINDALCO",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "JSWSTEEL",
+              "action": "PICK",
+              "previous_weight": 0.0,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "M&M",
+              "action": "TRIM",
+              "previous_weight": 0.1316563044,
+              "current_weight": 0.1077558079
+            },
+            {
+              "ticker": "NTPC",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            },
+            {
+              "ticker": "ONGC",
+              "action": "DROP",
+              "previous_weight": 0.05,
+              "current_weight": 0.0
+            },
+            {
+              "ticker": "SHRIRAMFIN",
+              "action": "HOLD",
+              "previous_weight": 0.0605173954,
+              "current_weight": 0.0642339444
+            },
+            {
+              "ticker": "SUNPHARMA",
+              "action": "TOP-UP",
+              "previous_weight": 0.0939302683,
+              "current_weight": 0.1040912626
+            },
+            {
+              "ticker": "TITAN",
+              "action": "HOLD",
+              "previous_weight": 0.05,
+              "current_weight": 0.05
+            }
+          ]
+        }
+      }
     }
   ],
-  "updated_at": "2026-08-17T19:16:53+05:30"
+  "updated_at": "2026-10-05T15:53:19+05:30"
 }
