@@ -5,7 +5,7 @@ const money = (paise: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(paise / 100);
 const signed = (value: number) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 
-type Story = {
+export type Story = {
   id: string;
   desk: string;
   headline: string;
@@ -15,7 +15,7 @@ type Story = {
   time: string;
 };
 
-function storiesFor(market: Market, campaign: Campaign): Story[] {
+export function storiesFor(market: Market, campaign: Campaign): Story[] {
   const equities = market.stocks.filter((stock) => (stock.asset_class || "EQUITY") === "EQUITY");
   const gainers = [...equities].sort((a, b) => b.momentum_90d_pct - a.momentum_90d_pct);
   const losers = [...gainers].reverse();

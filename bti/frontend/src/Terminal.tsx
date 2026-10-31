@@ -7,6 +7,7 @@ import {
   setDraftDelta,
 } from "./portfolioDraft";
 import { PortfolioRibbon, SignalModal } from "./Cockpit";
+import { storiesFor, type Story } from "./Newswire";
 
 type BaseProps = { market: Market; campaign: Campaign };
 type MarketProps = BaseProps & {
@@ -196,53 +197,68 @@ function QuantRiskModal({
   );
 }
 
-const stories = [
-  {
-    tag: "MONETARY POLICY",
-    title: "Rates held steady as the simulated policy path stays neutral",
-    body: "Financials keep their funding-cost tailwind, while expensive duration-sensitive names still need earnings support.",
-    impact: "Banks · NBFC · Realty",
-    tone: "purple",
-    age: "SIM 08:42",
-    ticker: null,
-  },
-  {
-    tag: "ENERGY",
-    title: "Crude eases; refiners gain a margin cushion",
-    body: "Lower input costs improve the near-term setup for downstream energy while upstream sensitivity softens.",
-    impact: "BPCL · ONGC · RELIANCE",
-    tone: "amber",
-    age: "SIM 08:18",
-    ticker: "BPCL",
-  },
-  {
-    tag: "EARNINGS",
-    title: "Capital-goods order books remain resilient",
-    body: "Visibility improves, but premium multiples leave little room for execution misses.",
-    impact: "BEL · LT · ADANIPORTS",
-    tone: "cyan",
-    age: "SIM 07:55",
-    ticker: "BEL",
-  },
-  {
-    tag: "GLOBAL TECH",
-    title: "Risk appetite returns to technology after a weak quarter",
-    body: "The simulated global cue helps sentiment; domestic valuation and growth quality remain the deciding filters.",
-    impact: "TCS · INFY · HCLTECH",
-    tone: "green",
-    age: "SIM 07:31",
-    ticker: "TCS",
-  },
-  {
-    tag: "CONSUMER",
-    title: "Rural demand improves while urban premium demand cools",
-    body: "Volume recovery helps staples, but high PEG names still carry expectation risk.",
-    impact: "ITC · NESTLEIND · TITAN",
-    tone: "red",
-    age: "SIM 06:50",
-    ticker: "ITC",
-  },
-];
+type TerminalStory = {
+  tag: string;
+  title: string;
+  body: string;
+  impact: string;
+  tone: string;
+  age: string;
+  ticker: string | null;
+};
+
+export function curatedTerminalStories(
+  market: Market,
+  campaign: Campaign,
+): TerminalStory[] {
+  const all = storiesFor(market, campaign);
+  const macro = all.find((s) => s.id === "macro-lead") || all[0];
+  const gainer = all.find((s) => s.id.startsWith("gain-"));
+  const loser = all.find((s) => s.id.startsWith("loss-"));
+  const held = all.find((s) => s.id.startsWith("held-"));
+  const valuation = all.find(
+    (s) => s.id.startsWith("earnings-") || s.id.startsWith("quant-"),
+  );
+  const sector = all.find((s) => s.id.startsWith("sector-"));
+
+  const candidates = [macro, gainer, held || valuation, loser, sector].filter(
+    Boolean,
+  ) as Story[];
+  for (const s of all) {
+    if (candidates.length >= 5) break;
+    if (!candidates.some((c) => c.id === s.id)) {
+      candidates.push(s);
+    }
+  }
+
+  return candidates.slice(0, 5).map((story, index) => {
+    const stock = story.ticker
+      ? market.stocks.find((s) => s.ticker === story.ticker)
+      : null;
+    const impact = stock
+      ? `${stock.ticker} · ${stock.sector}`
+      : story.ticker
+        ? `${story.ticker} · ASSET`
+        : `${market.regime?.label || "CROSS-ASSET"}`;
+
+    let tone = "purple";
+    if (story.tone === "positive") tone = "green";
+    else if (story.tone === "negative") tone = "red";
+    else if (story.desk.includes("RISK")) tone = "amber";
+    else if (index % 2 === 0) tone = "purple";
+    else tone = "cyan";
+
+    return {
+      tag: story.desk,
+      title: story.headline,
+      body: story.summary,
+      impact,
+      tone,
+      age: story.time,
+      ticker: story.ticker || null,
+    };
+  });
+}
 
 export function MarketTerminal({
   market,
@@ -253,6 +269,10 @@ export function MarketTerminal({
   trades,
   setTrades,
 }: MarketProps) {
+  const stories = useMemo(
+    () => curatedTerminalStories(market, campaign),
+    [market, campaign],
+  );
   const [query, setQuery] = useState("");
   const [repeatNotice, setRepeatNotice] = useState("");
   const [filter, setFilter] = useState("ALL");
@@ -1555,6 +1575,10 @@ export function NewsTerminal({
   campaign,
   backToMarket,
 }: BaseProps & { backToMarket: () => void }) {
+  const stories = useMemo(
+    () => curatedTerminalStories(market, campaign),
+    [market, campaign],
+  );
   const movers = [...market.stocks]
     .sort((a, b) => Math.abs(change(b)) - Math.abs(change(a)))
     .slice(0, 6);
