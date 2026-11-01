@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "validated_at": "2026-10-31T20:57:16+05:30",
+  "validated_at": "2026-11-01T10:40:57+00:00",
   "status": "passed",
   "data_through": "2026-10-30",
   "universe_size": 50,
   "benchmark_rows": 1236,
-  "data_age_days": 0,
+  "data_age_days": 2,
   "unresolved_or_stale": 0,
-  "max_turnover_pct": 22.61,
+  "max_turnover_pct": 17.33,
   "ledger_releases": 5,
   "ledger_tracking_started": "2026-06-04",
   "turnover_limit_pct": 30.0,
@@ -19,16 +19,14 @@
       "data_through": "2026-10-30",
       "num_stocks": 12,
       "weight_total": 1.0,
-      "turnover_pct": 22.61,
+      "turnover_pct": 17.33,
       "picks": [
-        "EICHERMOT",
-        "ONGC",
-        "TECHM"
+        "BPCL",
+        "EICHERMOT"
       ],
       "drops": [
         "ADANIPORTS",
-        "HINDALCO",
-        "JSWSTEEL"
+        "TITAN"
       ]
     },
     {
@@ -37,16 +35,14 @@
       "data_through": "2026-10-30",
       "num_stocks": 12,
       "weight_total": 1.0,
-      "turnover_pct": 22.61,
+      "turnover_pct": 17.33,
       "picks": [
-        "EICHERMOT",
-        "ONGC",
-        "TECHM"
+        "BPCL",
+        "EICHERMOT"
       ],
       "drops": [
         "ADANIPORTS",
-        "HINDALCO",
-        "JSWSTEEL"
+        "TITAN"
       ]
     },
     {
@@ -55,16 +51,14 @@
       "data_through": "2026-10-30",
       "num_stocks": 12,
       "weight_total": 1.0,
-      "turnover_pct": 22.61,
+      "turnover_pct": 17.33,
       "picks": [
-        "EICHERMOT",
-        "ONGC",
-        "TECHM"
+        "BPCL",
+        "EICHERMOT"
       ],
       "drops": [
         "ADANIPORTS",
-        "HINDALCO",
-        "JSWSTEEL"
+        "TITAN"
       ]
     },
     {
@@ -73,16 +67,14 @@
       "data_through": "2026-10-30",
       "num_stocks": 12,
       "weight_total": 1.0,
-      "turnover_pct": 22.61,
+      "turnover_pct": 17.33,
       "picks": [
-        "EICHERMOT",
-        "ONGC",
-        "TECHM"
+        "BPCL",
+        "EICHERMOT"
       ],
       "drops": [
         "ADANIPORTS",
-        "HINDALCO",
-        "JSWSTEEL"
+        "TITAN"
       ]
     },
     {
@@ -91,16 +83,14 @@
       "data_through": "2026-10-30",
       "num_stocks": 12,
       "weight_total": 1.0,
-      "turnover_pct": 22.61,
+      "turnover_pct": 17.33,
       "picks": [
-        "EICHERMOT",
-        "ONGC",
-        "TECHM"
+        "BPCL",
+        "EICHERMOT"
       ],
       "drops": [
         "ADANIPORTS",
-        "HINDALCO",
-        "JSWSTEEL"
+        "TITAN"
       ]
     }
   ]
